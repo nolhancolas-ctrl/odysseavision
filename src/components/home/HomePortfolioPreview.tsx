@@ -5,16 +5,16 @@ import { portfolioPreviewItems } from "@/data/home";
 
 export function HomePortfolioPreview() {
   return (
-    <section className="bg-[#11190f] px-8 py-24 text-[#f4efe4] md:px-14">
+    <section className="bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
           <SectionLabel dark>Portfolio</SectionLabel>
-          <h2 className="font-serif text-5xl uppercase tracking-[-0.04em]">
+          <h2 className="font-serif text-5xl uppercase tracking-[-0.04em] md:text-6xl">
             Explore our world
           </h2>
         </div>
 
-        <div className="grid gap-6 md:grid-cols-4">
+        <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
           {portfolioPreviewItems.map((item) => (
             <Link
               href={item.href}
@@ -32,7 +32,7 @@ export function HomePortfolioPreview() {
               <PhotoFrame
                 src={item.image}
                 label={item.label}
-                className="mb-6 h-52 w-full"
+                className="mb-6 h-56 w-full"
               />
 
               <p className="mb-5 text-sm leading-6 text-[#f4efe4]/70">
@@ -40,7 +40,7 @@ export function HomePortfolioPreview() {
               </p>
 
               <span className="text-[11px] uppercase tracking-[0.18em] text-[#f4efe4]">
-                View gallery →
+                View gallery
               </span>
             </Link>
           ))}

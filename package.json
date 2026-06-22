@@ -18,5 +18,27 @@
     "postcss": "^8.5.15",
     "tailwindcss": "^4.3.1",
     "typescript": "^6.0.3"
-  }
+  },
+  "name": "odysseavision",
+  "version": "1.0.0",
+  "description": "Andrew and Morgan presents",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/nolhancolas-ctrl/odysseavision.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/nolhancolas-ctrl/odysseavision/issues"
+  },
+  "homepage": "https://github.com/nolhancolas-ctrl/odysseavision#readme"
 }

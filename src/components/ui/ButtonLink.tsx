@@ -1,15 +1,18 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 
 type ButtonLinkProps = {
   href: string;
-  children: React.ReactNode;
+  children: ReactNode;
   variant?: "filled" | "outline" | "light";
+  className?: string;
 };
 
 export function ButtonLink({
   href,
   children,
   variant = "outline",
+  className = "",
 }: ButtonLinkProps) {
   const variants = {
     filled:
@@ -23,10 +26,9 @@ export function ButtonLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center border px-6 py-3 text-[11px] font-medium uppercase tracking-[0.18em] transition ${variants[variant]}`}
+      className={`inline-flex items-center justify-center border px-8 py-3 text-[11px] font-semibold uppercase tracking-[0.2em] transition ${variants[variant]} ${className}`}
     >
       {children}
-      <span className="ml-2">→</span>
     </Link>
   );
 }

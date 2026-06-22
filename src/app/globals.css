@@ -1,0 +1,217 @@
+@import "tailwindcss";
+
+:root {
+  --ov-green-dark: #11190f;
+  --ov-green: #30331f;
+  --ov-olive: #596044;
+  --ov-cream: #f4efe4;
+  --ov-text: #242617;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--ov-cream);
+  color: var(--ov-text);
+}
+
+.font-serif {
+  font-family: var(--font-serif);
+}
+
+.font-sans {
+  font-family: var(--font-sans);
+}
+
+.font-hand {
+  font-family: var(--font-hand);
+}
+
+a {
+  transition:
+    color 180ms ease,
+    background-color 180ms ease,
+    border-color 180ms ease,
+    transform 180ms ease;
+}
+
+
+/* HERO POSTCARDS START */
+.hero-postcards {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.hero-postcard {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: var(--w);
+  height: var(--h);
+  transform: translate(-50%, -50%) rotate(var(--r));
+  border: var(--b) solid rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.42);
+  transition:
+    width 260ms ease,
+    height 260ms ease,
+    left 260ms ease,
+    top 260ms ease,
+    opacity 260ms ease;
+}
+
+/* Large desktop: close to the design original */
+.hero-postcard--left-large {
+  --x: 15.5%;
+  --y: 46%;
+  --w: clamp(180px, 13vw, 235px);
+  --h: clamp(250px, 18vw, 330px);
+  --r: -4deg;
+  --b: clamp(5px, 0.42vw, 7px);
+}
+
+.hero-postcard--left-small {
+  --x: 26%;
+  --y: 61%;
+  --w: clamp(118px, 8.8vw, 160px);
+  --h: clamp(145px, 11vw, 205px);
+  --r: 2deg;
+  --b: clamp(5px, 0.42vw, 7px);
+}
+
+.hero-postcard--right-large {
+  --x: 84.5%;
+  --y: 46%;
+  --w: clamp(185px, 13.2vw, 245px);
+  --h: clamp(255px, 18.5vw, 340px);
+  --r: 3deg;
+  --b: clamp(5px, 0.42vw, 7px);
+}
+
+.hero-postcard--right-small {
+  --x: 74%;
+  --y: 62%;
+  --w: clamp(120px, 9vw, 165px);
+  --h: clamp(145px, 11.2vw, 205px);
+  --r: -2deg;
+  --b: clamp(5px, 0.42vw, 7px);
+}
+
+/* Medium screens: cards move closer to the edges and shrink */
+@media (max-width: 1180px) {
+  .hero-postcard--left-large {
+    --x: 10%;
+    --y: 46%;
+    --w: 175px;
+    --h: 250px;
+  }
+
+  .hero-postcard--left-small {
+    --x: 21%;
+    --y: 62%;
+    --w: 115px;
+    --h: 145px;
+  }
+
+  .hero-postcard--right-large {
+    --x: 90%;
+    --y: 46%;
+    --w: 180px;
+    --h: 255px;
+  }
+
+  .hero-postcard--right-small {
+    --x: 79%;
+    --y: 63%;
+    --w: 118px;
+    --h: 148px;
+  }
+}
+
+/* Tablet / narrow ratio: cards become side peeks */
+@media (max-width: 920px), (max-aspect-ratio: 4 / 5) {
+  .hero-postcard {
+    opacity: 0.62;
+  }
+
+  .hero-postcard--left-large {
+    --x: 0%;
+    --y: 53%;
+    --w: clamp(115px, 22vw, 155px);
+    --h: clamp(160px, 30vw, 215px);
+    --r: -5deg;
+  }
+
+  .hero-postcard--right-large {
+    --x: 100%;
+    --y: 53%;
+    --w: clamp(115px, 22vw, 155px);
+    --h: clamp(160px, 30vw, 215px);
+    --r: 5deg;
+  }
+
+  .hero-postcard--left-small {
+    --x: 9%;
+    --y: 72%;
+    --w: clamp(82px, 16vw, 112px);
+    --h: clamp(100px, 20vw, 135px);
+    --r: 2deg;
+    opacity: 0.48;
+  }
+
+  .hero-postcard--right-small {
+    --x: 91%;
+    --y: 72%;
+    --w: clamp(82px, 16vw, 112px);
+    --h: clamp(100px, 20vw, 135px);
+    --r: -2deg;
+    opacity: 0.48;
+  }
+}
+
+/* Mobile: keep atmosphere, but protect readability */
+@media (max-width: 640px) {
+  .hero-postcard--left-small,
+  .hero-postcard--right-small {
+    display: none;
+  }
+
+  .hero-postcard--left-large {
+    --x: -4%;
+    --y: 58%;
+    --w: 118px;
+    --h: 165px;
+    opacity: 0.38;
+  }
+
+  .hero-postcard--right-large {
+    --x: 104%;
+    --y: 58%;
+    --w: 118px;
+    --h: 165px;
+    opacity: 0.38;
+  }
+}
+
+/* Very short screens: avoid cards falling into the next section */
+@media (max-height: 720px) and (min-width: 921px) {
+  .hero-postcard--left-large,
+  .hero-postcard--right-large {
+    --y: 45%;
+    --w: 170px;
+    --h: 240px;
+  }
+
+  .hero-postcard--left-small,
+  .hero-postcard--right-small {
+    --y: 61%;
+    --w: 105px;
+    --h: 130px;
+  }
+}
+/* HERO POSTCARDS END */
+

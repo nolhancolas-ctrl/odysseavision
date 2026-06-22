@@ -5,18 +5,18 @@ import { homeImages } from "@/data/home";
 
 export function HomeFeaturedStory() {
   return (
-    <section className="bg-[#f4efe4] px-8 py-20 md:px-14">
-      <div className="mx-auto grid max-w-7xl items-center gap-14 md:grid-cols-[1.25fr_1fr]">
+    <section className="bg-[#f4efe4] px-6 py-20 md:px-14">
+      <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.25fr_1fr]">
         <PhotoFrame
           src={homeImages.storyElephants.src}
           label={homeImages.storyElephants.label}
-          className="h-[390px] w-full"
+          className="h-[320px] w-full md:h-[420px]"
         />
 
         <div>
           <SectionLabel>Featured story</SectionLabel>
 
-          <h2 className="font-serif text-5xl uppercase leading-[0.95] tracking-[-0.04em]">
+          <h2 className="font-serif text-5xl uppercase leading-[0.95] tracking-[-0.04em] md:text-6xl">
             The Reality Behind
             <br />
             Elephant Tours
@@ -31,7 +31,11 @@ export function HomeFeaturedStory() {
           </p>
 
           <div className="mt-8">
-            <ButtonLink href="/stories/the-reality-behind-elephant-tours" variant="light">
+            <ButtonLink
+              href="/stories/the-reality-behind-elephant-tours"
+              variant="light"
+              className="min-w-48"
+            >
               Read the story
             </ButtonLink>
           </div>

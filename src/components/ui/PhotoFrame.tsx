@@ -1,9 +1,14 @@
+"use client";
+
+import { useEffect, useState } from "react";
+
 type PhotoFrameProps = {
   src: string;
   label: string;
   className?: string;
   imageClassName?: string;
-  showLabel?: boolean;
+  imagePosition?: string;
+  showLabelWhenMissing?: boolean;
 };
 
 export function PhotoFrame({
@@ -11,26 +16,41 @@ export function PhotoFrame({
   label,
   className = "",
   imageClassName = "",
-  showLabel = true,
+  imagePosition = "center",
+  showLabelWhenMissing = true,
 }: PhotoFrameProps) {
+  const [hasError, setHasError] = useState(false);
+
+  useEffect(() => {
+    setHasError(false);
+  }, [src]);
+
   return (
     <div
-      className={`relative overflow-hidden border border-white/50 bg-[#28301f] shadow-2xl ${className}`}
+      className={`relative overflow-hidden bg-[#28301f] shadow-2xl ${className}`}
     >
-      <div
-        className={`absolute inset-0 bg-cover bg-center ${imageClassName}`}
-        style={{
-          backgroundImage: `linear-gradient(rgba(20, 24, 15, 0.12), rgba(20, 24, 15, 0.12)), url(${src})`,
-        }}
-      />
+      {!hasError && (
+        <img
+          src={src}
+          alt=""
+          loading="lazy"
+          onError={() => setHasError(true)}
+          className={`absolute inset-0 h-full w-full object-cover ${imageClassName}`}
+          style={{ objectPosition: imagePosition }}
+        />
+      )}
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
-
-      {showLabel && (
-        <div className="absolute left-2 top-2 z-10 rounded-full bg-black/55 px-2 py-1 text-[10px] uppercase tracking-[0.14em] text-white/85 backdrop-blur">
-          {label}
+      {hasError && (
+        <div className="absolute inset-0 flex items-center justify-center bg-[#1d2418]">
+          {showLabelWhenMissing && (
+            <span className="rounded-full bg-black/55 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.16em] text-white/85 backdrop-blur">
+              {label}
+            </span>
+          )}
         </div>
       )}
+
+      <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
     </div>
   );
 }
