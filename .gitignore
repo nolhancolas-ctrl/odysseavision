@@ -9,7 +9,7 @@ out/
 build/
 dist/
 
-# env files
+# environment variables
 .env
 .env.*
 !.env.example
