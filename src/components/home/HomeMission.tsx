@@ -22,7 +22,7 @@ export function HomeMission() {
       <img
         src="/images/home/mission_turtle_transparent_01.png"
         alt=""
-        className="pointer-events-none absolute right-10 top-6 hidden w-44 opacity-15 md:block"
+        className="pointer-events-none absolute right-[-51px] top-[-21px] hidden w-104 opacity-30 md:block"
       />
 
       <div className="mx-auto max-w-7xl text-center">
@@ -41,7 +41,7 @@ export function HomeMission() {
                 <img
                   src={item.icon}
                   alt=""
-                  className="h-10 w-10 object-contain opacity-75"
+                  className="h-60 w-40 object-contain opacity-75"
                 />
               </div>
               <h3 className="mb-4 text-[12px] font-semibold uppercase tracking-[0.18em]">

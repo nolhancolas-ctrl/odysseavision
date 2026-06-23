@@ -13,13 +13,13 @@ export function HomeFinalCTA() {
           <PhotoFrame
             src={homeImages.ctaSailboat.src}
             label={homeImages.ctaSailboat.label}
-            className="absolute left-8 top-1/2 h-[185px] w-[145px] -translate-y-1/2 rotate-[-4deg] border-[5px] border-white/80 shadow-xl"
+            className="absolute left-8 top-1/2 h-[285px] w-[245px] -translate-y-1/2 rotate-[-4deg] border-[5px] border-white/80 shadow-xl"
           />
 
           <img
             src="/images/home/cta_stamp_01.png"
             alt=""
-            className="absolute left-[145px] top-[38px] w-[78px] rotate-[-8deg] opacity-55"
+            className="absolute left-[235px] top-[108px] w-[178px] rotate-[-8deg] opacity-95"
           />
 
           <div className="absolute left-[180px] top-[92px] h-px w-20 rotate-[-8deg] bg-[#f4efe4]/15" />
@@ -49,14 +49,14 @@ export function HomeFinalCTA() {
 
         {/* Right quote + image group */}
         <div className="pointer-events-none absolute right-0 top-1/2 hidden h-[230px] w-[390px] -translate-y-1/2 lg:block xl:right-6">
-          <div className="absolute left-0 top-[58px] max-w-[155px] -rotate-6 text-left font-hand text-xl leading-8 text-[#f4efe4]/62">
+          <div className="absolute left-[30px] top-[58px] max-w-[155px] -rotate-6 text-left font-hand text-xl leading-8 text-[#f4efe4]/62">
             home is where the anchor drops
           </div>
 
           <PhotoFrame
             src={homeImages.ctaOceanCliff.src}
             label={homeImages.ctaOceanCliff.label}
-            className="absolute right-8 top-1/2 h-[185px] w-[230px] -translate-y-1/2 rotate-[3deg] border-[5px] border-white/80 shadow-xl"
+            className="absolute right-[-185px] top-2/3 h-[185px] w-[230px] -translate-y-1/2 rotate-[3deg] border-[5px] border-white/80 shadow-xl"
           />
 
           <img
