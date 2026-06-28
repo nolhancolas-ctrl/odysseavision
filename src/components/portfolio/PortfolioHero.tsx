@@ -31,7 +31,7 @@ export function PortfolioHero() {
             tells a story of wonder, respect and connection.
           </p>
 
-          <p className="mt-10 rotate-[-7deg] font-hand text-xl leading-7 text-white/65">
+          <p className="mt-10 translate-x-20 rotate-[-7deg] font-hand text-xl leading-7 text-white/65">
             see the world
             <br />
             differently
@@ -60,20 +60,7 @@ export function PortfolioHero() {
             label={portfolioImages.heroLandscape.label}
             className="absolute right-[-22%] top-[-180px] z-30 h-[175px] w-[260px] rotate-[4deg] border-[6px] border-white/85 shadow-2xl"
           />
-          {/* Ornaments reused from About Hero */}
-          <img
-            src="/images/about/hero_drawing_01.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute right-[70%] top-[15px] z-40 w-24 rotate-[-50deg] opacity-60 xl:w-36"
-          />
 
-          <img
-            src="/images/about/hero_drawing_02.png"
-            alt=""
-            aria-hidden="true"
-            className="absolute right-[80%] top-[380px] z-40 w-14 rotate-[-8deg] opacity-60 xl:w-20"
-          />
         </div>
       </div>
     </section>

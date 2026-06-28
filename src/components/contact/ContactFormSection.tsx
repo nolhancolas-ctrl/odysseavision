@@ -1,11 +1,38 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { contactImages, contactInfo, projectTypes } from "@/data/contact";
 
 export function ContactFormSection() {
   const [projectType, setProjectType] = useState(projectTypes[0]);
+  const [projectTypeOpen, setProjectTypeOpen] = useState(false);
+  const projectTypeMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const closeOnOutsideClick = (event: MouseEvent) => {
+      if (
+        projectTypeMenuRef.current &&
+        !projectTypeMenuRef.current.contains(event.target as Node)
+      ) {
+        setProjectTypeOpen(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setProjectTypeOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", closeOnOutsideClick);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", closeOnOutsideClick);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -76,17 +103,57 @@ export function ContactFormSection() {
                 className="w-full border border-[#242617]/20 bg-transparent px-5 py-4 text-sm outline-none placeholder:text-[#242617]/45 transition focus:border-[#596044]"
               />
 
-              <select
-                value={projectType}
-                onChange={(event) => setProjectType(event.target.value)}
-                className="w-full border border-[#242617]/20 bg-transparent px-5 py-4 text-sm text-[#242617]/65 outline-none transition focus:border-[#596044]"
-              >
-                {projectTypes.map((item) => (
-                  <option key={item} value={item}>
-                    {item}
-                  </option>
-                ))}
-              </select>
+              <div ref={projectTypeMenuRef} className="relative z-40 w-full">
+                <button
+                  type="button"
+                  onClick={() => setProjectTypeOpen((open) => !open)}
+                  aria-haspopup="listbox"
+                  aria-expanded={projectTypeOpen}
+                  className="flex w-full items-center justify-between border border-[#242617]/20 bg-transparent px-5 py-4 text-left text-sm text-[#242617]/65 outline-none transition hover:border-[#596044]/70"
+                >
+                  <span>{projectType}</span>
+
+                  <span
+                    className={`h-2 w-2 border-b border-r border-current transition-transform duration-200 ${
+                      projectTypeOpen
+                        ? "translate-y-0.5 rotate-[225deg]"
+                        : "-translate-y-0.5 rotate-45"
+                    }`}
+                  />
+                </button>
+
+                <div
+                  role="listbox"
+                  aria-label="Project type"
+                  aria-hidden={!projectTypeOpen}
+                  className={`absolute right-0 top-[calc(100%+6px)] z-50 w-full origin-top border border-[#242617]/20 bg-[#f4efe4] p-1 shadow-[0_14px_30px_rgba(36,38,23,0.16)] transition-[opacity,transform] duration-200 ease-out ${
+                    projectTypeOpen
+                      ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
+                      : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
+                  }`}
+                >
+                  {projectTypes.map((item) => (
+                    <button
+                      key={item}
+                      type="button"
+                      role="option"
+                      tabIndex={projectTypeOpen ? 0 : -1}
+                      aria-selected={projectType === item}
+                      onClick={() => {
+                        setProjectType(item);
+                        setProjectTypeOpen(false);
+                      }}
+                      className={`block w-full px-4 py-3 text-left text-[10px] font-semibold uppercase tracking-[0.14em] transition ${
+                        projectType === item
+                          ? "bg-[#596044] text-[#f4efe4]"
+                          : "text-[#242617]/65 hover:bg-[#e8dfcf] hover:text-[#242617]"
+                      }`}
+                    >
+                      {item}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
               <textarea
                 name="message"
