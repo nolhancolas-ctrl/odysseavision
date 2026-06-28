@@ -1,0 +1,65 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 70 1200"
+  preserveAspectRatio="none"
+>
+  <defs>
+    <filter id="rough">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.035 0.012"
+        numOctaves="3"
+        seed="12"
+        result="noise"
+      />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="noise"
+        scale="7"
+        xChannelSelector="R"
+        yChannelSelector="G"
+      />
+    </filter>
+  </defs>
+
+  <path
+    filter="url(#rough)"
+    fill="#d2c8b8"
+    opacity="0.55"
+    d="
+      M0 0
+      C22 35 13 72 29 111
+      C45 154 21 184 35 232
+      C50 284 18 322 32 373
+      C47 425 24 462 38 511
+      C55 571 19 612 34 664
+      C49 716 25 756 40 808
+      C56 865 20 903 34 956
+      C48 1009 25 1049 37 1095
+      C50 1145 31 1176 44 1200
+      L70 1200
+      L70 0
+      Z
+    "
+  />
+
+  <path
+    filter="url(#rough)"
+    fill="#f4efe4"
+    d="
+      M0 0
+      C18 28 8 61 24 98
+      C40 137 15 178 30 218
+      C47 265 14 311 27 354
+      C42 402 20 444 34 493
+      C51 548 17 591 31 642
+      C46 696 19 742 36 790
+      C52 840 16 889 31 938
+      C47 991 22 1031 35 1082
+      C50 1135 26 1172 40 1200
+      L70 1200
+      L70 0
+      Z
+    "
+  />
+</svg>
