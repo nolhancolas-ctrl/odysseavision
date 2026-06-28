@@ -1,0 +1,77 @@
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  viewBox="0 0 1600 72"
+  preserveAspectRatio="none"
+>
+  <defs>
+    <filter id="rough-shadow" x="-2%" y="-25%" width="104%" height="150%">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.006 0.11"
+        numOctaves="2"
+        seed="17"
+        result="noise"
+      />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="noise"
+        scale="5"
+        xChannelSelector="R"
+        yChannelSelector="G"
+      />
+    </filter>
+
+    <filter id="rough-paper" x="-2%" y="-25%" width="104%" height="150%">
+      <feTurbulence
+        type="fractalNoise"
+        baseFrequency="0.008 0.14"
+        numOctaves="3"
+        seed="41"
+        result="noise"
+      />
+      <feDisplacementMap
+        in="SourceGraphic"
+        in2="noise"
+        scale="4"
+        xChannelSelector="B"
+        yChannelSelector="R"
+      />
+    </filter>
+  </defs>
+
+  <!-- Translucent torn layer -->
+  <path
+    fill="#c8bfae"
+    opacity="0.68"
+    filter="url(#rough-shadow)"
+    d="
+      M0 29
+      L24 25 L61 33 L103 24 L151 31 L202 20
+      L264 27 L319 23 L376 35 L423 28 L487 32
+      L546 21 L613 26 L659 18 L728 29 L783 23
+      L847 34 L903 25 L968 30 L1023 20 L1091 28
+      L1157 24 L1209 36 L1278 27 L1336 32 L1401 22
+      L1453 29 L1521 19 L1568 27 L1600 24
+      V72 H0 Z
+    "
+  />
+
+  <!-- Main paper, sometimes above and sometimes below -->
+  <path
+    fill="#f4efe4"
+    filter="url(#rough-paper)"
+    d="
+      M0 24
+      L19 32 L53 27 L88 36 L129 29 L175 34
+      L226 25 L281 31 L337 20 L394 29 L438 22
+      L501 34 L559 28 L618 31 L674 23 L731 19
+      L792 30 L851 24 L911 35 L974 26 L1031 32
+      L1087 23 L1149 29 L1214 21 L1266 33 L1329 25
+      L1384 30 L1442 20 L1496 28 L1547 23 L1600 31
+      V72 H0 Z
+    "
+  />
+
+  <!-- Guarantees a solid connection with the next cream section -->
+  <rect x="0" y="46" width="1600" height="26" fill="#f4efe4" />
+</svg>
