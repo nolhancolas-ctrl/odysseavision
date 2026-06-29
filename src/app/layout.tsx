@@ -1,3 +1,4 @@
+import { SplashScreen } from "@/components/layout/SplashScreen";
 import type { Metadata } from "next";
 import { Cormorant_Garamond, Homemade_Apple, Inter } from "next/font/google";
 import "./globals.css";
@@ -36,6 +37,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${cormorant.variable} ${homemadeApple.variable} font-sans`}
       >
+        <SplashScreen />
         {children}
       </body>
     </html>

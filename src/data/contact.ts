@@ -73,6 +73,8 @@ export const contactServiceImages = {
   leftSmall: "/images/contact/services_left_02.png",
   rightTall: "/images/contact/services_right_01.png",
   rightSmall: "/images/contact/services_right_02.png",
+  stamp: "/images/contact/services_stamp_01.png",
+  leaf: "/images/contact/services_leaf_01.png",
 };
 
 export const contactNewsletterImages = {
