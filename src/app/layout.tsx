@@ -33,7 +33,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" translate="no" suppressHydrationWarning>
       <body
         className={`${inter.variable} ${cormorant.variable} ${homemadeApple.variable} font-sans`}
       >

@@ -1,0 +1,12 @@
+<svg id="Dashboard--Streamline-Carbon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" height="16" width="16">
+  <desc>
+    Dashboard Streamline Icon: https://streamlinehq.com
+  </desc>
+  <defs></defs>
+  <title>dashboard</title>
+  <path d="M12 10.5h1v2.5h-1Z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M10 8h1v5h-1Z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M5.5 13a2.50295 2.50295 0 0 1 -2.5 -2.5h1a1.5 1.5 0 1 0 1.5 -1.5v-1a2.5 2.5 0 0 1 0 5Z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M14 1H2a1.001 1.001 0 0 0 -1 1v12a1.00115 1.00115 0 0 0 1 1h12a1.00135 1.00135 0 0 0 1 -1V2a1.00115 1.00115 0 0 0 -1 -1Zm0 4.5H7V2h7ZM6 2v3.5H2V2ZM2 14V6.5h12.00035l0.00065 7.5Z" fill="#000000" stroke-width="0.5"></path>
+  <path id="_Transparent_Rectangle_" d="M0 0h16v16H0Z" fill="none" stroke-width="0.5"></path>
+</svg>

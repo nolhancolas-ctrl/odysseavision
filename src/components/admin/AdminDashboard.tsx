@@ -1,0 +1,235 @@
+import Link from "next/link";
+import {
+  adminActivities,
+  adminQuickActions,
+  adminRecentAlbums,
+  adminRecentItems,
+  adminStats,
+} from "@/data/admin";
+
+function DashboardIcon({
+  src,
+  fallback,
+  className = "h-7 w-7",
+}: {
+  src?: string;
+  fallback: string;
+  className?: string;
+}) {
+  if (src) {
+    return (
+      <img
+        src={src}
+        alt=""
+        aria-hidden="true"
+        className={`${className} object-contain`}
+      />
+    );
+  }
+
+  return <span aria-hidden="true">{fallback}</span>;
+}
+
+function StatusBadge({ status }: { status: string }) {
+  const variant =
+    status === "Published"
+      ? "bg-[#d9ead5] text-[#286235]"
+      : status === "Pending"
+        ? "bg-[#f3dfb8] text-[#8a6314]"
+        : "bg-[#eadfc8] text-[#84652d]";
+
+  return (
+    <span
+      className={`rounded-full px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] ${variant}`}
+    >
+      {status}
+    </span>
+  );
+}
+
+function SoftButton({ href, children }: { href: string; children: string }) {
+  return (
+    <Link
+      href={href}
+      className="rounded-full border border-[#11170f]/12 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55 transition hover:bg-[#071321] hover:text-[#f4efe4]"
+    >
+      {children}
+    </Link>
+  );
+}
+
+export function AdminDashboard() {
+  return (
+    <div className="space-y-7">
+      <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+        <div>
+          <h1 className="font-serif text-4xl leading-none tracking-[-0.04em] text-[#11170f] md:text-6xl">
+            Hey Andrew and Morgane, what&apos;s up?
+          </h1>
+        </div>
+
+        <div className="rounded-full border border-[#11170f]/12 bg-white/35 px-5 py-3 text-xs uppercase tracking-[0.18em] text-[#11170f]/55">
+          Private editing mode
+        </div>
+      </section>
+
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        {adminStats.map((stat) => (
+          <article
+            key={stat.label}
+            className="rounded-3xl border border-[#11170f]/10 bg-white/42 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]"
+          >
+            <div className="flex items-start justify-between gap-5">
+              <div>
+                <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-[#11170f]/48">
+                  {stat.label}
+                </p>
+                <p className="mt-3 font-serif text-5xl leading-none text-[#11170f]">
+                  {stat.value}
+                </p>
+                <p className="mt-3 text-sm text-[#2b6b3c]">{stat.detail}</p>
+              </div>
+
+              <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#b88a3b]/20 bg-[#b88a3b]/8 text-xl text-[#a6792e]">
+                <DashboardIcon src={stat.iconSrc} fallback={stat.icon} />
+              </span>
+            </div>
+          </article>
+        ))}
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-[1.3fr_0.82fr_0.82fr]">
+        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="font-serif text-2xl">Recent content</h2>
+            <SoftButton href="/admin/stories">View all</SoftButton>
+          </div>
+
+          <div className="space-y-3">
+            {adminRecentItems.map((item) => (
+              <div
+                key={item.title}
+                className="grid grid-cols-[82px_1fr] items-center gap-4 border-t border-[#11170f]/8 py-3 first:border-t-0 md:grid-cols-[82px_1fr_auto]"
+              >
+                <div
+                  className="h-16 rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
+                  style={{ backgroundImage: `url(${item.image})` }}
+                />
+
+                <div>
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#11170f]/40">
+                    {item.type}
+                  </p>
+                  <p className="mt-1 text-sm font-semibold text-[#11170f]">
+                    {item.title}
+                  </p>
+                </div>
+
+                <div className="hidden items-center gap-4 md:flex">
+                  <StatusBadge status={item.status} />
+                  <p className="w-24 text-right text-xs text-[#11170f]/45">
+                    {item.date}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="mb-5 flex items-center justify-between gap-4">
+            <h2 className="font-serif text-2xl">Recent albums</h2>
+            <SoftButton href="/admin/albums">View all</SoftButton>
+          </div>
+
+          <div className="space-y-4">
+            {adminRecentAlbums.map((album) => (
+              <div key={album.title} className="grid grid-cols-[74px_1fr] gap-4">
+                <div
+                  className="h-16 rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
+                  style={{ backgroundImage: `url(${album.image})` }}
+                />
+                <div>
+                  <p className="text-sm font-semibold">{album.title}</p>
+                  <p className="mt-1 text-xs text-[#11170f]/50">
+                    {album.photos}
+                  </p>
+                  <div className="mt-2">
+                    <StatusBadge status={album.status} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </article>
+
+        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="flex items-center justify-between gap-4">
+            <h2 className="font-serif text-2xl">Recent activity</h2>
+          </div>
+
+          <div className="mt-5 space-y-4">
+            {adminActivities.map((activity) => (
+              <div key={activity} className="flex gap-3">
+                <span className="mt-1 h-2 w-2 rounded-full bg-[#b88a3b]" />
+                <p className="text-sm leading-6 text-[#11170f]/62">
+                  {activity}
+                </p>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-6">
+            <SoftButton href="/admin/activity">View all activity</SoftButton>
+          </div>
+        </article>
+      </section>
+
+      <section className="rounded-3xl border border-[#11170f]/10 bg-white/38 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <h2 className="font-serif text-2xl">Quick actions</h2>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-7">
+          {adminQuickActions.map((action) => (
+            <Link
+              key={action.label}
+              href={action.href}
+              className="group flex min-h-[118px] flex-col items-center justify-center rounded-3xl border border-[#11170f]/10 bg-[#f4efe4]/60 p-4 text-center transition hover:-translate-y-1 hover:border-[#b88a3b]/45 hover:bg-white"
+            >
+              <span className="flex h-11 w-11 items-center justify-center transition group-hover:scale-110">
+                <DashboardIcon
+                  src={action.iconSrc}
+                  fallback={action.icon}
+                  className="h-9 w-9"
+                />
+              </span>
+              <span className="mt-3 text-sm text-[#11170f]/76">
+                {action.label}
+              </span>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="rounded-3xl bg-[#071321] p-6 text-[#f4efe4] shadow-[0_20px_70px_rgba(7,19,33,0.25)]">
+        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
+          <div>
+            <p className="text-[11px] uppercase tracking-[0.24em] text-[#d5ad68]">
+              Secret access
+            </p>
+            <p className="mt-2 text-sm leading-6 text-[#f4efe4]/68">
+              Later, the admin can be unlocked through a special password typed
+              into the client album access field.
+            </p>
+          </div>
+
+          <Link
+            href="/admin/settings"
+            className="rounded-full border border-[#d5ad68]/60 px-5 py-3 text-xs uppercase tracking-[0.16em] text-[#d5ad68] transition hover:bg-[#d5ad68] hover:text-[#071321]"
+          >
+            Prepare admin access
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}

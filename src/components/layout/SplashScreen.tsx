@@ -13,6 +13,7 @@ const SPLASH_IMAGES = [
 
 export function SplashScreen() {
   const pathname = usePathname();
+  const isAdminRoute = pathname === "/admin" || pathname.startsWith("/admin/");
   const previousPathname = useRef(pathname);
   const initialRenderDone = useRef(false);
 
@@ -20,6 +21,8 @@ export function SplashScreen() {
   const [isVisible, setIsVisible] = useState(true);
 
   useEffect(() => {
+    if (isAdminRoute) return;
+
     let cancelled = false;
 
     const preloadImage = async (src: string) => {
@@ -48,6 +51,7 @@ export function SplashScreen() {
   }, []);
 
   useEffect(() => {
+    if (isAdminRoute) return;
     if (!assetsReady) return;
 
     const timer = window.setTimeout(() => {
@@ -59,6 +63,8 @@ export function SplashScreen() {
   }, [assetsReady]);
 
   useEffect(() => {
+    if (isAdminRoute) return;
+
     const handleClick = (event: MouseEvent) => {
       const target = event.target as HTMLElement | null;
       const link = target?.closest("a");
@@ -75,6 +81,7 @@ export function SplashScreen() {
 
       if (url.origin !== window.location.origin) return;
       if (url.pathname === window.location.pathname) return;
+      if (url.pathname === "/admin" || url.pathname.startsWith("/admin/")) return;
 
       setIsVisible(true);
     };
@@ -87,6 +94,13 @@ export function SplashScreen() {
   }, []);
 
   useEffect(() => {
+    if (isAdminRoute) {
+      previousPathname.current = pathname;
+      initialRenderDone.current = true;
+      setIsVisible(false);
+      return;
+    }
+
     if (!initialRenderDone.current) {
       previousPathname.current = pathname;
       return;
@@ -103,6 +117,10 @@ export function SplashScreen() {
 
     return () => window.clearTimeout(timer);
   }, [pathname]);
+
+  if (isAdminRoute) {
+    return null;
+  }
 
   return (
     <div

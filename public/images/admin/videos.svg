@@ -1,0 +1,11 @@
+<svg id="Media-Library--Streamline-Carbon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" height="16" width="16">
+  <desc>
+    Media Library Streamline Icon: https://streamlinehq.com
+  </desc>
+  <defs></defs>
+  <path d="m6.5 7.5 0 4 3.5 -2 -3.5 -2z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M13 14H3a1.00105 1.00105 0 0 1 -1 -1V6a1.00105 1.00105 0 0 1 1 -1h10a1.00105 1.00105 0 0 1 1 1v7a1.00105 1.00105 0 0 1 -1 1ZM3 6v7h10V6Z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M3 3h10v1H3Z" fill="#000000" stroke-width="0.5"></path>
+  <path d="M4 1h8v1H4Z" fill="#000000" stroke-width="0.5"></path>
+  <path id="_Transparent_Rectangle_" d="M0 0h16v16H0Z" fill="none" stroke-width="0.5"></path>
+</svg>
