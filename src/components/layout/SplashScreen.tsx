@@ -239,7 +239,7 @@ export function SplashScreen() {
           }
 
           to {
-            transform: rotate(-360deg);
+            transform: rotate(360deg);
           }
         }
 
@@ -249,7 +249,7 @@ export function SplashScreen() {
           }
 
           to {
-            transform: rotate(377deg);
+            transform: rotate(-377deg);
           }
         }
 

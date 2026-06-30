@@ -78,4 +78,13 @@ export const portfolioPreviewItems = [
     description:
       "Faces, gestures and human stories we had the chance to cross along the way.",
   },
+  {
+    number: "05",
+    title: "Vintage",
+    image: "/images/home/portfolio_vintage.png",
+    label: "Vintage photography",
+    href: "/portfolio/vintage",
+    description:
+      "Soft grain, timeless tones and nostalgic frames for stories that feel like memories.",
+  },
 ];

@@ -5,6 +5,7 @@ import { PortfolioCategories } from "./PortfolioCategories";
 import { PortfolioFeatured } from "./PortfolioFeatured";
 import { PortfolioRecent } from "./PortfolioRecent";
 import { PortfolioNewsletter } from "./PortfolioNewsletter";
+import { PortfolioLiveGallery } from "@/components/portfolio/PortfolioLiveGallery";
 
 export function PortfolioPage() {
   return (
@@ -12,6 +13,7 @@ export function PortfolioPage() {
       <SiteHeader active="Portfolio" />
       <PortfolioHero />
       <PortfolioCategories />
+      <PortfolioLiveGallery />
       <PortfolioFeatured />
       <PortfolioRecent />
       <PortfolioNewsletter />

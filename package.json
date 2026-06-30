@@ -1,5 +1,6 @@
 {
   "dependencies": {
+    "@prisma/client": "^6.19.0",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.21.0",
@@ -16,7 +17,9 @@
     "eslint": "^9.39.4",
     "eslint-config-next": "^16.2.9",
     "postcss": "^8.5.15",
+    "prisma": "^6.19.0",
     "tailwindcss": "^4.3.1",
+    "tsx": "^4.22.4",
     "typescript": "^6.0.3"
   },
   "name": "odysseavision",
@@ -25,10 +28,18 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "next dev -H 0.0.0.0 -p 3001",
+    "dev": "next dev -H 0.0.0.0 -p 3333",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "db:generate": "prisma generate",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset",
+    "db:seed:portfolio": "tsx scripts/seed-portfolio.ts",
+    "postinstall": "prisma generate",
+    "dev:clean": "pkill -f 'next dev' || true; fuser -k 3333/tcp || true; rm -rf .next; next dev -H 0.0.0.0 -p 3333",
+    "db:seed:stories": "tsx scripts/seed-stories.ts"
   },
   "repository": {
     "type": "git",
@@ -40,5 +51,6 @@
   "bugs": {
     "url": "https://github.com/nolhancolas-ctrl/odysseavision/issues"
   },
-  "homepage": "https://github.com/nolhancolas-ctrl/odysseavision#readme"
+  "homepage": "https://github.com/nolhancolas-ctrl/odysseavision#readme",
+  "db:seed:stories": "tsx scripts/seed-stories.ts"
 }
