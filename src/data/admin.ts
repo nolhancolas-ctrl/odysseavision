@@ -50,13 +50,6 @@ export const adminPrimaryNavigation: AdminNavItem[] = [
     iconSrc: adminAsset.clients,
     description: "Contacts, notes and private links",
   },
-  {
-    href: "/admin/media",
-    label: "Media library",
-    icon: "▤",
-    iconSrc: adminAsset.media_librairie,
-    description: "Reusable images and files",
-  },
 ];
 
 export const adminSiteNavigation: AdminNavItem[] = [

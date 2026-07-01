@@ -181,7 +181,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
           src={adminAsset.stamp_corner}
           alt=""
           aria-hidden="true"
-          className="pointer-events-none fixed bottom-0 right-0 z-[1] hidden w-[360px] max-w-[32vw] opacity-20 mix-blend-multiply lg:block"
+          className="pointer-events-none absolute bottom-0 right-0 z-[1] hidden w-[560px] max-w-[46vw] opacity-25 lg:block"
         />
       ) : null}
 

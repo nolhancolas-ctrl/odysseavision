@@ -1,6 +1,13 @@
 import { getPublicPortfolioItems } from "@/lib/content/portfolio";
+import type { PublicSectionContent } from "@/lib/content/site";
 
-export async function PortfolioLiveGallery() {
+type PortfolioLiveGalleryProps = {
+  content?: PublicSectionContent;
+};
+
+export async function PortfolioLiveGallery({
+  content,
+}: PortfolioLiveGalleryProps) {
   const items = await getPublicPortfolioItems();
 
   return (
@@ -9,16 +16,16 @@ export async function PortfolioLiveGallery() {
         <div className="mb-12 flex flex-col justify-between gap-5 md:flex-row md:items-end">
           <div>
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#f4efe4]/45">
-              Published from admin
+              {content?.eyebrow || "Published from admin"}
             </p>
             <h2 className="mt-4 font-serif text-5xl uppercase tracking-[-0.04em] md:text-6xl">
-              Latest frames
+              {content?.title || "Latest frames"}
             </h2>
           </div>
 
           <p className="max-w-md text-sm leading-7 text-[#f4efe4]/55">
-            This gallery now reads published portfolio items from the admin
-            platform.
+            {content?.description ||
+              "This gallery now reads published portfolio items from the admin platform."}
           </p>
         </div>
 

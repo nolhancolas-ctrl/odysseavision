@@ -1,5 +1,10 @@
 import Link from "next/link";
 import { getPublicPortfolioCategories } from "@/lib/content/portfolio";
+import type { PublicSectionContent } from "@/lib/content/site";
+
+type PortfolioCategoriesProps = {
+  content?: PublicSectionContent;
+};
 
 function PortfolioCategoryCard({
   item,
@@ -36,14 +41,16 @@ function PortfolioCategoryCard({
   );
 }
 
-export async function PortfolioCategories() {
+export async function PortfolioCategories({
+  content,
+}: PortfolioCategoriesProps) {
   const categories = await getPublicPortfolioCategories();
 
   return (
     <section className="overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14 md:py-20">
       <div className="mx-auto max-w-[1450px]">
         <p className="mb-10 text-center text-[10px] font-semibold uppercase tracking-[0.22em] text-[#242617]/65">
-          Explore our categories
+          {content?.eyebrow || "Explore our categories"}
         </p>
 
         <div className="grid gap-5 md:hidden">

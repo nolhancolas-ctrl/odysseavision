@@ -5,6 +5,11 @@ import {
   getPublicPortfolioCategories,
   type PublicPortfolioCategory,
 } from "@/lib/content/portfolio";
+import type { PublicSectionContent } from "@/lib/content/site";
+
+type HomePortfolioPreviewProps = {
+  content?: PublicSectionContent;
+};
 
 function PortfolioPreviewCard({
   item,
@@ -41,27 +46,27 @@ function PortfolioPreviewCard({
   );
 }
 
-export async function HomePortfolioPreview() {
+export async function HomePortfolioPreview({
+  content,
+}: HomePortfolioPreviewProps) {
   const portfolioCategories = await getPublicPortfolioCategories();
 
   return (
     <section className="overflow-hidden bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
-          <SectionLabel dark>Portfolio</SectionLabel>
+          <SectionLabel dark>{content?.eyebrow || "Portfolio"}</SectionLabel>
           <h2 className="font-serif text-5xl uppercase tracking-[-0.04em] md:text-6xl">
-            Explore our world
+            {content?.title || "Explore our world"}
           </h2>
         </div>
 
-        {/* Mobile: normal stacked/grid display */}
         <div className="grid gap-6 md:hidden">
           {portfolioCategories.map((item) => (
             <PortfolioPreviewCard key={item.title} item={item} />
           ))}
         </div>
 
-        {/* Medium and desktop: seamless carousel */}
         <div className="relative hidden overflow-hidden md:block">
           <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#11190f] to-transparent" />
           <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#11190f] to-transparent" />

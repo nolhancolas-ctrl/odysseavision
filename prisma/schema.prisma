@@ -17,26 +17,6 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-model MediaAsset {
-  id          String   @id @default(cuid())
-  title       String
-  alt         String?
-  src         String
-  type        String   @default("image")
-  folder      String?
-  width       Int?
-  height      Int?
-  size        Int?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-
-  portfolioItems PortfolioItem[]
-  stories         Story[]
-  videos          Video[]
-  clientAlbums    ClientAlbum[]
-  albumImages     ClientAlbumImage[]
-}
-
 model PortfolioCategory {
   id        String          @id @default(cuid())
   name      String
@@ -60,12 +40,10 @@ model PortfolioItem {
   order       Int               @default(0)
   tags        String?
   imageSrc    String
-  imageId     String?
   categoryId  String?
   createdAt   DateTime          @default(now())
   updatedAt   DateTime          @updatedAt
 
-  image       MediaAsset?        @relation(fields: [imageId], references: [id])
   category    PortfolioCategory? @relation(fields: [categoryId], references: [id])
 }
 
@@ -94,7 +72,6 @@ model Story {
   order       Int           @default(0)
   tags        String?
   imageSrc    String
-  imageId     String?
   categoryId  String?
   seoTitle    String?
   seoDescription String?
@@ -129,7 +106,6 @@ model Video {
   featured    Boolean       @default(false)
   order       Int           @default(0)
   thumbnailSrc String
-  thumbnailId  String?
   categoryId  String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
@@ -159,7 +135,6 @@ model ClientAlbum {
   slug            String      @unique
   description     String?
   coverSrc        String?
-  coverId         String?
   shootingDate    DateTime?
   location        String?
   status          String      @default("DRAFT")
@@ -172,7 +147,6 @@ model ClientAlbum {
   updatedAt       DateTime    @updatedAt
 
   client          Client?     @relation(fields: [clientId], references: [id])
-  cover           MediaAsset? @relation(fields: [coverId], references: [id])
   images          ClientAlbumImage[]
 }
 
@@ -180,7 +154,6 @@ model ClientAlbumImage {
   id        String      @id @default(cuid())
   albumId   String
   imageSrc  String
-  imageId   String?
   title     String?
   alt       String?
   order     Int         @default(0)
@@ -189,7 +162,6 @@ model ClientAlbumImage {
   updatedAt DateTime    @updatedAt
 
   album     ClientAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
-  image     MediaAsset? @relation(fields: [imageId], references: [id])
 }
 
 model PageContent {
