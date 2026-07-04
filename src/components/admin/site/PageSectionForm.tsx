@@ -11,10 +11,15 @@ import type {
 
 type SectionContent = {
   ctaLabel?: string;
+  ctaHref?: string;
   eyebrow?: string;
   title?: string;
   description?: string;
   body?: string;
+  andrewDescription?: string;
+  morganeDescription?: string;
+  featuredVideoMode?: string;
+  featuredVideoId?: string;
   imageSrc?: string;
   images?: Record<string, string>;
   drawings?: Record<string, string>;
@@ -36,6 +41,8 @@ const fieldLabels: Record<EditableFieldKey, string> = {
   body: "Body",
   andrewDescription: "Andrew description",
   morganeDescription: "Morgane description",
+  featuredVideoMode: "Featured video mode",
+  featuredVideoId: "Featured video ID",
 };
 
 const imageCategoryLabels: Record<EditableImageCategory, string> = {

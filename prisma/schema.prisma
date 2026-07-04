@@ -18,33 +18,33 @@ model User {
 }
 
 model PortfolioCategory {
-  id        String          @id @default(cuid())
+  id        String   @id @default(cuid())
   name      String
-  slug      String          @unique
-  order     Int             @default(0)
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  slug      String   @unique
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  items     PortfolioItem[]
+  items PortfolioItem[]
 }
 
 model PortfolioItem {
-  id          String            @id @default(cuid())
+  id          String    @id @default(cuid())
   title       String
-  slug        String            @unique
+  slug        String    @unique
   description String?
   location    String?
   date        DateTime?
-  status      String            @default("DRAFT")
-  featured    Boolean           @default(false)
-  order       Int               @default(0)
+  status      String    @default("DRAFT")
+  featured    Boolean   @default(false)
+  order       Int       @default(0)
   tags        String?
   imageSrc    String
   categoryId  String?
-  createdAt   DateTime          @default(now())
-  updatedAt   DateTime          @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
-  category    PortfolioCategory? @relation(fields: [categoryId], references: [id])
+  category PortfolioCategory? @relation(fields: [categoryId], references: [id])
 }
 
 model StoryCategory {
@@ -55,31 +55,30 @@ model StoryCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  stories   Story[]
+  stories Story[]
 }
 
 model Story {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  excerpt     String?
-  content     String?
-  readTime    String?
-  author      String?
-  date        DateTime?
-  status      String        @default("DRAFT")
-  featured    Boolean       @default(false)
-  order       Int           @default(0)
-  tags        String?
-  imageSrc    String
-  categoryId  String?
-  seoTitle    String?
+  id             String    @id @default(cuid())
+  title          String
+  slug           String    @unique
+  excerpt        String?
+  content        String?
+  readTime       String?
+  author         String?
+  date           DateTime?
+  status         String    @default("DRAFT")
+  featured       Boolean   @default(false)
+  order          Int       @default(0)
+  tags           String?
+  imageSrc       String
+  categoryId     String?
+  seoTitle       String?
   seoDescription String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 
-  image       MediaAsset?   @relation(fields: [imageId], references: [id])
-  category    StoryCategory? @relation(fields: [categoryId], references: [id])
+  category StoryCategory? @relation(fields: [categoryId], references: [id])
 }
 
 model VideoCategory {
@@ -90,28 +89,27 @@ model VideoCategory {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  videos    Video[]
+  videos Video[]
 }
 
 model Video {
-  id          String        @id @default(cuid())
-  title       String
-  slug        String        @unique
-  description String?
-  vimeoUrl    String?
-  vimeoId     String?
-  duration    String?
-  date        DateTime?
-  status      String        @default("DRAFT")
-  featured    Boolean       @default(false)
-  order       Int           @default(0)
+  id           String    @id @default(cuid())
+  title        String
+  slug         String    @unique
+  description  String?
+  vimeoUrl     String?
+  vimeoId      String?
+  duration     String?
+  date         DateTime?
+  status       String    @default("DRAFT")
+  featured     Boolean   @default(false)
+  order        Int       @default(0)
   thumbnailSrc String
-  categoryId  String?
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  categoryId   String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
-  thumbnail   MediaAsset?   @relation(fields: [thumbnailId], references: [id])
-  category    VideoCategory? @relation(fields: [categoryId], references: [id])
+  category VideoCategory? @relation(fields: [categoryId], references: [id])
 }
 
 model Client {
@@ -126,64 +124,64 @@ model Client {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  albums    ClientAlbum[]
+  albums ClientAlbum[]
 }
 
 model ClientAlbum {
-  id              String      @id @default(cuid())
-  title           String
-  slug            String      @unique
-  description     String?
-  coverSrc        String?
-  shootingDate    DateTime?
-  location        String?
-  status          String      @default("DRAFT")
-  passwordHash    String?
-  allowDownload   Boolean     @default(false)
-  allowShare      Boolean     @default(true)
-  expiresAt       DateTime?
-  clientId        String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  id            String    @id @default(cuid())
+  title         String
+  slug          String    @unique
+  description   String?
+  coverSrc      String?
+  shootingDate  DateTime?
+  location      String?
+  status        String    @default("DRAFT")
+  passwordHash  String?
+  allowDownload Boolean   @default(false)
+  allowShare    Boolean   @default(true)
+  expiresAt     DateTime?
+  clientId      String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 
-  client          Client?     @relation(fields: [clientId], references: [id])
-  images          ClientAlbumImage[]
+  client Client?            @relation(fields: [clientId], references: [id])
+  images ClientAlbumImage[]
 }
 
 model ClientAlbumImage {
-  id        String      @id @default(cuid())
+  id        String   @id @default(cuid())
   albumId   String
   imageSrc  String
   title     String?
   alt       String?
-  order     Int         @default(0)
-  selected  Boolean     @default(false)
-  createdAt DateTime    @default(now())
-  updatedAt DateTime    @updatedAt
+  order     Int      @default(0)
+  selected  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  album     ClientAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+  album ClientAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 }
 
 model PageContent {
-  id        String   @id @default(cuid())
-  pageKey   String
+  id         String   @id @default(cuid())
+  pageKey    String
   sectionKey String
-  content   Json
-  updatedAt DateTime @updatedAt
-  createdAt DateTime @default(now())
+  content    Json
+  updatedAt  DateTime @updatedAt
+  createdAt  DateTime @default(now())
 
   @@unique([pageKey, sectionKey])
 }
 
 model ContactMessage {
-  id        String   @id @default(cuid())
-  name      String?
-  email     String?
+  id          String   @id @default(cuid())
+  name        String?
+  email       String?
   projectType String?
-  message   String
-  status    String   @default("NEW")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  message     String
+  status      String   @default("NEW")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 }
 
 model NewsletterSubscriber {
@@ -201,4 +199,20 @@ model SiteSetting {
   value     Json
   updatedAt DateTime @updatedAt
   createdAt DateTime @default(now())
+}
+
+model NewsletterCampaign {
+  id             String    @id @default(cuid())
+  title          String
+  subject        String
+  previewText    String?
+  heroImage      String?
+  body           String
+  ctaLabel       String?
+  ctaHref        String?
+  status         String    @default("DRAFT")
+  recipientCount Int       @default(0)
+  sentAt         DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }

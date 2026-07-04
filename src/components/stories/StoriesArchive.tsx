@@ -2,7 +2,14 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { stories, storyCategories } from "@/data/stories";
+import type { PublicSectionContent } from "@/lib/content/site";
+import type { PublicStory } from "@/lib/content/stories";
+
+type StoriesArchiveProps = {
+  stories: PublicStory[];
+  storyCategories: string[];
+  content?: PublicSectionContent;
+};
 
 type DropdownOption = {
   value: string;
@@ -60,7 +67,7 @@ function Dropdown({
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex w-full items-center justify-between gap-4 border border-[#242617]/35 bg-[#f4efe4]/95 px-4 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] transition hover:border-[#596044]/70"
+        className="flex w-full cursor-pointer items-center justify-between gap-4 border border-[#242617]/35 bg-[#f4efe4]/95 px-4 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] transition hover:border-[#596044]/70"
       >
         <span className="truncate">{currentLabel}</span>
         <span
@@ -93,7 +100,7 @@ function Dropdown({
               onChange(option.value);
               setOpen(false);
             }}
-            className={`block w-full px-3 py-2.5 text-left text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
+            className={`block w-full cursor-pointer px-3 py-2.5 text-left text-[9px] font-semibold uppercase tracking-[0.13em] transition ${
               value === option.value
                 ? "bg-[#596044] text-[#f4efe4]"
                 : "text-[#242617]/70 hover:bg-[#e8dfcf] hover:text-[#242617]"
@@ -112,40 +119,52 @@ const sortOptions = [
   { value: "oldest", label: "Oldest" },
 ];
 
-export function StoriesArchive() {
+export function StoriesArchive({
+  stories,
+  storyCategories,
+  content,
+}: StoriesArchiveProps) {
   const [category, setCategory] = useState("All stories");
   const [sort, setSort] = useState("latest");
+
+  const safeStories = Array.isArray(stories) ? stories : [];
+  const safeCategories =
+    Array.isArray(storyCategories) && storyCategories.length > 0
+      ? storyCategories
+      : ["All stories"];
 
   const filteredStories = useMemo(() => {
     const result =
       category === "All stories"
-        ? stories
-        : stories.filter((story) => story.category === category);
+        ? safeStories
+        : safeStories.filter((story) => story.category === category);
 
-    return [...result].sort((a, b) =>
+    return result.slice().sort((a, b) =>
       sort === "latest"
         ? b.date.localeCompare(a.date)
         : a.date.localeCompare(b.date),
     );
-  }, [category, sort]);
+  }, [category, sort, safeStories]);
 
   const primaryStory = filteredStories[0];
   const remainingStories = filteredStories.slice(1, 9);
 
-  const categoryOptions = storyCategories.map((item) => ({
+  const categoryOptions = safeCategories.map((item) => ({
     value: item,
     label: item,
   }));
+
+  const ornament =
+    content?.images.ornament || "/images/about/hero_drawing_01.png";
 
   return (
     <section className="bg-[#f4efe4] px-6 py-14 md:px-14 md:py-20">
       <div className="mx-auto max-w-[1450px]">
         <div className="border-b border-[#242617]/15 pb-8">
           <p className="mb-7 text-[9px] font-semibold uppercase tracking-[0.2em] text-[#242617]/55">
-            Browse by category
+            {content?.eyebrow || "Browse by category"}
           </p>
 
-          {/* Mobile and tablet controls */}
           <div className="flex gap-3 lg:hidden">
             <Dropdown
               value={category}
@@ -164,15 +183,14 @@ export function StoriesArchive() {
             />
           </div>
 
-          {/* Desktop controls */}
           <div className="hidden items-end justify-between gap-8 lg:flex">
             <div className="flex flex-wrap gap-x-10 gap-y-4">
-              {storyCategories.map((item) => (
+              {safeCategories.map((item) => (
                 <button
                   key={item}
                   type="button"
                   onClick={() => setCategory(item)}
-                  className={`border-b pb-2 text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
+                  className={`cursor-pointer border-b pb-2 text-[10px] font-semibold uppercase tracking-[0.13em] transition ${
                     category === item
                       ? "border-[#242617] text-[#242617]"
                       : "border-transparent text-[#242617]/55 hover:text-[#242617]"
@@ -195,13 +213,12 @@ export function StoriesArchive() {
 
         {primaryStory ? (
           <>
-            {/* First result displayed in the large format */}
             <article className="grid items-center gap-10 border-b border-[#242617]/15 py-12 lg:grid-cols-[1.25fr_0.8fr]">
               <Link
                 href={`/stories/${primaryStory.slug}`}
                 className="block min-h-[310px] bg-[#cfc8bb] bg-cover bg-center transition-opacity hover:opacity-90 md:min-h-[390px]"
                 style={{
-                  backgroundImage: `url(${primaryStory.image.src})`,
+                  backgroundImage: `url(${primaryStory.imageSrc})`,
                 }}
                 aria-label={primaryStory.title}
               />
@@ -233,18 +250,18 @@ export function StoriesArchive() {
                 >
                   Read the story
                 </Link>
-                    
-              <img
-                src="/images/about/hero_drawing_01.png"
-                alt=""
-                className="pointer-events-none absolute -bottom-53 right-0 rotate-25 hidden w-68 opacity-30 md:block"
-              />
-                    
+
+                {ornament ? (
+                  <img
+                    src={ornament}
+                    alt=""
+                    className="pointer-events-none absolute -bottom-53 right-0 hidden w-68 rotate-25 opacity-30 md:block"
+                  />
+                ) : null}
               </div>
             </article>
 
-            {/* Remaining results */}
-            {remainingStories.length > 0 && (
+            {remainingStories.length > 0 ? (
               <div className="grid gap-5 py-10 sm:grid-cols-2 lg:grid-cols-4">
                 {remainingStories.map((story) => (
                   <article
@@ -258,7 +275,7 @@ export function StoriesArchive() {
                       <div
                         className="aspect-[1.42] bg-[#d4cdc0] bg-cover bg-center transition duration-700 group-hover:opacity-90"
                         style={{
-                          backgroundImage: `url(${story.image.src})`,
+                          backgroundImage: `url(${story.imageSrc})`,
                         }}
                       />
 
@@ -285,7 +302,7 @@ export function StoriesArchive() {
                   </article>
                 ))}
               </div>
-            )}
+            ) : null}
           </>
         ) : (
           <p className="py-20 text-center text-sm text-[#242617]/55">
@@ -300,12 +317,12 @@ export function StoriesArchive() {
               : "text-center"
           }
         >
-          <Link
-            href="/stories/all"
-            className="inline-block border border-[#242617]/45 px-10 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] transition hover:bg-[#242617] hover:text-[#f4efe4]"
+          <button
+            type="button"
+            className="cursor-pointer border border-[#242617]/25 px-8 py-3 text-[9px] font-semibold uppercase tracking-[0.18em] transition hover:border-[#596044] hover:bg-[#596044] hover:text-[#f4efe4]"
           >
-            View all stories
-          </Link>
+            {content?.ctaLabel || "Load more stories"}
+          </button>
         </div>
       </div>
     </section>

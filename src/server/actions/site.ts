@@ -181,3 +181,55 @@ export async function resetPageSection(pageKey: string, sectionKey: string) {
   revalidatePath(`/admin/site/${pageKey}`);
   revalidatePath(publicPathForPage(pageKey));
 }
+
+
+export async function updateFeaturedFilmSelection(formData: FormData) {
+  const selectedValue = String(formData.get("featuredVideoId") ?? "__latest__");
+  const featuredVideoId =
+    selectedValue && selectedValue !== "__latest__" ? selectedValue : "__latest__";
+
+  const existing = await db.pageContent.findUnique({
+    where: {
+      pageKey_sectionKey: {
+        pageKey: "videos",
+        sectionKey: "featured-film",
+      },
+    },
+  });
+
+  const currentContent =
+    existing?.content &&
+    typeof existing.content === "object" &&
+    !Array.isArray(existing.content)
+      ? existing.content
+      : {};
+
+  await db.pageContent.upsert({
+    where: {
+      pageKey_sectionKey: {
+        pageKey: "videos",
+        sectionKey: "featured-film",
+      },
+    },
+    update: {
+      content: {
+        ...currentContent,
+        featuredVideoMode:
+          featuredVideoId === "__latest__" ? "latest" : "selected",
+        featuredVideoId,
+      },
+    },
+    create: {
+      pageKey: "videos",
+      sectionKey: "featured-film",
+      content: {
+        featuredVideoMode:
+          featuredVideoId === "__latest__" ? "latest" : "selected",
+        featuredVideoId,
+      },
+    },
+  });
+
+  revalidatePath("/videos");
+  revalidatePath("/admin/site/videos");
+}

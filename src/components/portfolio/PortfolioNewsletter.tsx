@@ -1,10 +1,19 @@
+"use client";
+
+import { useActionState } from "react";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { homeImages } from "@/data/home";
 import { portfolioImages } from "@/data/portfolio";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { submitNewsletterForm } from "@/server/actions/forms";
 
 type PortfolioNewsletterProps = {
   content?: PublicSectionContent;
+};
+
+const initialNewsletterState = {
+  status: "idle" as const,
+  message: "",
 };
 
 function fileLabel(src: string, fallback: string) {
@@ -12,6 +21,11 @@ function fileLabel(src: string, fallback: string) {
 }
 
 export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
+  const [state, formAction, isPending] = useActionState(
+    submitNewsletterForm,
+    initialNewsletterState,
+  );
+
   const background =
     content?.images.background ||
     content?.imageSrc ||
@@ -64,20 +78,40 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
 
           <div className="mx-auto my-6 h-px w-10 bg-[#f4efe4]/45" />
 
-          <form className="flex border border-[#f4efe4]/45 bg-[#11190f]/20 backdrop-blur-[2px]">
+          <form
+            action={formAction}
+            className="flex border border-[#f4efe4]/45 bg-[#11190f]/20 backdrop-blur-[2px]"
+          >
+            <input type="hidden" name="source" value="portfolio-newsletter" />
+
             <input
+              name="email"
               type="email"
+              required
               placeholder="Your email address"
               className="min-w-0 flex-1 bg-transparent px-5 py-4 text-xs text-white outline-none placeholder:text-white/55"
             />
 
             <button
               type="submit"
-              className="border-l border-[#f4efe4]/45 px-7 text-[9px] font-semibold uppercase tracking-[0.18em] transition hover:bg-white/10"
+              disabled={isPending}
+              className="cursor-pointer border-l border-[#f4efe4]/45 px-7 text-[9px] font-semibold uppercase tracking-[0.18em] transition hover:bg-white/10 disabled:cursor-wait disabled:opacity-60"
             >
-              {content?.ctaLabel || "Subscribe"}
+              {isPending ? "Saving..." : content?.ctaLabel || "Subscribe"}
             </button>
           </form>
+
+          {state.message ? (
+            <p
+              className={`mt-4 text-xs font-semibold ${
+                state.status === "success"
+                  ? "text-[#f4efe4]/85"
+                  : "text-red-200"
+              }`}
+            >
+              {state.message}
+            </p>
+          ) : null}
         </div>
 
         <div className="pointer-events-none absolute right-0 top-1/2 hidden h-[230px] w-[390px] -translate-y-1/2 lg:block xl:right-6">

@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { contactServiceImages, contactServices } from "@/data/contact";
+import type { PublicSectionContent } from "@/lib/content/site";
+
+type ContactServicesProps = {
+  content?: PublicSectionContent;
+};
 
 function ServiceIcon({ type }: { type: string }) {
   if (type === "camera") {
@@ -33,59 +38,84 @@ function ServiceIcon({ type }: { type: string }) {
   );
 }
 
-export function ContactServices() {
+export function ContactServices({ content }: ContactServicesProps) {
+  const leftTall = content?.images.leftTall || contactServiceImages.leftTall;
+  const leftSmall = content?.images.leftSmall || contactServiceImages.leftSmall;
+  const rightTall = content?.images.rightTall || contactServiceImages.rightTall;
+  const rightSmall = content?.images.rightSmall || contactServiceImages.rightSmall;
+  const stamp = content?.images.stamp ?? "";
+  const leaf = content?.images.leaf ?? "";
+
   return (
     <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 text-[#242617] md:px-14 md:py-20">
       <div className="pointer-events-none absolute left-0 top-0 hidden h-full w-[330px] lg:block">
-        <PhotoFrame
-          src={contactServiceImages.leftTall}
-          label="services_left_01.png"
-          className="absolute left-[70px] top-[55px] h-[285px] w-[205px] rotate-[-4deg] border-[5px] border-white/85 shadow-xl opacity-40 [@media_(min-aspect-ratio:2/1)]:opacity-100"
-        />
+        {leftTall ? (
+          <PhotoFrame
+            src={leftTall}
+            label="services_left_01.png"
+            className="absolute left-[70px] top-[55px] h-[285px] w-[205px] rotate-[-4deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+          />
+        ) : null}
 
-        <PhotoFrame
-          src={contactServiceImages.leftSmall}
-          label="services_left_02.png"
-          className="absolute left-[25px] top-[35px] h-[155px] w-[230px] rotate-[-5deg] border-[5px] border-white/85 shadow-xl opacity-40 [@media_(min-aspect-ratio:2/1)]:opacity-100"
-        />
+        {leftSmall ? (
+          <PhotoFrame
+            src={leftSmall}
+            label="services_left_02.png"
+            className="absolute left-[25px] top-[35px] h-[155px] w-[230px] rotate-[-5deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+          />
+        ) : null}
       </div>
 
       <div className="pointer-events-none absolute right-0 top-0 hidden h-full w-[360px] lg:block">
-        <img
-          src={contactServiceImages.stamp}
-          alt=""
-          aria-hidden="true"
-          className="absolute right-[180px] top-[8px] w-32 opacity-35"
-        />
+        {stamp ? (
+          <img
+            src={stamp}
+            alt=""
+            aria-hidden="true"
+            className="absolute right-[180px] top-[8px] w-32 opacity-35"
+          />
+        ) : null}
 
-        <PhotoFrame
-          src={contactServiceImages.rightTall}
-          label="services_right_01.png"
-          className="absolute right-[-80px] top-[55px] h-[285px] w-[205px] rotate-[5deg] border-[5px] border-white/85 shadow-xl opacity-40 [@media_(min-aspect-ratio:2/1)]:opacity-100"
-        />
+        {rightTall ? (
+          <PhotoFrame
+            src={rightTall}
+            label="services_right_01.png"
+            className="absolute right-[-80px] top-[55px] h-[285px] w-[205px] rotate-[5deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+          />
+        ) : null}
 
-        <PhotoFrame
-          src={contactServiceImages.rightSmall}
-          label="services_right_02.png"
-          className="absolute right-[-100px] top-[35px] h-[155px] w-[230px] rotate-[4deg] border-[5px] border-white/85 shadow-xl opacity-40 [@media_(min-aspect-ratio:2/1)]:opacity-100"
-        />
+        {rightSmall ? (
+          <PhotoFrame
+            src={rightSmall}
+            label="services_right_02.png"
+            className="absolute right-[-100px] top-[35px] h-[155px] w-[230px] rotate-[4deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+          />
+        ) : null}
 
-        <img
-          src={contactServiceImages.leaf}
-          alt=""
-          aria-hidden="true"
-          className="absolute right-[22px] top-[150px] w-24 opacity-25"
-        />
+        {leaf ? (
+          <img
+            src={leaf}
+            alt=""
+            aria-hidden="true"
+            className="absolute right-[22px] top-[150px] w-24 opacity-25"
+          />
+        ) : null}
       </div>
 
       <div className="relative mx-auto max-w-[850px] text-center">
         <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#242617]/55">
-          What we do
+          {content?.eyebrow || "What we do"}
         </p>
 
         <h2 className="mt-5 font-serif text-4xl leading-none tracking-[-0.04em] md:text-5xl">
-          How can we work together?
+          {content?.title || "How can we work together?"}
         </h2>
+
+        {content?.description ? (
+          <p className="mx-auto mt-5 max-w-xl text-sm leading-7 text-[#242617]/55">
+            {content.description}
+          </p>
+        ) : null}
 
         <div className="mx-auto my-7 h-px w-12 bg-[#242617]/35" />
 
@@ -111,7 +141,7 @@ export function ContactServices() {
           href="/portfolio"
           className="mt-12 inline-block border border-[#242617]/35 px-14 py-4 text-[10px] font-semibold uppercase tracking-[0.16em] transition hover:bg-[#242617] hover:text-[#f4efe4]"
         >
-          View portfolio
+          {content?.ctaLabel || "View portfolio"}
         </Link>
       </div>
     </section>

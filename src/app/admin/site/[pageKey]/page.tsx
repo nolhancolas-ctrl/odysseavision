@@ -1,6 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FloatingBackButton } from "@/components/admin/site/FloatingBackButton";
 import { PageSectionForm } from "@/components/admin/site/PageSectionForm";
+import { FeaturedFilmSelectorForm } from "@/components/admin/site/FeaturedFilmSelectorForm";
+import { VideosVimeoStatus } from "@/components/admin/site/VideosVimeoStatus";
 import { resetPageSection, updatePageSection } from "@/server/actions/site";
 import { db } from "@/lib/db";
 import { getEditablePage } from "@/data/sitePages";
@@ -47,6 +50,7 @@ export default async function EditWebsitePage({ params }: PageProps) {
 
   return (
     <div className="space-y-8">
+      <FloatingBackButton href="/admin/site" />
       <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
@@ -114,6 +118,8 @@ export default async function EditWebsitePage({ params }: PageProps) {
         </Link>
       </div>
 
+      {page.key === "videos" ? <VideosVimeoStatus /> : null}
+
       <div className="space-y-6">
         {page.sections.map((section) => {
           const saved = savedSections.find(
@@ -126,7 +132,11 @@ export default async function EditWebsitePage({ params }: PageProps) {
           };
 
           return (
-            <PageSectionForm
+            <div key={section.key}>
+              {page.key === "videos" && section.key === "featured-film" ? (
+                <FeaturedFilmSelectorForm />
+              ) : (
+                <PageSectionForm
               key={section.key}
               section={section}
               content={content}
@@ -134,6 +144,8 @@ export default async function EditWebsitePage({ params }: PageProps) {
               updateAction={updatePageSection.bind(null, page.key, section.key)}
               resetAction={resetPageSection.bind(null, page.key, section.key)}
             />
+              )}
+            </div>
           );
         })}
       </div>

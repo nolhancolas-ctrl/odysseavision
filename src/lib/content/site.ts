@@ -17,6 +17,8 @@ export type PublicSectionContent = {
   imageSrc?: string;
   images: Record<string, string>;
   drawings: Record<string, string>;
+  featuredVideoMode?: string;
+  featuredVideoId?: string;
 };
 
 export type PublicPageContent = {
@@ -32,6 +34,8 @@ const editableFields: EditableFieldKey[] = [
   "body",
   "andrewDescription",
   "morganeDescription",
+  "featuredVideoMode",
+  "featuredVideoId",
 ];
 
 function isObject(value: unknown): value is Record<string, unknown> {

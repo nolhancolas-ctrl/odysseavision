@@ -16,18 +16,26 @@ body {
   margin: 0;
   background: var(--ov-cream);
   color: var(--ov-text);
+  font-size: var(--ov-base-font-size, 16px);
+  letter-spacing: var(--ov-text-letter-spacing, 0em);
 }
 
 .font-serif {
-  font-family: var(--font-serif);
+  font-family: var(--ov-font-serif, var(--font-serif));
+  letter-spacing: var(--ov-heading-letter-spacing, inherit);
 }
 
 .font-sans {
-  font-family: var(--font-sans);
+  font-family: var(--ov-font-sans, var(--font-sans));
 }
 
 .font-hand {
-  font-family: var(--font-hand);
+  font-family: var(--ov-font-hand, var(--font-hand));
+}
+
+::selection {
+  background: var(--ov-gold);
+  color: var(--ov-green-dark);
 }
 
 a {

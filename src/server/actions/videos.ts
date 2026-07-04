@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { extractVimeoId } from "@/lib/vimeo";
 
 function slugify(value: string) {
   return value
@@ -54,6 +55,9 @@ function getVideoData(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const manualSlug = String(formData.get("slug") ?? "").trim();
   const slug = slugify(manualSlug || title);
+  const rawVimeoUrl = String(formData.get("vimeoUrl") ?? "").trim();
+  const rawVimeoId = String(formData.get("vimeoId") ?? "").trim();
+  const vimeoId = rawVimeoId || extractVimeoId(rawVimeoUrl);
 
   if (!title) {
     throw new Error("Title is required.");
@@ -67,8 +71,8 @@ function getVideoData(formData: FormData) {
     title,
     slug,
     description: String(formData.get("description") ?? "").trim() || null,
-    vimeoUrl: String(formData.get("vimeoUrl") ?? "").trim() || null,
-    vimeoId: String(formData.get("vimeoId") ?? "").trim() || null,
+    vimeoUrl: rawVimeoUrl || (vimeoId ? `https://vimeo.com/${vimeoId}` : null),
+    vimeoId: vimeoId || null,
     duration: String(formData.get("duration") ?? "").trim() || null,
     date: parseDate(formData.get("date")),
     status: parseStatus(formData.get("status")),

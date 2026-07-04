@@ -36,6 +36,14 @@ export const adminPrimaryNavigation: AdminNavItem[] = [
     iconSrc: adminAsset.videos,
     description: "Vimeo films and thumbnails",
   },
+{
+    href: "/admin/newsletters",
+    label: "Newsletters",
+    icon: "✉",
+    iconSrc: adminAsset.forms_emails,
+    description: "Create, preview and send campaigns",
+    mode: "content",
+},
   {
     href: "/admin/albums",
     label: "Client albums",

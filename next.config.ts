@@ -9,7 +9,7 @@ const nextConfig: NextConfig = {
         "*.app.github.dev",
         "turbo-invention-pj5w5wqpq5x43rjvx-3333.app.github.dev",
       ],
-      bodySizeLimit: "5mb",
+      bodySizeLimit: "15mb",
     },
   },
 };

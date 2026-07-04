@@ -5,7 +5,9 @@ export type EditableFieldKey =
   | "description"
   | "body"
   | "andrewDescription"
-  | "morganeDescription";
+  | "morganeDescription"
+  | "featuredVideoMode"
+  | "featuredVideoId";
 
 export type EditableImageCategory =
   | "background"
@@ -53,6 +55,8 @@ export type EditablePageSection = {
     body?: string;
     andrewDescription?: string;
     morganeDescription?: string;
+    featuredVideoMode?: string;
+    featuredVideoId?: string;
   };
 
   /**
@@ -816,12 +820,13 @@ Always chasing the light.`,
       {
         key: "hero",
         label: "Hero",
-        description: "Top section of the Stories page.",
+        description: "Top section of the Stories page with background, framed photos and ornaments.",
         fields: ["eyebrow", "title", "description"],
         defaults: {
-          eyebrow: "Stories",
-          title: "Field notes, ocean encounters and wild memories.",
-          description: "Read the stories behind the images.",
+          eyebrow: "Our stories",
+          title: "Tales from the road & sea",
+          description:
+            "Stories, reflections and raw moments from our travels. From wildlife encounters to conservation, photography and life on the road.",
           imageSrc: "/images/stories/hero_fond.png",
         },
         images: [
@@ -832,36 +837,103 @@ Always chasing the light.`,
             defaultSrc: "/images/stories/hero_fond.png",
           },
           {
-            key: "photo",
-            label: "Hero photo",
-            category: "photo",
-            defaultSrc: "/images/stories/featured_elephants_01.png",
+            key: "heroWhale",
+            label: "Left whale frame",
+            category: "photoframe",
+            defaultSrc: "/images/stories/hero_whale_01.png",
+          },
+          {
+            key: "heroManta",
+            label: "Left manta frame",
+            category: "photoframe",
+            defaultSrc: "/images/stories/hero_manta_01.png",
+          },
+          {
+            key: "heroElephants",
+            label: "Right elephants frame",
+            category: "photoframe",
+            defaultSrc: "/images/stories/hero_elephants_01.png",
+          },
+          {
+            key: "drawing",
+            label: "Hero drawing",
+            category: "drawing",
+            defaultSrc: "/images/stories/hero_drawing_01.png",
+          },
+          {
+            key: "stamp",
+            label: "Hero stamp",
+            category: "ornamental",
+            defaultSrc: "/images/stories/hero_stamp_01.png",
           },
         ],
         drawings: [
           {
             key: "handwritten",
-            label: "Handwritten text",
-            defaultText: "field notes",
+            label: "Hero handwritten text",
+            defaultText: "stories worth sharing",
           },
         ],
       },
       {
-        key: "archive-intro",
-        label: "Archive intro",
-        description: "Introduction above the story archive.",
-        fields: ["eyebrow", "title", "description"],
+        key: "archive",
+        label: "Archive",
+        description: "Story archive controls and editorial listing.",
+        fields: ["eyebrow", "ctaLabel"],
         defaults: {
-          eyebrow: "Journal",
-          title: "Latest stories",
-          description: "A collection of travel notes, wildlife encounters and visual essays.",
+          eyebrow: "Browse by category",
+          ctaLabel: "Load more stories",
         },
         images: [
           {
-            key: "ornamental",
-            label: "Archive ornament",
+            key: "ornament",
+            label: "Archive drawing ornament",
             category: "ornamental",
-            defaultSrc: "/images/admin/stamp_corner.png",
+            defaultSrc: "/images/about/hero_drawing_01.png",
+          },
+        ],
+      },
+      {
+        key: "newsletter",
+        label: "Newsletter",
+        description: "Newsletter call-to-action section.",
+        fields: ["ctaLabel", "title"],
+        defaults: {
+          title: "Stay inspired",
+          ctaLabel: "Subscribe",
+          imageSrc: "/images/portfolio/newsletter_fond.png",
+        },
+        images: [
+          {
+            key: "background",
+            label: "Newsletter background",
+            category: "background",
+            defaultSrc: "/images/portfolio/newsletter_fond.png",
+          },
+          {
+            key: "leftPhoto",
+            label: "Left sailboat photo",
+            category: "photoframe",
+            defaultSrc: "/images/home/cta_sailboat_01.png",
+          },
+          {
+            key: "rightPhoto",
+            label: "Right ocean cliff photo",
+            category: "photoframe",
+            defaultSrc: "/images/home/cta_ocean_cliff_01.png",
+          },
+          {
+            key: "stamp",
+            label: "Newsletter stamp",
+            category: "ornamental",
+            defaultSrc: "/images/home/cta_stamp_01.png",
+          },
+        ],
+        drawings: [
+          {
+            key: "handwritten",
+            label: "Newsletter handwritten subtitle",
+            defaultText: "stories, new photos & adventures",
           },
         ],
       },
@@ -871,17 +943,19 @@ Always chasing the light.`,
     key: "videos",
     title: "Videos",
     href: "/videos",
-    description: "Videos page, hero copy and film sections.",
+    description: "Films page with hero, featured film, video collection, inspiration and final CTA.",
     sections: [
       {
         key: "hero",
         label: "Hero",
-        description: "Top section of the Videos page.",
-        fields: ["eyebrow", "title", "description"],
+        description: "Top section of the Videos page with background, framed photos and intro text.",
+        fields: ["ctaLabel", "eyebrow", "title", "description"],
         defaults: {
-          eyebrow: "Videos",
-          title: "Films from the ocean and the road.",
-          description: "Short films, travel episodes and cinematic memories.",
+          ctaLabel: "Watch our films →",
+          eyebrow: "Our films",
+          title: "Films from the road.",
+          description:
+            "Short films, travel recaps and visual stories from land and sea. Cinematic moments, real emotions, wild places.",
           imageSrc: "/images/videos/hero_fond.png",
         },
         images: [
@@ -892,48 +966,130 @@ Always chasing the light.`,
             defaultSrc: "/images/videos/hero_fond.png",
           },
           {
-            key: "photo",
-            label: "Hero film still",
-            category: "photo",
-            defaultSrc: "/images/videos/featured_thailand_01.png",
+            key: "heroCoast",
+            label: "Coast photo frame",
+            category: "photoframe",
+            defaultSrc: "/images/videos/hero_coast_01.png",
+          },
+          {
+            key: "heroTurtle",
+            label: "Turtle photo frame",
+            category: "photoframe",
+            defaultSrc: "/images/videos/hero_turtle_01.png",
+          },
+          {
+            key: "heroRoadtrip",
+            label: "Roadtrip photo frame",
+            category: "photoframe",
+            defaultSrc: "/images/videos/hero_roadtrip_01.png",
+          },
+        ],
+        drawings: [
+          {
+            key: "handwritten",
+            label: "Hero handwritten text",
+            defaultText: "collect moments,\nnot things.",
           },
         ],
       },
       {
         key: "featured-film",
         label: "Featured film",
-        description: "Featured video block introduction.",
-        fields: ["eyebrow", "title", "description"],
+        description:
+          "Automatically display the latest uploaded Vimeo video or select a specific uploaded video.",
+        fields: [],
+        defaults: {},
+      },
+      {
+        key: "collection",
+        label: "Collection",
+        description: "Video archive heading and category filter area.",
+        fields: ["eyebrow", "title"],
         defaults: {
-          eyebrow: "Featured film",
-          title: "Latest episode",
-          description: "A highlighted film from the collection.",
+          eyebrow: "Explore more films",
+          title: "Our collection",
+        },
+      },
+      {
+        key: "inspiration",
+        label: "Inspiration",
+        description: "Editorial section with image strip and CTA.",
+        fields: ["ctaLabel", "eyebrow", "title", "description"],
+        defaults: {
+          ctaLabel: "Follow our journey →",
+          eyebrow: "What inspires us",
+          title: "Stories, places & people.",
+          description:
+            "We love creating films that bring you closer to the wild places we explore and the stories that deserve to be told.",
         },
         images: [
           {
-            key: "photo",
-            label: "Featured film poster",
+            key: "image01",
+            label: "Inspiration image 01",
             category: "photo",
-            defaultSrc: "/images/videos/featured_thailand_01.png",
+            defaultSrc: "/images/videos/inspiration_01.png",
+          },
+          {
+            key: "image02",
+            label: "Inspiration image 02",
+            category: "photo",
+            defaultSrc: "/images/videos/inspiration_02.png",
+          },
+          {
+            key: "image03",
+            label: "Inspiration image 03",
+            category: "photo",
+            defaultSrc: "/images/videos/inspiration_03.png",
+          },
+          {
+            key: "image04",
+            label: "Inspiration image 04",
+            category: "photo",
+            defaultSrc: "/images/videos/inspiration_04.png",
+          },
+          {
+            key: "image05",
+            label: "Inspiration image 05",
+            category: "photo",
+            defaultSrc: "/images/videos/inspiration_05.png",
           },
         ],
       },
       {
-        key: "collection-intro",
-        label: "Collection intro",
-        description: "Introduction above the video collection.",
-        fields: ["eyebrow", "title", "description"],
+        key: "final-cta",
+        label: "Final CTA",
+        description: "Bottom call-to-action section.",
+        fields: ["ctaLabel", "title", "description"],
         defaults: {
-          eyebrow: "Collection",
-          title: "All films",
-          description: "Browse travel films, ocean films, recaps and behind the scenes.",
+          ctaLabel: "Get in touch →",
+          title: "Love visual storytelling?",
+          description: "Let’s create something beautiful together.",
+          imageSrc: "/images/videos/cta_fond.png",
         },
         images: [
           {
-            key: "ornamental",
-            label: "Collection ornament",
+            key: "background",
+            label: "CTA background",
+            category: "background",
+            defaultSrc: "/images/videos/cta_fond.png",
+          },
+          {
+            key: "stamp",
+            label: "CTA stamp",
             category: "ornamental",
-            defaultSrc: "/images/admin/stamp_corner.png",
+            defaultSrc: "/images/videos/cta_stamp_01.png",
+          },
+          {
+            key: "duo",
+            label: "Duo photo frame",
+            category: "photoframe",
+            defaultSrc: "/images/videos/cta_duo_01.png",
+          },
+          {
+            key: "leaf",
+            label: "Leaf ornament",
+            category: "ornamental",
+            defaultSrc: "/images/videos/cta_leaf_01.png",
           },
         ],
       },
@@ -941,19 +1097,22 @@ Always chasing the light.`,
   },
   {
     key: "client-albums",
-    title: "Client albums",
+    title: "Client Albums",
     href: "/client-albums",
-    description: "Client album landing page, private gallery access and CTA.",
+    description:
+      "Private gallery landing page with hero, intro, recent albums, secure access and final CTA.",
     sections: [
       {
         key: "hero",
         label: "Hero",
-        description: "Top section of the Client albums page.",
+        description:
+          "Top section of the Client Albums page with background, framed photos and handwritten note.",
         fields: ["eyebrow", "title", "description"],
         defaults: {
           eyebrow: "Client albums",
           title: "Your memories, beautifully preserved.",
-          description: "Private galleries for clients, families, couples and brands.",
+          description:
+            "Private galleries for our incredible clients. Relive your adventures and share your moments with the people who matter most.",
           imageSrc: "/images/client-albums/hero_fond.png",
         },
         images: [
@@ -964,16 +1123,28 @@ Always chasing the light.`,
             defaultSrc: "/images/client-albums/hero_fond.png",
           },
           {
-            key: "photo",
-            label: "Hero client image",
-            category: "photo",
+            key: "hero01",
+            label: "Left photo frame",
+            category: "photoframe",
             defaultSrc: "/images/client-albums/hero_01.png",
+          },
+          {
+            key: "hero02",
+            label: "Small photo frame",
+            category: "photoframe",
+            defaultSrc: "/images/client-albums/hero_02.png",
+          },
+          {
+            key: "stamp",
+            label: "Hero stamp",
+            category: "ornamental",
+            defaultSrc: "/images/client-albums/hero_stamp_01.png",
           },
         ],
         drawings: [
           {
             key: "handwritten",
-            label: "Handwritten text",
+            label: "Hero handwritten text",
             defaultText: "for the moments that stay",
           },
         ],
@@ -981,30 +1152,58 @@ Always chasing the light.`,
       {
         key: "intro",
         label: "Intro",
-        description: "Introductory private gallery text.",
-        fields: ["eyebrow", "title", "description"],
+        description:
+          "Introductory section explaining the purpose of private galleries.",
+        fields: ["ctaLabel", "eyebrow", "title", "description"],
         defaults: {
+          ctaLabel: "How it works",
           eyebrow: "Private & personal",
           title: "A gallery, just for you.",
-          description: "A private space to download, share and cherish your images.",
+          description:
+            "Whether it’s an elopement, a family adventure, a brand project or an unforgettable experience, your gallery is a space to download, share and cherish.",
         },
         images: [
           {
-            key: "photoframe",
-            label: "Intro photo frame",
-            category: "photoframe",
+            key: "photo",
+            label: "Intro photo",
+            category: "photo",
             defaultSrc: "/images/client-albums/intro_01.png",
           },
         ],
       },
       {
-        key: "access",
-        label: "Access",
-        description: "Password and access explanation.",
-        fields: ["title", "description"],
+        key: "recent",
+        label: "Recent albums",
+        description:
+          "Recent published client albums from the Albums manager.",
+        fields: ["ctaLabel", "eyebrow", "title", "description"],
         defaults: {
-          title: "Access your private gallery",
-          description: "Use your private password to enter your album.",
+          ctaLabel: "Contact us",
+          eyebrow: "Recent client albums",
+          title: "Can’t find your gallery?",
+          description: "Send us a message and we’ll help you out.",
+        },
+        images: [
+          {
+            key: "ornament",
+            label: "Background ornament",
+            category: "ornamental",
+            defaultSrc: "/images/about/ocean_icon_04.png",
+          },
+        ],
+      },
+      {
+        key: "access",
+        label: "Secure access",
+        description:
+          "Access information section with feature list and password card.",
+        fields: ["eyebrow", "title", "description"],
+        defaults: {
+          eyebrow: "Easy & secure access",
+          title: "Your gallery, your way.",
+          description:
+            "Each gallery is designed to be simple, private and easy to share with the people who matter most.",
+          imageSrc: "/images/client-albums/access_fond.png",
         },
         images: [
           {
@@ -1013,29 +1212,46 @@ Always chasing the light.`,
             category: "background",
             defaultSrc: "/images/client-albums/access_fond.png",
           },
+        ],
+        drawings: [
           {
-            key: "photoframe",
-            label: "Access card image",
+            key: "handwritten",
+            label: "Access card handwritten text",
+            defaultText: "access your\ngallery",
+          },
+        ],
+      },
+      {
+        key: "final-cta",
+        label: "Final CTA",
+        description:
+          "Bottom call-to-action section for new projects.",
+        fields: ["ctaLabel", "title", "description"],
+        defaults: {
+          ctaLabel: "Let’s connect",
+          title: "Have a project in mind?",
+          description: "Let’s create something unforgettable together.",
+          imageSrc: "/images/client-albums/cta_fond.png",
+        },
+        images: [
+          {
+            key: "background",
+            label: "CTA background",
+            category: "background",
+            defaultSrc: "/images/client-albums/cta_fond.png",
+          },
+          {
+            key: "whale",
+            label: "CTA whale frame",
             category: "photoframe",
-            defaultSrc: "/images/client-albums/access_card.png",
+            defaultSrc: "/images/client-albums/cta_01.png",
           },
+        ],
+        drawings: [
           {
-            key: "iconPrivate",
-            label: "Private gallery icon",
-            category: "icons",
-            defaultSrc: "/images/client-albums/access_icon_01.png",
-          },
-          {
-            key: "iconDownload",
-            label: "Download icon",
-            category: "icons",
-            defaultSrc: "/images/client-albums/access_icon_02.png",
-          },
-          {
-            key: "iconShare",
-            label: "Share icon",
-            category: "icons",
-            defaultSrc: "/images/client-albums/access_icon_03.png",
+            key: "handwritten",
+            label: "CTA handwritten text",
+            defaultText: "we’re here\nfor you!",
           },
         ],
       },
@@ -1045,17 +1261,20 @@ Always chasing the light.`,
     key: "contact",
     title: "Contact",
     href: "/contact",
-    description: "Contact page copy, form introduction and contact details.",
+    description:
+      "Contact page with hero, services, contact form, details panel and newsletter.",
     sections: [
       {
         key: "hero",
         label: "Hero",
-        description: "Top section of the Contact page.",
+        description:
+          "Top section of the Contact page with background, framed photos and handwritten note.",
         fields: ["eyebrow", "title", "description"],
         defaults: {
           eyebrow: "Contact",
-          title: "Tell us about your next story.",
-          description: "For visual projects, private galleries, travel work and creative collaborations.",
+          title: "Let’s create something beautiful.",
+          description:
+            "Whether it’s a film, a private gallery, a wild adventure or a simple hello, we’d love to hear your story.",
           imageSrc: "/images/contact/hero_fond.png",
         },
         images: [
@@ -1066,46 +1285,138 @@ Always chasing the light.`,
             defaultSrc: "/images/contact/hero_fond.png",
           },
           {
-            key: "photo",
-            label: "Contact visual",
-            category: "photo",
+            key: "hero01",
+            label: "Large hero photo",
+            category: "photoframe",
             defaultSrc: "/images/contact/hero_01.png",
           },
-        ],
-      },
-      {
-        key: "form-intro",
-        label: "Form intro",
-        description: "Text above the contact form.",
-        fields: ["title", "description"],
-        defaults: {
-          title: "Start the conversation",
-          description: "Share a few details about your project and we will get back to you.",
-        },
-        images: [
           {
-            key: "ornamental",
-            label: "Form ornament",
-            category: "ornamental",
-            defaultSrc: "/images/admin/stamp_corner.png",
+            key: "hero02",
+            label: "Small hero photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/hero_02.png",
+          },
+        ],
+        drawings: [
+          {
+            key: "handwritten",
+            label: "Hero handwritten text",
+            defaultText: "stories begin with hello",
           },
         ],
       },
       {
-        key: "details",
-        label: "Contact details",
-        description: "Email, location or practical contact information.",
-        fields: ["title", "body"],
+        key: "services",
+        label: "Services",
+        description:
+          "Services section with decorative photos and portfolio call-to-action.",
+        fields: ["ctaLabel", "eyebrow", "title", "description"],
         defaults: {
-          title: "Contact details",
-          body: "Email, location and availability details can be edited here.",
+          ctaLabel: "View portfolio",
+          eyebrow: "What we do",
+          title: "How can we work together?",
+          description:
+            "Photography, videography and collaborations for stories from land and sea.",
         },
         images: [
           {
-            key: "icons",
-            label: "Contact icon",
-            category: "icons",
-            defaultSrc: "/images/contact/icon_01.png",
+            key: "leftTall",
+            label: "Left tall photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/services_left_01.png",
+          },
+          {
+            key: "leftSmall",
+            label: "Left small photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/services_left_02.png",
+          },
+          {
+            key: "rightTall",
+            label: "Right tall photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/services_right_01.png",
+          },
+          {
+            key: "rightSmall",
+            label: "Right small photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/services_right_02.png",
+          },
+        ],
+      },
+      {
+        key: "form",
+        label: "Contact form",
+        description:
+          "Main contact form and dark contact information panel.",
+        fields: ["ctaLabel", "eyebrow", "title", "description", "body"],
+        defaults: {
+          ctaLabel: "Send message",
+          eyebrow: "Send us a message",
+          title: "Tell us about your project",
+          description: "We’ll do our best to get back to you within 48 hours.",
+          body:
+            "We believe in real connections,\nwild places and telling\nstories that matter.",
+        },
+        images: [
+          {
+            key: "ornament",
+            label: "Form background ornament",
+            category: "ornamental",
+            defaultSrc: "/images/about/hero_drawing_01.png",
+          },
+          {
+            key: "photo",
+            label: "Contact panel photo",
+            category: "photoframe",
+            defaultSrc: "/images/contact/form_01.png",
+          },
+        ],
+        drawings: [
+          {
+            key: "panelEyebrow",
+            label: "Contact panel eyebrow",
+            defaultText: "Get in touch",
+          },
+        ],
+      },
+      {
+        key: "newsletter",
+        label: "Newsletter",
+        description:
+          "Newsletter subscription section with image strip.",
+        fields: ["ctaLabel", "title", "description"],
+        defaults: {
+          ctaLabel: "Subscribe",
+          title: "Stay inspired",
+          description:
+            "Join our mailing list for new stories, photos and behind the scenes.",
+        },
+        images: [
+          {
+            key: "image01",
+            label: "Newsletter image 01",
+            category: "photo",
+            defaultSrc: "/images/contact/newsletter_01.png",
+          },
+          {
+            key: "image02",
+            label: "Newsletter image 02",
+            category: "photo",
+            defaultSrc: "/images/contact/newsletter_02.png",
+          },
+          {
+            key: "image03",
+            label: "Newsletter image 03",
+            category: "photo",
+            defaultSrc: "/images/contact/newsletter_03.png",
+          },
+          {
+            key: "image04",
+            label: "Newsletter image 04",
+            category: "photo",
+            defaultSrc: "/images/contact/newsletter_04.png",
           },
         ],
       },
