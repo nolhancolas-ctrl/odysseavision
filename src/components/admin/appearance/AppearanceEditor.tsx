@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 import type { AppearanceSettings } from "@/lib/content/appearance";
 
 type AppearanceEditorProps = {
@@ -559,11 +560,15 @@ export function AppearanceEditor({
               </Field>
             </div>
 
-            <Field label="Public logo path">
-              <TextInput
+            <Field label="Public logo">
+              <AdminImageDropzone
+                label="Public logo"
                 value={publicLogoSrc}
                 onChange={setPublicLogoSrc}
-                placeholder="/images/admin/odyssea_logo.png"
+                context="appearance"
+                entitySlug="brand"
+                slotKey="public-logo"
+                ratio="1 / 1"
               />
             </Field>
           </div>
@@ -748,12 +753,28 @@ export function AppearanceEditor({
               Enable splashscreen
             </label>
 
-            <Field label="Outer logo path">
-              <TextInput value={splashOuterLogoSrc} onChange={setSplashOuterLogoSrc} />
+            <Field label="Outer logo">
+              <AdminImageDropzone
+                label="Splash outer logo"
+                value={splashOuterLogoSrc}
+                onChange={setSplashOuterLogoSrc}
+                context="appearance"
+                entitySlug="splashscreen"
+                slotKey="outer-logo"
+                ratio="1 / 1"
+              />
             </Field>
 
-            <Field label="Inner logo path">
-              <TextInput value={splashInnerLogoSrc} onChange={setSplashInnerLogoSrc} />
+            <Field label="Inner logo">
+              <AdminImageDropzone
+                label="Splash inner logo"
+                value={splashInnerLogoSrc}
+                onChange={setSplashInnerLogoSrc}
+                context="appearance"
+                entitySlug="splashscreen"
+                slotKey="inner-logo"
+                ratio="1 / 1"
+              />
             </Field>
 
             <Field label="Splash text">

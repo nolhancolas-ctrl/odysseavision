@@ -265,3 +265,74 @@ input[type="submit"],
 input[type="reset"] {
   cursor: pointer;
 }
+
+/* Hide native scrollbars while keeping scroll enabled */
+html,
+body,
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 0;
+  height: 0;
+  display: none;
+}
+
+@keyframes ov-login-shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  15% {
+    transform: translateX(-14px);
+  }
+  30% {
+    transform: translateX(12px);
+  }
+  45% {
+    transform: translateX(-9px);
+  }
+  60% {
+    transform: translateX(7px);
+  }
+  75% {
+    transform: translateX(-4px);
+  }
+}
+
+.ov-login-shake {
+  animation: ov-login-shake 0.42s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+/* Newsletter builder image blocks */
+.newsletter-builder-image-frame {
+  width: 100%;
+  max-width: 100%;
+}
+
+.newsletter-builder-image-frame--mail {
+  max-width: 520px;
+  margin-right: auto;
+}
+
+.newsletter-builder-image-frame--mail img {
+  display: block;
+  width: 100%;
+  max-width: 520px;
+  height: auto;
+}
+
+.newsletter-builder-image-frame--mail [style*="background-image"] {
+  width: 100% !important;
+  max-width: 520px !important;
+  background-size: contain !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+}
+
+.newsletter-builder-image-frame--mail > * {
+  max-width: 520px;
+}

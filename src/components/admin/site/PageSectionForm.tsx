@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 import type {
   EditableFieldKey,
   EditableImageCategory,
@@ -111,10 +112,6 @@ function fieldValue(
   return content[field] ?? section.defaults[field] ?? "";
 }
 
-function isImagePath(value: string) {
-  return /\.(png|jpe?g|webp|gif|svg)$/i.test(value);
-}
-
 function getInitialImageValue(slot: EditableImageSlot, content: SectionContent) {
   if (content.images && typeof content.images[slot.key] === "string") {
     return content.images[slot.key];
@@ -127,89 +124,57 @@ function getInitialImageValue(slot: EditableImageSlot, content: SectionContent) 
   return slot.defaultSrc ?? "";
 }
 
+function getCurrentWebsitePageKey() {
+  if (typeof window === "undefined") {
+    return "website-page";
+  }
+
+  const parts = window.location.pathname.split("/").filter(Boolean);
+  const pageKey = parts[parts.length - 1] || "website-page";
+
+  try {
+    return decodeURIComponent(pageKey);
+  } catch {
+    return pageKey;
+  }
+}
+
+function getImageSlotRatio(slot: EditableImageSlot) {
+  if (slot.category === "background") return "16 / 9";
+  if (slot.category === "icons") return "1 / 1";
+  if (slot.category === "ornamental") return "1 / 1";
+  if (slot.category === "drawing") return "1 / 1";
+
+  return "4 / 3";
+}
+
 function ImageSlotEditor({
   slot,
   value,
   onChange,
+  sectionKey,
 }: {
   slot: EditableImageSlot;
   value: string;
   onChange: (value: string) => void;
+  sectionKey: string;
 }) {
-  const [isEditing, setIsEditing] = useState(!value);
-  const hasImage = Boolean(value);
+  const pageKey = getCurrentWebsitePageKey();
 
   return (
-    <div
-      className={`rounded-[1.5rem] border p-4 transition ${
-        hasImage
-          ? "border-[#242617]/10 bg-[#f4efe4]/65"
-          : "border-dashed border-[#242617]/12 bg-transparent"
-      }`}
-    >
+    <div>
       <input readOnly type="hidden" name={`image:${slot.key}`} value={value} />
 
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/40">
-            {slot.label}
-          </p>
-
-          <p className="mt-1 break-all text-xs text-[#242617]/45">
-            {hasImage ? value : "No image selected"}
-          </p>
-        </div>
-
-        {hasImage ? (
-          <button
-            type="button"
-            onClick={() => {
-              onChange("");
-              setIsEditing(false);
-            }}
-            className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border border-red-900/20 text-sm font-bold text-red-900/55 transition hover:border-red-800 hover:bg-red-800 hover:text-[#f4efe4]"
-            aria-label={`Remove ${slot.label}`}
-          >
-            ×
-          </button>
-        ) : null}
-      </div>
-
-      {hasImage && isImagePath(value) ? (
-        <div
-          className="mt-4 aspect-[16/9] rounded-2xl border border-[#242617]/8 bg-[#e8dfcf] bg-contain bg-center bg-no-repeat"
-          style={{ backgroundImage: `url(${value})` }}
-        />
-      ) : hasImage ? (
-        <div className="mt-4 rounded-2xl border border-[#242617]/8 bg-[#e8dfcf]/60 p-4 text-xs text-[#242617]/45">
-          Preview unavailable for this file type.
-        </div>
-      ) : null}
-
-      {isEditing ? (
-        <div className="mt-4">
-          <label className="mb-2 block text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/40">
-            Image path
-          </label>
-
-          <input
-            value={value}
-            onChange={(event) => onChange(event.target.value)}
-            className="w-full rounded-2xl border border-[#242617]/10 bg-white/60 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
-            placeholder="/images/..."
-          />
-        </div>
-      ) : null}
-
-      <div className="mt-4 flex flex-wrap gap-3">
-        <button
-          type="button"
-          onClick={() => setIsEditing((current) => !current)}
-          className="cursor-pointer rounded-full border border-[#242617]/15 px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
-        >
-          {hasImage ? "Replace" : "Add"}
-        </button>
-      </div>
+      <AdminImageDropzone
+        label={slot.label}
+        value={value}
+        onChange={onChange}
+        context="website-page"
+        pageKey={pageKey}
+        sectionKey={sectionKey}
+        slotKey={slot.key}
+        ratio={getImageSlotRatio(slot)}
+      />
     </div>
   );
 }
@@ -449,6 +414,7 @@ export function PageSectionForm({
                         key={slot.key}
                         slot={slot}
                         value={imageValues[slot.key] ?? ""}
+                        sectionKey={section.key}
                         onChange={(value) =>
                           setImageValues((current) => ({
                             ...current,

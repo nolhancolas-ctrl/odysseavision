@@ -28,6 +28,23 @@ async function resolveCategory(formData: FormData) {
   const categoryId = String(formData.get("categoryId") ?? "");
   const newCategory = String(formData.get("newCategory") ?? "").trim();
 
+  if (categoryId === "__new__") {
+    if (!newCategory) {
+      throw new Error("New category name is required.");
+    }
+
+    const slug = slugify(newCategory);
+
+    return db.storyCategory.upsert({
+      where: { slug },
+      update: { name: newCategory },
+      create: {
+        name: newCategory,
+        slug,
+      },
+    });
+  }
+
   if (newCategory) {
     const slug = slugify(newCategory);
 
@@ -42,13 +59,20 @@ async function resolveCategory(formData: FormData) {
   }
 
   if (categoryId) {
-    return db.storyCategory.findUnique({
+    const category = await db.storyCategory.findUnique({
       where: { id: categoryId },
     });
+
+    if (!category) {
+      throw new Error("Selected category was not found.");
+    }
+
+    return category;
   }
 
-  return null;
+  throw new Error("A story category is required.");
 }
+
 
 function getStoryData(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();

@@ -1,11 +1,6 @@
 import Link from "next/link";
-import {
-  adminActivities,
-  adminQuickActions,
-  adminRecentAlbums,
-  adminRecentItems,
-  adminStats,
-} from "@/data/admin";
+import { adminQuickActions } from "@/data/admin";
+import { getAdminDashboardData } from "@/lib/admin/dashboard";
 
 function DashboardIcon({
   src,
@@ -34,9 +29,11 @@ function StatusBadge({ status }: { status: string }) {
   const variant =
     status === "Published"
       ? "bg-[#d9ead5] text-[#286235]"
-      : status === "Pending"
-        ? "bg-[#f3dfb8] text-[#8a6314]"
-        : "bg-[#eadfc8] text-[#84652d]";
+      : status === "Draft"
+        ? "bg-[#eadfc8] text-[#84652d]"
+        : status === "Archived"
+          ? "bg-[#e8d6d1] text-[#8a3d2f]"
+          : "bg-[#f3dfb8] text-[#8a6314]";
 
   return (
     <span
@@ -58,26 +55,51 @@ function SoftButton({ href, children }: { href: string; children: string }) {
   );
 }
 
-export function AdminDashboard() {
+function getStatHref(label: string) {
+  const key = label.toLowerCase();
+
+  if (key.includes("view")) {
+    return "/admin/analytics/views";
+  }
+
+  if (key.includes("message")) {
+    return "/admin/messages";
+  }
+
+  if (key.includes("subscriber")) {
+    return "/admin/analytics/subscribers";
+  }
+
+  return "/admin";
+}
+
+export async function AdminDashboard() {
+  const dashboard = await getAdminDashboardData();
+
   return (
     <div className="space-y-7">
-      <section className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+      <section className="max-w-6xl">
         <div>
-          <h1 className="font-serif text-4xl leading-none tracking-[-0.04em] text-[#11170f] md:text-6xl">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
+            Admin overview
+          </p>
+
+          <h1 className="mt-3 font-serif text-4xl leading-none tracking-[-0.04em] text-[#11170f] md:text-6xl">
             Hey Andrew and Morgane, what&apos;s up?
           </h1>
-        </div>
 
-        <div className="rounded-full border border-[#11170f]/12 bg-white/35 px-5 py-3 text-xs uppercase tracking-[0.18em] text-[#11170f]/55">
-          Private editing mode
-        </div>
-      </section>
+          <div className="mt-5 flex items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#11170f]/42">
+            <span className="h-2 w-2 rounded-full bg-[#2b6b3c]" />
+            <span>Private editing mode active</span>
+          </div>
+        </div>      </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {adminStats.map((stat) => (
-          <article
+      <section className="grid gap-4 md:grid-cols-3">
+        {dashboard.stats.map((stat) => (
+          <Link
             key={stat.label}
-            className="rounded-3xl border border-[#11170f]/10 bg-white/42 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]"
+            href={getStatHref(stat.label)}
+            className="group block rounded-3xl border border-[#11170f]/10 bg-white/42 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)] transition hover:-translate-y-1 hover:border-[#b88a3b]/45 hover:bg-white"
           >
             <div className="flex items-start justify-between gap-5">
               <div>
@@ -91,115 +113,166 @@ export function AdminDashboard() {
               </div>
 
               <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-[#b88a3b]/20 bg-[#b88a3b]/8 text-xl text-[#a6792e]">
-                <DashboardIcon src={stat.iconSrc} fallback={stat.icon} />
+                <DashboardIcon fallback={stat.icon} />
               </span>
             </div>
-          </article>
+          </Link>
         ))}
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[1.3fr_0.82fr_0.82fr]">
-        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <div className="mb-5 flex items-center justify-between gap-4">
+      <section className="grid gap-5 xl:grid-cols-3 xl:h-[70vh] xl:min-h-[560px]">
+        <article className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="mb-5 flex shrink-0 items-center justify-between gap-4">
             <h2 className="font-serif text-2xl">Recent content</h2>
             <SoftButton href="/admin/stories">View all</SoftButton>
           </div>
 
           <div className="space-y-3">
-            {adminRecentItems.map((item) => (
-              <div
-                key={item.title}
-                className="grid grid-cols-[82px_1fr] items-center gap-4 border-t border-[#11170f]/8 py-3 first:border-t-0 md:grid-cols-[82px_1fr_auto]"
-              >
-                <div
-                  className="h-16 rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
-                  style={{ backgroundImage: `url(${item.image})` }}
-                />
+            {dashboard.recentContent.length > 0 ? (
+              dashboard.recentContent.map((item) => (
+                <Link
+                  href={item.href}
+                  key={`${item.type}-${item.title}`}
+                  className="group grid grid-cols-[92px_minmax(0,1fr)_112px] items-center gap-4 border-t border-[#11170f]/8 py-3 transition first:border-t-0 hover:opacity-75 max-sm:grid-cols-[92px_1fr]"
+                >
+                  <div
+                    className="relative h-[76px] rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
+                    style={{ backgroundImage: `url(${item.image})` }}
+                  >
+                    <div className="absolute bottom-2 right-2 hidden max-sm:block">
+                      <StatusBadge status={item.status} />
+                    </div>
+                  </div>
 
-                <div>
-                  <p className="text-[11px] uppercase tracking-[0.16em] text-[#11170f]/40">
-                    {item.type}
-                  </p>
-                  <p className="mt-1 text-sm font-semibold text-[#11170f]">
-                    {item.title}
-                  </p>
-                </div>
+                  <div className="min-w-0 max-sm:hidden">
+                    <p className="text-[10px] uppercase tracking-[0.16em] text-[#11170f]/38">
+                      {item.type}
+                    </p>
+                    <p className="mt-1 overflow-hidden text-sm font-semibold leading-5 text-[#11170f] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                      {item.title}
+                    </p>
+                  </div>
 
-                <div className="hidden items-center gap-4 md:flex">
-                  <StatusBadge status={item.status} />
-                  <p className="w-24 text-right text-xs text-[#11170f]/45">
-                    {item.date}
-                  </p>
-                </div>
-              </div>
-            ))}
+                  <div className="flex flex-col items-end gap-2 text-right max-sm:hidden">
+                    <StatusBadge status={item.status} />
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/35">
+                      {item.date}
+                    </p>
+                  </div>
+                </Link>
+              ))
+            ) : (
+              <p className="border-t border-[#11170f]/8 py-5 text-sm text-[#11170f]/45">
+                No recent content yet.
+              </p>
+            )}
           </div>
+        
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f7f2e8] via-[#f7f2e8]/82 to-transparent"
+          />
         </article>
 
-        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <div className="mb-5 flex items-center justify-between gap-4">
+        <article className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="mb-5 flex shrink-0 items-center justify-between gap-4">
             <h2 className="font-serif text-2xl">Recent albums</h2>
             <SoftButton href="/admin/albums">View all</SoftButton>
           </div>
 
           <div className="space-y-4">
-            {adminRecentAlbums.map((album) => (
-              <div key={album.title} className="grid grid-cols-[74px_1fr] gap-4">
-                <div
-                  className="h-16 rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
-                  style={{ backgroundImage: `url(${album.image})` }}
-                />
-                <div>
-                  <p className="text-sm font-semibold">{album.title}</p>
-                  <p className="mt-1 text-xs text-[#11170f]/50">
-                    {album.photos}
-                  </p>
-                  <div className="mt-2">
-                    <StatusBadge status={album.status} />
+            {dashboard.recentAlbums.length > 0 ? (
+              dashboard.recentAlbums.map((album) => (
+                <Link
+                  href={album.href}
+                  key={album.title}
+                  className="grid grid-cols-[86px_1fr_auto] items-center gap-4 transition hover:opacity-75"
+                >
+                  <div
+                    className="h-[72px] rounded-2xl bg-[#d9d0c1] bg-cover bg-center"
+                    style={{ backgroundImage: `url(${album.image})` }}
+                  />
+                  <div className="min-w-0">
+                    <p className="overflow-hidden text-sm font-semibold leading-5 text-[#11170f] [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                      {album.title}
+                    </p>
+                    <p className="mt-1 text-xs text-[#11170f]/50">
+                      {album.photos}
+                    </p>
                   </div>
-                </div>
-              </div>
-            ))}
+                  <StatusBadge status={album.status} />
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#11170f]/45">
+                No client albums yet.
+              </p>
+            )}
           </div>
+        
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f7f2e8] via-[#f7f2e8]/82 to-transparent"
+          />
         </article>
 
-        <article className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <div className="flex items-center justify-between gap-4">
+        <article className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div className="mb-5 flex shrink-0 items-center justify-between gap-4">
             <h2 className="font-serif text-2xl">Recent activity</h2>
+            <SoftButton href="/admin/activity">View all</SoftButton>
           </div>
 
-          <div className="mt-5 space-y-4">
-            {adminActivities.map((activity) => (
-              <div key={activity} className="flex gap-3">
-                <span className="mt-1 h-2 w-2 rounded-full bg-[#b88a3b]" />
-                <p className="text-sm leading-6 text-[#11170f]/62">
-                  {activity}
-                </p>
-              </div>
-            ))}
+          <div className="space-y-4">
+            {dashboard.activity.length > 0 ? (
+              dashboard.activity.map((activity) => (
+                <Link
+                  key={activity.id}
+                  href={activity.href}
+                  className="flex gap-3 transition hover:opacity-75"
+                >
+                  <span className="mt-2 h-2 w-2 shrink-0 rounded-full bg-[#b88a3b]" />
+                  <span className="min-w-0">
+                    <span className="block text-sm font-semibold leading-5 text-[#11170f]/75">
+                      {activity.title}
+                    </span>
+                    <span className="mt-1 block overflow-hidden text-sm leading-6 text-[#11170f]/55 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:2]">
+                      {activity.detail}
+                    </span>
+                    <span className="mt-1 block text-[11px] uppercase tracking-[0.16em] text-[#11170f]/35">
+                      {activity.date}
+                    </span>
+                  </span>
+                </Link>
+              ))
+            ) : (
+              <p className="text-sm leading-6 text-[#11170f]/45">
+                No activity yet.
+              </p>
+            )}
           </div>
-
-          <div className="mt-6">
-            <SoftButton href="/admin/activity">View all activity</SoftButton>
-          </div>
+        
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-[#f7f2e8] via-[#f7f2e8]/82 to-transparent"
+          />
         </article>
       </section>
 
       <section className="rounded-3xl border border-[#11170f]/10 bg-white/38 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
         <h2 className="font-serif text-2xl">Quick actions</h2>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-7">
+        <div className="mt-5 grid gap-4 md:grid-cols-3 xl:grid-cols-6">
           {adminQuickActions.map((action) => (
             <Link
               key={action.label}
               href={action.href}
               className="group flex min-h-[118px] flex-col items-center justify-center rounded-3xl border border-[#11170f]/10 bg-[#f4efe4]/60 p-4 text-center transition hover:-translate-y-1 hover:border-[#b88a3b]/45 hover:bg-white"
             >
-              <span className="flex h-11 w-11 items-center justify-center transition group-hover:scale-110">
+              <span className="flex h-14 w-14 items-center justify-center transition group-hover:scale-110">
                 <DashboardIcon
                   src={action.iconSrc}
                   fallback={action.icon}
-                  className="h-9 w-9"
+                  className="h-10 w-10"
                 />
               </span>
               <span className="mt-3 text-sm text-[#11170f]/76">
@@ -207,27 +280,6 @@ export function AdminDashboard() {
               </span>
             </Link>
           ))}
-        </div>
-      </section>
-
-      <section className="rounded-3xl bg-[#071321] p-6 text-[#f4efe4] shadow-[0_20px_70px_rgba(7,19,33,0.25)]">
-        <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
-          <div>
-            <p className="text-[11px] uppercase tracking-[0.24em] text-[#d5ad68]">
-              Secret access
-            </p>
-            <p className="mt-2 text-sm leading-6 text-[#f4efe4]/68">
-              Later, the admin can be unlocked through a special password typed
-              into the client album access field.
-            </p>
-          </div>
-
-          <Link
-            href="/admin/settings"
-            className="rounded-full border border-[#d5ad68]/60 px-5 py-3 text-xs uppercase tracking-[0.16em] text-[#d5ad68] transition hover:bg-[#d5ad68] hover:text-[#071321]"
-          >
-            Prepare admin access
-          </Link>
         </div>
       </section>
     </div>

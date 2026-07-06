@@ -32,7 +32,6 @@ export function StoriesHero({ content }: StoriesHeroProps) {
   const heroManta = content?.images.heroManta || storiesImages.heroManta.src;
   const heroElephants =
     content?.images.heroElephants || storiesImages.heroElephants.src;
-  const drawing = content?.images.drawing || "/images/stories/hero_drawing_01.png";
   const stamp = content?.images.stamp || "/images/stories/hero_stamp_01.png";
 
   return (
@@ -90,14 +89,6 @@ export function StoriesHero({ content }: StoriesHeroProps) {
               src={heroElephants}
               label={fileLabel(heroElephants, storiesImages.heroElephants.label)}
               className="absolute right-[-25%] top-[28%] h-[215px] w-[185px] rotate-[5deg] border-[6px] border-white/90 shadow-2xl"
-            />
-          ) : null}
-
-          {drawing ? (
-            <img
-              src={drawing}
-              alt=""
-              className="absolute right-[-8%] top-[38%] w-24 opacity-55"
             />
           ) : null}
 

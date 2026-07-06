@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 import type { PageSeoSettings, SeoSettings } from "@/lib/content/seo";
 
 type SeoEditorProps = {
@@ -305,10 +306,14 @@ function PageSeoRow({
           </Field>
 
           <Field label="Page Open Graph image">
-            <TextInput
+            <AdminImageDropzone
+              label={`${page.label} Open Graph image`}
               value={page.ogImage}
               onChange={(value) => onChange({ ...page, ogImage: value })}
-              placeholder="/images/..."
+              context="seo"
+              entitySlug={page.pageKey}
+              slotKey="open-graph"
+              ratio="1.91 / 1"
             />
           </Field>
         </div>
@@ -410,7 +415,8 @@ export function SeoEditor({
     <form action={updateAction} className="space-y-8">
       <input type="hidden" name="seoSettings" value={payload} />
 
-      <Category
+      <div className="grid gap-8 xl:grid-cols-2">
+        <Category
         eyebrow="Global"
         title="Global SEO"
         description="Default metadata used across the whole website."
@@ -471,11 +477,18 @@ export function SeoEditor({
           </Field>
 
           <div className="md:col-span-2">
-            <Field label="Favicon path">
-              <TextInput
+            <Field
+              label="Favicon"
+              help="Upload a square PNG, SVG or WEBP. Existing /favicon.ico paths can still be kept manually in settings if needed."
+            >
+              <AdminImageDropzone
+                label="Favicon"
                 value={faviconSrc}
                 onChange={setFaviconSrc}
-                placeholder="/favicon.ico"
+                context="seo"
+                entitySlug="global"
+                slotKey="favicon"
+                ratio="1 / 1"
               />
             </Field>
           </div>
@@ -499,62 +512,86 @@ export function SeoEditor({
           />
         </div>
       </Category>
+      </div>
 
       <Category
         eyebrow="Sharing"
-        title="Open Graph"
-        description="Preview information used by social networks and messaging apps."
+        title="Sharing"
+        description="Preview images and metadata used by social networks and messaging apps."
       >
-        <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Open Graph type">
-            <TextInput value={openGraphType} onChange={setOpenGraphType} />
-          </Field>
+        <div className="grid gap-6 xl:grid-cols-2">
+          <section className="rounded-[1.5rem] border border-[#242617]/10 bg-[#f4efe4]/55 p-5">
+            <div className="mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b88a3b]">
+                Open Graph
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[#242617]/45">
+                Default sharing preview used by social platforms and messaging apps.
+              </p>
+            </div>
 
-          <Field label="Locale">
-            <TextInput value={openGraphLocale} onChange={setOpenGraphLocale} />
-          </Field>
+            <div className="grid gap-5">
+              <div className="grid gap-5 md:grid-cols-2">
+                <Field label="Open Graph type">
+                  <TextInput value={openGraphType} onChange={setOpenGraphType} />
+                </Field>
 
-          <div className="md:col-span-2">
-            <Field label="Default Open Graph image">
-              <TextInput
-                value={openGraphImage}
-                onChange={setOpenGraphImage}
-                placeholder="/images/home/hero_fond.png"
-              />
-            </Field>
-          </div>
+                <Field label="Locale">
+                  <TextInput value={openGraphLocale} onChange={setOpenGraphLocale} />
+                </Field>
+              </div>
 
-          {openGraphImage ? (
-            <div
-              className="aspect-[1.91] rounded-[1.5rem] border border-[#242617]/10 bg-[#e8dfcf] bg-cover bg-center md:col-span-2"
-              style={{ backgroundImage: `url(${openGraphImage})` }}
-            />
-          ) : null}
-        </div>
-      </Category>
+              <Field label="Default Open Graph image">
+                <AdminImageDropzone
+                  label="Default Open Graph image"
+                  value={openGraphImage}
+                  onChange={setOpenGraphImage}
+                  context="seo"
+                  entitySlug="global"
+                  slotKey="open-graph"
+                  ratio="1.91 / 1"
+                />
+              </Field>
+            </div>
+          </section>
 
-      <Category
-        eyebrow="Sharing"
-        title="Twitter / X cards"
-        description="Preview information used when pages are shared on Twitter/X."
-      >
-        <div className="grid gap-5 md:grid-cols-2">
-          <Field label="Card type">
-            <CardTypeSelect
-              value={twitterCard}
-              onChange={setTwitterCard}
-            />
-          </Field>
+          <section className="rounded-[1.5rem] border border-[#242617]/10 bg-[#f4efe4]/55 p-5">
+            <div className="mb-5">
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b88a3b]">
+                Twitter / X cards
+              </p>
+              <p className="mt-2 text-xs leading-5 text-[#242617]/45">
+                Specific preview card used when pages are shared on Twitter / X.
+              </p>
+            </div>
 
-          <Field label="Creator">
-            <TextInput value={twitterCreator} onChange={setTwitterCreator} />
-          </Field>
+            <div className="grid gap-5">
+              <div className="grid gap-5 md:grid-cols-2">
+                <Field label="Card type">
+                  <CardTypeSelect
+                    value={twitterCard}
+                    onChange={setTwitterCard}
+                  />
+                </Field>
 
-          <div className="md:col-span-2">
-            <Field label="Twitter image">
-              <TextInput value={twitterImage} onChange={setTwitterImage} />
-            </Field>
-          </div>
+                <Field label="Creator">
+                  <TextInput value={twitterCreator} onChange={setTwitterCreator} />
+                </Field>
+              </div>
+
+              <Field label="Twitter image">
+                <AdminImageDropzone
+                  label="Twitter image"
+                  value={twitterImage}
+                  onChange={setTwitterImage}
+                  context="seo"
+                  entitySlug="global"
+                  slotKey="twitter-image"
+                  ratio="1.91 / 1"
+                />
+              </Field>
+            </div>
+          </section>
         </div>
       </Category>
 
@@ -563,7 +600,7 @@ export function SeoEditor({
         title="Per-page SEO"
         description="Edit title, description, keywords and preview image for every main page."
       >
-        <div className="grid gap-5">
+        <div className="grid gap-5 xl:grid-cols-2">
           {pages.map((page, index) => (
             <PageSeoRow
               key={page.pageKey}

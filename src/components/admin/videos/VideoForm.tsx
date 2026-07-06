@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import type { Video, VideoCategory } from "@prisma/client";
 import { extractVimeoId, getVimeoEmbedUrl, getVimeoWatchUrl } from "@/lib/vimeo";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 
 type VideoWithCategory = Video & {
   category: VideoCategory | null;
@@ -163,24 +164,18 @@ export function VideoForm({
           <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#f4efe4]/55">
             Thumbnail
           </label>
-          <input
-            name="thumbnailSrc"
-            value={thumbnailSrc}
-            onChange={(event) => setThumbnailSrc(event.target.value)}
-            className="w-full rounded-2xl border border-[#f4efe4]/10 bg-[#071008] px-4 py-3 text-sm text-[#f4efe4] outline-none transition focus:border-[#d5ad68]/70"
-            placeholder="/images/videos/film_thailand_01.png"
-          />
 
-          {thumbnailSrc ? (
-            <div
-              className="mt-5 aspect-video rounded-3xl bg-[#071008] bg-cover bg-center"
-              style={{ backgroundImage: `url(${thumbnailSrc})` }}
-            />
-          ) : (
-            <div className="mt-5 flex aspect-video items-center justify-center rounded-3xl border border-dashed border-[#f4efe4]/15 bg-[#071008] px-5 text-center text-xs leading-5 text-[#f4efe4]/35">
-              Add a thumbnail path for the video card preview.
-            </div>
-          )}
+          <input type="hidden" name="thumbnailSrc" value={thumbnailSrc} />
+
+          <AdminImageDropzone
+            label="Video thumbnail"
+            value={thumbnailSrc}
+            onChange={setThumbnailSrc}
+            context="video"
+            entitySlug={video?.slug || video?.id || resolvedVimeoId || "draft"}
+            slotKey="thumbnail"
+            ratio="16 / 9"
+          />
         </div>
 
         <div className="space-y-4 rounded-[2rem] border border-[#f4efe4]/10 bg-[#10190f]/80 p-6">

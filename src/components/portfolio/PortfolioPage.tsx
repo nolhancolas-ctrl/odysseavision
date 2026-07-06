@@ -6,7 +6,6 @@ import { PortfolioCategories } from "./PortfolioCategories";
 import { PortfolioFeatured } from "./PortfolioFeatured";
 import { PortfolioRecent } from "./PortfolioRecent";
 import { PortfolioNewsletter } from "./PortfolioNewsletter";
-import { PortfolioLiveGallery } from "@/components/portfolio/PortfolioLiveGallery";
 
 export async function PortfolioPage() {
   const pageContent = await getPublicPageContent("portfolio");
@@ -17,7 +16,6 @@ export async function PortfolioPage() {
       <SiteHeader active="Portfolio" />
       <PortfolioHero content={sections.hero} />
       <PortfolioCategories content={sections.categories} />
-      <PortfolioLiveGallery content={sections["live-gallery"]} />
       <PortfolioFeatured content={sections.featured} />
       <PortfolioRecent content={sections.recent} />
       <PortfolioNewsletter content={sections.newsletter} />

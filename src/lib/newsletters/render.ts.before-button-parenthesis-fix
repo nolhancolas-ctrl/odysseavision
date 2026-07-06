@@ -1,0 +1,335 @@
+type NewsletterBlockType =
+  | "heading"
+  | "text"
+  | "image"
+  | "button"
+  | "quote"
+  | "divider"
+  | "spacer";
+
+type NewsletterBlock = {
+  id?: string;
+  type: NewsletterBlockType;
+  title?: string;
+  text?: string;
+  src?: string;
+  alt?: string;
+  label?: string;
+  href?: string;
+  height?: number;
+  align?: "left" | "center" | "right";
+};
+
+type NewsletterBodyPayload = {
+  version?: number;
+  blocks?: NewsletterBlock[];
+};
+
+type BuildNewsletterHtmlInput = {
+  title: string;
+  subject: string;
+  previewText?: string | null;
+  heroImage?: string | null;
+  body?: string | null;
+  ctaLabel?: string | null;
+  ctaHref?: string | null;
+};
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function normalizeUrl(value?: string | null) {
+  const url = value?.trim();
+
+  if (!url) {
+    return "";
+  }
+
+  if (
+    url.startsWith("/") ||
+    url.startsWith("http://") ||
+    url.startsWith("https://") ||
+    url.startsWith("mailto:")
+  ) {
+    return url;
+  }
+
+  return `https://${url}`;
+}
+
+function paragraphsFromText(value: string) {
+  return value
+    .split(/\n{2,}/)
+    .map((paragraph) => paragraph.trim())
+    .filter(Boolean)
+    .map((paragraph) => paragraph.replace(/\n/g, "<br />"))
+    .join("");
+}
+
+function parseBodyPayload(input: BuildNewsletterHtmlInput): NewsletterBlock[] {
+  const body = input.body?.trim() ?? "";
+
+  if (body) {
+    try {
+      const payload = JSON.parse(body) as NewsletterBodyPayload;
+
+      if (Array.isArray(payload.blocks)) {
+        return payload.blocks.filter((block) => block && block.type);
+      }
+    } catch {
+      // Legacy plain body.
+    }
+  }
+
+  const legacyBlocks: NewsletterBlock[] = [];
+
+  if (input.heroImage) {
+    legacyBlocks.push({
+      type: "image",
+      src: input.heroImage,
+      alt: input.title || input.subject,
+    });
+  }
+
+  if (body) {
+    legacyBlocks.push({
+      type: "text",
+      text: body,
+    });
+  }
+
+  if (input.ctaLabel || input.ctaHref) {
+    legacyBlocks.push({
+      type: "button",
+      label: input.ctaLabel || "Read more",
+      href: input.ctaHref || "#",
+      align: "center",
+    });
+  }
+
+  return legacyBlocks;
+}
+
+function renderTextBlock(text?: string) {
+  const content = paragraphsFromText(escapeHtml(text ?? ""));
+
+  if (!content) {
+    return "";
+  }
+
+  return content
+    .split(/(?=<br \/>)/)
+    .join("")
+    .replace(
+      /^([\s\S]*)$/,
+      `<tr><td style="padding:0 34px 22px 34px;color:#242617;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;">$1</td></tr>`,
+    );
+}
+
+function renderBlock(block: NewsletterBlock) {
+  if (block.type === "heading") {
+    const title = escapeHtml(block.title || "Section title");
+
+    return `
+      <tr>
+        <td style="padding:8px 34px 14px 34px;">
+          <h2 style="margin:0;color:#242617;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.05;font-weight:500;letter-spacing:-0.03em;">${title}</h2>
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "text") {
+    const text = escapeHtml(block.text || "");
+
+    if (!text) {
+      return "";
+    }
+
+    const paragraphs = text
+      .split(/\n{2,}/)
+      .map((paragraph) => paragraph.trim())
+      .filter(Boolean)
+      .map(
+        (paragraph) =>
+          `<p style="margin:0 0 16px 0;">${paragraph.replace(/\n/g, "<br />")}</p>`,
+      )
+      .join("");
+
+    return `
+      <tr>
+        <td style="padding:0 34px 12px 34px;color:#242617;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;">
+          ${paragraphs}
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "image") {
+    const src = normalizeUrl(block.src);
+
+    if (!src) {
+      return "";
+    }
+
+    return `
+      <tr>
+        <td align="center" style="padding:8px 34px 26px 34px;">
+          <img
+            src="${escapeHtml(src)}"
+            alt="${escapeHtml(block.alt || "")}"
+            width="460"
+            style="display:block;width:100%;max-width:460px;height:auto;margin:0 auto;border-radius:24px;"
+          />
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "button" {
+    const href = normalizeUrl(block.href);
+    const label = escapeHtml(block.label || "Read more");
+
+    if (!href) {
+      return "";
+    }
+
+    const align = block.align || "center";
+
+    return `
+      <tr>
+        <td align="${align}" style="padding:10px 34px 30px 34px;">
+          <a href="${escapeHtml(href)}" style="display:inline-block;border-radius:999px;background:#071321;color:#f4efe4;font-family:Arial,Helvetica,sans-serif;font-size:12px;font-weight:700;letter-spacing:0.16em;text-transform:uppercase;text-decoration:none;padding:15px 24px;">${label}</a>
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "quote") {
+    const text = escapeHtml(block.text || "");
+
+    if (!text) {
+      return "";
+    }
+
+    return `
+      <tr>
+        <td style="padding:8px 34px 26px 34px;">
+          <div style="border-left:3px solid #b88a3b;padding:6px 0 6px 18px;color:#242617;font-family:Georgia,'Times New Roman',serif;font-size:24px;line-height:1.35;font-style:italic;">
+            ${text.replace(/\n/g, "<br />")}
+          </div>
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "divider") {
+    return `
+      <tr>
+        <td style="padding:18px 34px 34px 34px;">
+          <div style="height:1px;background:rgba(36,38,23,0.14);line-height:1px;">&nbsp;</div>
+        </td>
+      </tr>
+    `;
+  }
+
+  if (block.type === "spacer") {
+    const height = Math.min(Math.max(Number(block.height || 28), 12), 96);
+
+    return `
+      <tr>
+        <td style="height:${height}px;line-height:${height}px;font-size:${height}px;">&nbsp;</td>
+      </tr>
+    `;
+  }
+
+  return "";
+}
+
+export function buildNewsletterHtml(input: BuildNewsletterHtmlInput) {
+  const blocks = parseBodyPayload(input);
+  const subject = escapeHtml(input.subject || input.title || "Odyssea Vision");
+  const title = escapeHtml(input.title || input.subject || "Odyssea Vision");
+  const previewText = escapeHtml(input.previewText || "");
+
+  const renderedBlocks = blocks.map(renderBlock).join("");
+
+  return `
+    <div style="background:#e8dfcf;padding:0;margin:0;">
+      <span style="display:none!important;visibility:hidden;opacity:0;color:transparent;height:0;width:0;overflow:hidden;mso-hide:all;">
+        ${previewText}
+      </span>
+
+      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="border-collapse:collapse;background:#e8dfcf;margin:0;padding:0;">
+        <tr>
+          <td align="center" style="padding:32px 16px;">
+            <table role="presentation" width="640" cellspacing="0" cellpadding="0" style="width:100%;max-width:640px;border-collapse:collapse;background:#f4efe4;border-radius:28px;overflow:hidden;">
+              <tr>
+                <td style="padding:34px 34px 22px 34px;text-align:center;">
+                  <p style="margin:0 0 12px 0;color:#b88a3b;font-family:Arial,Helvetica,sans-serif;font-size:11px;font-weight:700;letter-spacing:0.22em;text-transform:uppercase;">Odyssea Vision</p>
+                  <h1 style="margin:0;color:#242617;font-family:Georgia,'Times New Roman',serif;font-size:42px;line-height:0.95;font-weight:500;letter-spacing:-0.04em;">${subject}</h1>
+                  <p style="margin:16px 0 0 0;color:rgba(36,38,23,0.52);font-family:Arial,Helvetica,sans-serif;font-size:13px;line-height:1.7;">${title}</p>
+                </td>
+              </tr>
+
+              ${renderedBlocks}
+
+              <tr>
+                <td style="padding:24px 34px 34px 34px;text-align:center;color:rgba(36,38,23,0.42);font-family:Arial,Helvetica,sans-serif;font-size:11px;line-height:1.7;">
+                  You are receiving this email from Odyssea Vision.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+}
+
+
+export function buildNewsletterText(input: BuildNewsletterHtmlInput) {
+  const blocks = parseBodyPayload(input);
+
+  const lines = [
+    input.subject || input.title || "Odyssea Vision",
+    input.previewText || "",
+    "",
+  ];
+
+  for (const block of blocks) {
+    if (block.type === "heading" && block.title) {
+      lines.push(block.title, "");
+    }
+
+    if ((block.type === "text" || block.type === "quote") && block.text) {
+      lines.push(block.text, "");
+    }
+
+    if (block.type === "image" && block.src) {
+      lines.push(`[Image] ${block.alt || block.src}`, block.src, "");
+    }
+
+    if (block.type === "button" && (block.label || block.href)) {
+      lines.push(block.label || "Read more", block.href || "", "");
+    }
+
+    if (block.type === "divider") {
+      lines.push("—", "");
+    }
+  }
+
+  lines.push("You are receiving this email from Odyssea Vision.");
+
+  return lines
+    .map((line) => line.trim())
+    .join("\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}

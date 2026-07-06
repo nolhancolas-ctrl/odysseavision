@@ -1,9 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { adminAsset } from "@/data/adminAssets";
 import {
   adminPrimaryNavigation,
@@ -99,9 +99,9 @@ function AdminNavGroup({
       </p>
 
       <div className="space-y-1.5">
-        {items.map((item) => (
+        {items.map((item, index) => (
           <AdminNavLink
-            key={item.href}
+            key={`${item.href}-${item.label}-${index}`}
             item={item}
             pathname={pathname}
             onClick={onNavigate}
@@ -156,17 +156,70 @@ function AdminSidebarContent({
           onNavigate={onNavigate}
         />
       </nav>
-
-      <div className="mt-10 rounded-3xl border border-[#d5ad68]/35 bg-[#f4efe4]/5 p-4">
-        <p className="text-[11px] uppercase tracking-[0.22em] text-[#d5ad68]">
-          Secret access
-        </p>
-        <p className="mt-2 text-sm leading-6 text-[#f4efe4]/68">
-          Later, a special password typed into the client album access field will
-          unlock this private admin space.
-        </p>
-      </div>
+      <Link
+        href="/admin/settings"
+        onClick={onNavigate}
+        title="Admin settings"
+        aria-label="Admin settings"
+        className="mt-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5ad68]/35 bg-[#f4efe4]/5 text-xl text-[#d5ad68] transition hover:-translate-y-0.5 hover:bg-[#f4efe4]/10 hover:text-[#f4efe4]"
+      >
+        <span aria-hidden="true">🔒</span>
+      </Link>
     </>
+  );
+}
+
+function AdminFloatingBackButton({ pathname }: { pathname: string }) {
+  const router = useRouter();
+  const [visible, setVisible] = useState(false);
+
+  const canShow =
+    pathname !== "/admin" &&
+    pathname.startsWith("/admin") &&
+    !pathname.startsWith("/admin/settings");
+
+  useEffect(() => {
+    if (!canShow) {
+      setVisible(false);
+      return;
+    }
+
+    const updateVisibility = () => {
+      setVisible(window.scrollY > 160);
+    };
+
+    updateVisibility();
+    window.addEventListener("scroll", updateVisibility, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", updateVisibility);
+    };
+  }, [canShow, pathname]);
+
+  if (!canShow) {
+    return null;
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label="Go back"
+      onClick={() => {
+        if (window.history.length > 1) {
+          router.back();
+          return;
+        }
+
+        router.push("/admin");
+      }}
+      className={`fixed right-5 top-24 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-[#d5ad68]/35 bg-[#071321] text-3xl leading-none text-[#f4efe4] shadow-[0_20px_60px_rgba(7,19,33,0.25)] transition duration-300 hover:-translate-y-1 hover:bg-[#142844] lg:right-8 ${
+        visible
+          ? "pointer-events-auto translate-y-0 opacity-100"
+          : "pointer-events-none -translate-y-5 opacity-0"
+      }`}
+    >
+      <span className="-mt-1">‹</span>
+    </button>
   );
 }
 
@@ -176,6 +229,7 @@ export function AdminShell({ children }: { children: ReactNode }) {
 
   return (
     <div className="relative min-h-screen overflow-hidden bg-[#f4efe4] text-[#11170f]">
+      <AdminFloatingBackButton pathname={pathname} />
       {adminAsset.stamp_corner ? (
         <img
           src={adminAsset.stamp_corner}

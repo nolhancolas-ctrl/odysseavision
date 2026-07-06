@@ -1,3 +1,5 @@
+import { ViewTracker } from "@/components/analytics/ViewTracker";
+import { SecretAccessWatcher } from "@/components/admin/secret/SecretAccessWatcher";
 import { SplashScreen } from "@/components/layout/SplashScreen";
 import { getAppearanceSettings } from "@/lib/content/appearance";
 import { buildMetadata, getSeoSettings } from "@/lib/content/seo";
@@ -81,6 +83,8 @@ export default async function RootLayout({
         className={`${inter.variable} ${cormorant.variable} ${homemadeApple.variable} font-sans`}
       >
         <SplashScreen />
+        <SecretAccessWatcher />
+        <ViewTracker />
         {children}
       </body>
     </html>

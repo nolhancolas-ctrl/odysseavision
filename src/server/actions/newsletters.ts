@@ -21,10 +21,7 @@ function cleanStatus(value: string) {
   return "DRAFT";
 }
 
-export async function saveNewsletterCampaign(
-  campaignId: string | null,
-  formData: FormData,
-) {
+function readNewsletterFormData(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const subject = String(formData.get("subject") ?? "").trim();
   const previewText = String(formData.get("previewText") ?? "").trim();
@@ -42,7 +39,7 @@ export async function saveNewsletterCampaign(
     throw new Error("Newsletter subject is required.");
   }
 
-  const data = {
+  return {
     title,
     subject,
     previewText: previewText || null,
@@ -52,12 +49,17 @@ export async function saveNewsletterCampaign(
     ctaHref: ctaHref || null,
     status,
   };
+}
+
+export async function saveNewsletterCampaign(
+  campaignId: string | null,
+  formData: FormData,
+) {
+  const data = readNewsletterFormData(formData);
 
   const campaign = campaignId
     ? await db.newsletterCampaign.update({
-        where: {
-          id: campaignId,
-        },
+        where: { id: campaignId },
         data,
       })
     : await db.newsletterCampaign.create({
@@ -71,9 +73,7 @@ export async function saveNewsletterCampaign(
 
 export async function duplicateNewsletterCampaign(campaignId: string) {
   const campaign = await db.newsletterCampaign.findUnique({
-    where: {
-      id: campaignId,
-    },
+    where: { id: campaignId },
   });
 
   if (!campaign) {
@@ -100,9 +100,7 @@ export async function duplicateNewsletterCampaign(campaignId: string) {
 
 export async function deleteNewsletterCampaign(campaignId: string) {
   await db.newsletterCampaign.delete({
-    where: {
-      id: campaignId,
-    },
+    where: { id: campaignId },
   });
 
   revalidateNewsletters();
@@ -112,54 +110,94 @@ export async function deleteNewsletterCampaign(campaignId: string) {
 
 export async function sendNewsletterCampaign(
   campaignId: string,
-  _formData?: FormData,
+  formData?: FormData,
 ) {
-  const [campaign, subscribers] = await Promise.all([
-    db.newsletterCampaign.findUnique({
-      where: {
-        id: campaignId,
-      },
-    }),
-    db.newsletterSubscriber.findMany({
-      where: {
-        active: true,
-      },
-      orderBy: {
-        createdAt: "asc",
-      },
-    }),
-  ]);
+  const existingCampaign = await db.newsletterCampaign.findUnique({
+    where: { id: campaignId },
+  });
 
-  if (!campaign) {
+  if (!existingCampaign) {
     throw new Error("Newsletter not found.");
   }
 
+  const subscribers = await db.newsletterSubscriber.findMany({
+    where: { active: true },
+    orderBy: { createdAt: "asc" },
+  });
+
   if (subscribers.length === 0) {
-    throw new Error("No active subscribers.");
+    redirect(`/admin/newsletters/${campaignId}?send=no-subscribers`);
   }
+
+  const formValues = formData ? readNewsletterFormData(formData) : null;
+
+  const campaign = formValues
+    ? await db.newsletterCampaign.update({
+        where: { id: campaignId },
+        data: {
+          ...formValues,
+          status: "READY",
+        },
+      })
+    : existingCampaign;
 
   const html = buildNewsletterHtml(campaign);
   const text = buildNewsletterText(campaign);
 
   let sentCount = 0;
+  let smtpNotConfigured = false;
+  let failedCount = 0;
 
   for (const subscriber of subscribers) {
-    const result = await sendTransactionalEmail({
-      to: subscriber.email,
-      subject: campaign.subject,
-      text,
-      html,
-    });
+    try {
+      const result = await sendTransactionalEmail({
+        to: subscriber.email,
+        subject: campaign.subject,
+        text,
+        html,
+      });
 
-    if (result.sent) {
-      sentCount += 1;
+      if (result.sent) {
+        sentCount += 1;
+      } else if (result.reason === "SMTP_NOT_CONFIGURED") {
+        smtpNotConfigured = true;
+      }
+    } catch (error) {
+      failedCount += 1;
+      console.error("[newsletter] Send failed:", subscriber.email, error);
     }
   }
 
+  if (smtpNotConfigured && sentCount === 0) {
+    await db.newsletterCampaign.update({
+      where: { id: campaign.id },
+      data: {
+        status: "READY",
+        recipientCount: 0,
+      },
+    });
+
+    revalidateNewsletters();
+
+    redirect(`/admin/newsletters/${campaign.id}?send=smtp-not-configured`);
+  }
+
+  if (sentCount === 0) {
+    await db.newsletterCampaign.update({
+      where: { id: campaign.id },
+      data: {
+        status: "READY",
+        recipientCount: 0,
+      },
+    });
+
+    revalidateNewsletters();
+
+    redirect(`/admin/newsletters/${campaign.id}?send=failed`);
+  }
+
   await db.newsletterCampaign.update({
-    where: {
-      id: campaign.id,
-    },
+    where: { id: campaign.id },
     data: {
       status: "SENT",
       sentAt: new Date(),
@@ -169,5 +207,9 @@ export async function sendNewsletterCampaign(
 
   revalidateNewsletters();
 
-  redirect(`/admin/newsletters/${campaign.id}`);
+  const status = failedCount > 0 ? "partial" : "sent";
+
+  redirect(
+    `/admin/newsletters/${campaign.id}?send=${status}&count=${sentCount}&failed=${failedCount}`,
+  );
 }

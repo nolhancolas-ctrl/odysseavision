@@ -1,4 +1,8 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 import type { Client, ClientAlbum } from "@prisma/client";
 
 type AlbumWithClient = ClientAlbum & {
@@ -18,6 +22,9 @@ export function AlbumForm({
   action,
   submitLabel,
 }: AlbumFormProps) {
+  const [coverSrc, setCoverSrc] = useState(album?.coverSrc ?? "");
+  const uploadSlug = album?.slug || album?.id || "draft";
+
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
       <div className="space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
@@ -66,19 +73,18 @@ export function AlbumForm({
           <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
             Cover image
           </label>
-          <input
-            name="coverSrc"
-            defaultValue={album?.coverSrc ?? ""}
-            className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
-            placeholder="/images/client-albums/album_01.png"
-          />
 
-          {album?.coverSrc ? (
-            <div
-              className="mt-5 aspect-[4/3] rounded-3xl bg-[#e8dfcf] bg-cover bg-center"
-              style={{ backgroundImage: `url(${album.coverSrc})` }}
-            />
-          ) : null}
+          <input type="hidden" name="coverSrc" value={coverSrc} />
+
+          <AdminImageDropzone
+            label="Album cover image"
+            value={coverSrc}
+            onChange={setCoverSrc}
+            context="client-album"
+            entitySlug={uploadSlug}
+            slotKey="cover"
+            ratio="4 / 3"
+          />
         </div>
       </div>
 
