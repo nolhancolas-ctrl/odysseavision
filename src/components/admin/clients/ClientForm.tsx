@@ -75,9 +75,9 @@ export function ClientForm({
           </label>
           <textarea
             name="notes"
-            rows={8}
+            rows={1}
             defaultValue={client?.notes ?? ""}
-            className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm leading-7 text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+            className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm leading-7 text-[#242617] outline-none transition focus:border-[#b88a3b]/70 admin-autogrow-textarea"
             placeholder="Client preferences, access notes, delivery details..."
           />
         </div>

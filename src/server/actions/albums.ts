@@ -5,6 +5,13 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
 
+type AlbumPreviewImage = {
+  imageSrc: string;
+  title?: string;
+  alt?: string;
+  order?: number;
+};
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -27,6 +34,57 @@ function parseDate(value: FormDataEntryValue | null) {
 
 function hashPassword(password: string) {
   return createHash("sha256").update(password).digest("hex");
+}
+
+function parseAlbumPreviewImages(formData: FormData): AlbumPreviewImage[] {
+  const raw = String(formData.get("previewImages") ?? "").trim();
+
+  if (!raw) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(raw) as AlbumPreviewImage[];
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((image, index) => ({
+        imageSrc: String(image.imageSrc ?? "").trim(),
+        title: String(image.title ?? "").trim(),
+        alt: String(image.alt ?? "").trim(),
+        order: Number.isFinite(Number(image.order)) ? Number(image.order) : index,
+      }))
+      .filter((image) => image.imageSrc);
+  } catch {
+    return [];
+  }
+}
+
+async function saveAlbumPreviewImages(
+  albumId: string,
+  images: AlbumPreviewImage[],
+) {
+  await db.clientAlbumImage.deleteMany({
+    where: { albumId },
+  });
+
+  if (images.length === 0) {
+    return;
+  }
+
+  await db.clientAlbumImage.createMany({
+    data: images.map((image, index) => ({
+      albumId,
+      imageSrc: image.imageSrc,
+      title: image.title || null,
+      alt: image.alt || image.title || null,
+      order: image.order ?? index,
+      selected: false,
+    })),
+  });
 }
 
 async function resolveClient(formData: FormData) {
@@ -81,22 +139,31 @@ function getAlbumData(formData: FormData) {
     status: parseStatus(formData.get("status")),
     allowDownload: formData.get("allowDownload") === "on",
     allowShare: formData.get("allowShare") === "on",
+    externalDownloadUrl:
+      String(formData.get("externalDownloadUrl") ?? "").trim() || null,
+    externalDownloadLabel:
+      String(formData.get("externalDownloadLabel") ?? "").trim() || null,
     expiresAt: parseDate(formData.get("expiresAt")),
   };
 }
 
-function revalidateAlbums() {
+function revalidateAlbums(slug?: string) {
   revalidatePath("/");
   revalidatePath("/client-albums");
   revalidatePath("/admin/albums");
+
+  if (slug) {
+    revalidatePath(`/client-albums/${slug}`);
+  }
 }
 
 export async function createClientAlbum(formData: FormData) {
   const client = await resolveClient(formData);
   const data = getAlbumData(formData);
+  const previewImages = parseAlbumPreviewImages(formData);
   const password = String(formData.get("password") ?? "").trim();
 
-  await db.clientAlbum.create({
+  const album = await db.clientAlbum.create({
     data: {
       ...data,
       passwordHash: password ? hashPassword(password) : null,
@@ -104,17 +171,20 @@ export async function createClientAlbum(formData: FormData) {
     },
   });
 
-  revalidateAlbums();
+  await saveAlbumPreviewImages(album.id, previewImages);
+
+  revalidateAlbums(album.slug);
   redirect("/admin/albums");
 }
 
 export async function updateClientAlbum(id: string, formData: FormData) {
   const client = await resolveClient(formData);
   const data = getAlbumData(formData);
+  const previewImages = parseAlbumPreviewImages(formData);
   const password = String(formData.get("password") ?? "").trim();
   const clearPassword = formData.get("clearPassword") === "on";
 
-  await db.clientAlbum.update({
+  const album = await db.clientAlbum.update({
     where: { id },
     data: {
       ...data,
@@ -124,7 +194,9 @@ export async function updateClientAlbum(id: string, formData: FormData) {
     },
   });
 
-  revalidateAlbums();
+  await saveAlbumPreviewImages(album.id, previewImages);
+
+  revalidateAlbums(album.slug);
   redirect("/admin/albums");
 }
 

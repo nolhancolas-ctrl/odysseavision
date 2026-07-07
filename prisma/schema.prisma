@@ -139,6 +139,8 @@ model ClientAlbum {
   passwordHash  String?
   allowDownload Boolean   @default(false)
   allowShare    Boolean   @default(true)
+  externalDownloadUrl   String?
+  externalDownloadLabel String?
   expiresAt     DateTime?
   clientId      String?
   createdAt     DateTime  @default(now())
@@ -213,6 +215,7 @@ model NewsletterCampaign {
   status         String    @default("DRAFT")
   recipientCount Int       @default(0)
   sentAt         DateTime?
+  scheduledAt    DateTime?
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { deleteClientAlbum } from "@/server/actions/albums";
 import { db } from "@/lib/db";
 
@@ -131,6 +132,12 @@ export default async function AdminAlbumsPage() {
                       </span>
                     ) : null}
 
+                    {album.externalDownloadUrl ? (
+                      <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/45">
+                        External link
+                      </span>
+                    ) : null}
+
                     {album.client ? (
                       <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/45">
                         {album.client.firstName} {album.client.lastName ?? ""}
@@ -164,21 +171,29 @@ export default async function AdminAlbumsPage() {
                   </p>
                 </div>
 
-                <div className="flex items-start gap-3 md:justify-end">
+                <div className="flex flex-col items-stretch gap-2 md:items-end">
+                  <Link
+                    href={`/client-albums/${album.slug}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="w-full rounded-full border border-[#242617]/15 px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b] md:w-28"
+                  >
+                    Preview
+                  </Link>
+
                   <Link
                     href={`/admin/albums/${album.id}`}
-                    className="rounded-full border border-[#242617]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
+                    className="w-full rounded-full border border-[#242617]/15 px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b] md:w-28"
                   >
                     Edit
                   </Link>
 
                   <form action={deleteClientAlbum.bind(null, album.id)}>
-                    <button
-                      type="submit"
-                      className="rounded-full border border-red-900/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900"
+                    <ConfirmSubmitButton
+                      className="w-full rounded-full border border-red-900/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900 md:w-28"
                     >
                       Delete
-                    </button>
+                    </ConfirmSubmitButton>
                   </form>
                 </div>
               </article>

@@ -111,6 +111,11 @@ function ActivityRow({
           <span className="truncate text-sm text-[#242617]/45">
             {item.detail}
           </span>
+          {!item.href ? (
+            <span className="rounded-full border border-[#242617]/10 px-2.5 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#242617]/35">
+              Details
+            </span>
+          ) : null}
         </span>
       </span>
 

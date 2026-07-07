@@ -336,3 +336,11 @@ body::-webkit-scrollbar,
 .newsletter-builder-image-frame--mail > * {
   max-width: 520px;
 }
+
+/* Admin adaptive textarea */
+.admin-autogrow-textarea {
+  field-sizing: content;
+  min-height: 52px;
+  overflow: hidden;
+  resize: vertical;
+}

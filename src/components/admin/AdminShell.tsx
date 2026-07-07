@@ -161,7 +161,7 @@ function AdminSidebarContent({
         onClick={onNavigate}
         title="Admin settings"
         aria-label="Admin settings"
-        className="mt-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5ad68]/35 bg-[#f4efe4]/5 text-xl text-[#d5ad68] transition hover:-translate-y-0.5 hover:bg-[#f4efe4]/10 hover:text-[#f4efe4]"
+        className="mx-auto mt-10 flex h-14 w-14 items-center justify-center rounded-2xl border border-[#d5ad68]/35 bg-[#f4efe4]/5 text-xl text-[#d5ad68] transition hover:-translate-y-0.5 hover:bg-[#f4efe4]/10 hover:text-[#f4efe4]"
       >
         <span aria-hidden="true">🔒</span>
       </Link>

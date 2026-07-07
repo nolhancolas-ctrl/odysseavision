@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
 import { deleteClient } from "@/server/actions/clients";
 import { db } from "@/lib/db";
 
@@ -145,12 +146,12 @@ export default async function AdminClientsPage() {
                     </Link>
 
                     <form action={deleteClient.bind(null, client.id)}>
-                      <button
+                      <ConfirmSubmitButton
                         type="submit"
                         className="rounded-full border border-red-900/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900"
                       >
-                        Delete
-                      </button>
+                      Delete
+                    </ConfirmSubmitButton>
                     </form>
                   </div>
                 </article>

@@ -1,5 +1,12 @@
 import { db } from "@/lib/db";
+import type { Prisma } from "@prisma/client";
 import { clientAlbums as staticClientAlbums } from "@/data/clients";
+
+type ClientAlbumWithImages = Prisma.ClientAlbumGetPayload<{
+  include: {
+    images: true;
+  };
+}>;
 
 export type PublicClientAlbumImage = {
   id: string;
@@ -22,6 +29,8 @@ export type PublicClientAlbum = {
   photoCount: number;
   allowDownload: boolean;
   allowShare: boolean;
+  externalDownloadUrl: string;
+  externalDownloadLabel: string;
   images: PublicClientAlbumImage[];
 };
 
@@ -48,6 +57,8 @@ function getStaticAlbums(): PublicClientAlbum[] {
     photoCount: album.photoCount,
     allowDownload: false,
     allowShare: true,
+    externalDownloadUrl: "",
+    externalDownloadLabel: "",
     images: [
       {
         id: `${album.slug}-cover`,
@@ -59,6 +70,38 @@ function getStaticAlbums(): PublicClientAlbum[] {
       },
     ],
   }));
+}
+
+function mapAlbum(album: ClientAlbumWithImages): PublicClientAlbum {
+  const images = album.images.map((image) => ({
+    id: image.id,
+    imageSrc: image.imageSrc,
+    title: image.title ?? "",
+    alt: image.alt ?? image.title ?? album.title,
+    selected: image.selected,
+    order: image.order,
+  }));
+
+  return {
+    id: album.id,
+    slug: album.slug,
+    title: album.title,
+    description: album.description ?? "",
+    coverSrc:
+      album.coverSrc ||
+      images[0]?.imageSrc ||
+      "/images/client-albums/album_01.png",
+    href: `/client-albums/${album.slug}`,
+    date: formatAlbumDate(album.shootingDate),
+    location: album.location ?? "",
+    photoCount: images.length,
+    allowDownload: album.allowDownload,
+    allowShare: album.allowShare,
+    externalDownloadUrl: album.externalDownloadUrl ?? "",
+    externalDownloadLabel:
+      album.externalDownloadLabel || "Download full gallery",
+    images,
+  };
 }
 
 export async function getPublicClientAlbums(): Promise<PublicClientAlbum[]> {
@@ -79,34 +122,7 @@ export async function getPublicClientAlbums(): Promise<PublicClientAlbum[]> {
       return getStaticAlbums();
     }
 
-    return albums.map((album) => {
-      const images = album.images.map((image) => ({
-        id: image.id,
-        imageSrc: image.imageSrc,
-        title: image.title ?? "",
-        alt: image.alt ?? image.title ?? album.title,
-        selected: image.selected,
-        order: image.order,
-      }));
-
-      return {
-        id: album.id,
-        slug: album.slug,
-        title: album.title,
-        description: album.description ?? "",
-        coverSrc:
-          album.coverSrc ||
-          images[0]?.imageSrc ||
-          "/images/client-albums/album_01.png",
-        href: `/client-albums/${album.slug}`,
-        date: formatAlbumDate(album.shootingDate),
-        location: album.location ?? "",
-        photoCount: images.length,
-        allowDownload: album.allowDownload,
-        allowShare: album.allowShare,
-        images,
-      };
-    });
+    return albums.map(mapAlbum);
   } catch {
     return getStaticAlbums();
   }
@@ -132,32 +148,7 @@ export async function getPublicClientAlbumBySlug(
       return getStaticAlbums().find((item) => item.slug === slug) ?? null;
     }
 
-    const images = album.images.map((image) => ({
-      id: image.id,
-      imageSrc: image.imageSrc,
-      title: image.title ?? "",
-      alt: image.alt ?? image.title ?? album.title,
-      selected: image.selected,
-      order: image.order,
-    }));
-
-    return {
-      id: album.id,
-      slug: album.slug,
-      title: album.title,
-      description: album.description ?? "",
-      coverSrc:
-        album.coverSrc ||
-        images[0]?.imageSrc ||
-        "/images/client-albums/album_01.png",
-      href: `/client-albums/${album.slug}`,
-      date: formatAlbumDate(album.shootingDate),
-      location: album.location ?? "",
-      photoCount: images.length,
-      allowDownload: album.allowDownload,
-      allowShare: album.allowShare,
-      images,
-    };
+    return mapAlbum(album);
   } catch {
     return getStaticAlbums().find((item) => item.slug === slug) ?? null;
   }

@@ -134,7 +134,7 @@ export default async function AdminSettingsPage({
           <form action={logoutAdminAction}>
             <button
               type="submit"
-              className="w-full cursor-pointer rounded-[2rem] border border-[#d76b5b]/25 bg-white/45 p-5 text-left text-sm font-semibold uppercase tracking-[0.16em] text-[#b94a3a] transition hover:bg-[#b94a3a] hover:text-[#f4efe4]"
+              className="flex w-full cursor-pointer items-center justify-center rounded-[2rem] border border-[#d76b5b]/25 bg-white/45 p-5 text-center text-sm font-semibold uppercase tracking-[0.16em] text-[#b94a3a] transition hover:bg-[#b94a3a] hover:text-[#f4efe4]"
             >
               Log out
             </button>

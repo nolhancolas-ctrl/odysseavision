@@ -1,5 +1,7 @@
 "use client";
 
+import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
+
 import type { ReactNode } from "react";
 import { useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -39,6 +41,7 @@ type NewsletterFormCampaign = {
   ctaHref: string | null;
   status: string;
   sentAt?: Date | null;
+  scheduledAt?: Date | string | null;
 };
 
 type NewsletterFormProps = {
@@ -46,6 +49,9 @@ type NewsletterFormProps = {
   activeSubscribers: number;
   saveAction: (formData: FormData) => Promise<void>;
   sendAction?: (formData: FormData) => Promise<void>;
+  
+    scheduleAction?: (formData: FormData) => Promise<void>;
+testAction?: (formData: FormData) => Promise<void>;
   deleteAction?: (formData: FormData) => Promise<void>;
   duplicateAction?: (formData: FormData) => Promise<void>;
 };
@@ -62,6 +68,23 @@ const blockLabels: Record<NewsletterBlockType, string> = {
 
 function createId() {
   return `block-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+
+function toDateTimeLocalValue(value?: Date | string | null) {
+  if (!value) {
+    return "";
+  }
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  const localDate = new Date(date.getTime() - date.getTimezoneOffset() * 60_000);
+
+  return localDate.toISOString().slice(0, 16);
 }
 
 function createBlock(type: NewsletterBlockType): NewsletterBlock {
@@ -274,13 +297,13 @@ function BlockEditor({
             ↓
           </button>
 
-          <button
+          <ConfirmSubmitButton
             type="button"
             onClick={onDelete}
             className="cursor-pointer rounded-full border border-red-900/20 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-red-900/60 transition hover:border-red-800 hover:bg-red-800 hover:text-[#f4efe4]"
           >
-            Delete
-          </button>
+                      Delete
+                    </ConfirmSubmitButton>
         </div>
       </div>
 
@@ -411,6 +434,8 @@ export function NewsletterForm({
   activeSubscribers,
   saveAction,
   sendAction,
+  scheduleAction,
+  testAction,
   deleteAction,
   duplicateAction,
 }: NewsletterFormProps) {
@@ -426,12 +451,42 @@ export function NewsletterForm({
       : "DRAFT",
   );
   const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const [scheduledAt, setScheduledAt] = useState(() =>
+    toDateTimeLocalValue(campaign.scheduledAt),
+  );
+  const scheduledAtOffsetMinutes = useMemo(
+    () => String(new Date().getTimezoneOffset()),
+    [],
+  );
   const searchParams = useSearchParams();
   const sendStatus = searchParams.get("send");
   const sentCount = searchParams.get("count");
   const failedCount = searchParams.get("failed");
+  const testStatus = searchParams.get("test");
+  const testEmail = searchParams.get("email");
+  const scheduleStatus = searchParams.get("schedule");
+
+  const scheduleMessage =
+    scheduleStatus === "scheduled"
+      ? "Newsletter scheduled."
+      : scheduleStatus === "missing-date"
+        ? "Choose a date and time before scheduling."
+        : scheduleStatus === "past-date"
+          ? "Choose a future date and time."
+          : "";
+
+  const testMessage =
+    scheduleMessage ||
+    testStatus === "sent"
+      ? `Test email sent to ${testEmail || "your address"}.`
+      : testStatus === "invalid-email"
+        ? "Please enter a valid test email address."
+        : testStatus === "smtp-not-configured"
+          ? "SMTP is not configured yet. Add SMTP credentials before sending test emails."
+          : "";
 
   const sendMessage =
+    testMessage ||
     sendStatus === "sent"
       ? `Newsletter sent to ${sentCount || "all"} subscriber${sentCount === "1" ? "" : "s"}.`
       : sendStatus === "partial"
@@ -512,6 +567,11 @@ export function NewsletterForm({
       <input type="hidden" name="heroImage" value="" />
       <input type="hidden" name="ctaLabel" value="" />
       <input type="hidden" name="ctaHref" value="" />
+      <input
+        type="hidden"
+        name="scheduledAtOffsetMinutes"
+        value={scheduledAtOffsetMinutes}
+      />
 
       {sendMessage ? (
         <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 px-5 py-4 text-sm text-[#242617]/65 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
@@ -748,14 +808,51 @@ export function NewsletterForm({
           ) : null}
 
           {deleteAction ? (
-            <button
+            <ConfirmSubmitButton
               type="submit"
               formAction={deleteAction}
               className="cursor-pointer rounded-full border border-red-900/20 px-5 py-3 text-xs font-bold uppercase tracking-[0.16em] text-red-900/60 transition hover:border-red-800 hover:bg-red-800 hover:text-[#f4efe4]"
             >
-              Delete
-            </button>
+                      Delete
+                    </ConfirmSubmitButton>
           ) : null}
+
+          {scheduleAction ? (
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+              <input
+                name="scheduledAt"
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={(event) => setScheduledAt(event.target.value)}
+                className="w-full rounded-full border border-[#071321]/10 bg-white/45 px-5 py-3 text-sm text-[#071321] outline-none transition focus:border-[#b88a3b] sm:w-64"
+              />
+              <button
+                type="submit"
+                formAction={scheduleAction}
+                className="cursor-pointer rounded-full border border-[#b88a3b]/35 px-5 py-3 text-xs font-bold uppercase tracking-[0.16em] text-[#8d6829] transition hover:bg-[#b88a3b] hover:text-[#f4efe4]"
+              >
+                Schedule
+              </button>
+            </div>
+          ) : null}
+
+          {testAction ? (
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  name="testEmail"
+                  type="email"
+                  placeholder="Test email"
+                  className="w-full rounded-full border border-[#071321]/10 bg-white/45 px-5 py-3 text-sm text-[#071321] outline-none transition focus:border-[#b88a3b] sm:w-64"
+                />
+                <button
+                  type="submit"
+                  formAction={testAction}
+                  className="cursor-pointer rounded-full border border-[#071321]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.16em] text-[#071321]/70 transition hover:bg-[#071321] hover:text-[#f4efe4]"
+                >
+                  Send test
+                </button>
+              </div>
+            ) : null}
 
           {sendAction ? (
             <button

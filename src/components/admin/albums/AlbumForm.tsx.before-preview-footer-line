@@ -1,0 +1,589 @@
+"use client";
+
+import Link from "next/link";
+import {
+  DragEvent,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
+import { uploadImage } from "@/server/actions/uploads";
+import type { Client, ClientAlbum, ClientAlbumImage } from "@prisma/client";
+
+const CREATE_NEW_CLIENT_VALUE = "__create_new_client__";
+
+type AlbumWithClient = ClientAlbum & {
+  client: Client | null;
+  images?: ClientAlbumImage[];
+};
+
+type AlbumFormProps = {
+  album?: AlbumWithClient | null;
+  clients: Client[];
+  action: (formData: FormData) => Promise<void>;
+  submitLabel: string;
+};
+
+type SelectOption = {
+  value: string;
+  label: string;
+};
+
+type PreviewImage = {
+  id: string;
+  imageSrc: string;
+  title: string;
+  alt: string;
+  order: number;
+};
+
+function AdminSelect({
+  name,
+  value,
+  formValue,
+  onChange,
+  options,
+}: {
+  name: string;
+  value: string;
+  formValue?: string;
+  onChange: (value: string) => void;
+  options: SelectOption[];
+}) {
+  const [open, setOpen] = useState(false);
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  return (
+    <div className="relative">
+      <input type="hidden" name={name} value={formValue ?? value} />
+
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        onBlur={() => window.setTimeout(() => setOpen(false), 120)}
+        className="flex w-full cursor-pointer items-center justify-between rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-left text-sm text-[#242617] outline-none transition hover:border-[#b88a3b]/50 focus:border-[#b88a3b]/70"
+      >
+        <span className="min-w-0 truncate">{selected.label}</span>
+        <span
+          className={`ml-3 text-lg leading-none text-[#242617]/60 transition ${
+            open ? "rotate-180" : ""
+          }`}
+        >
+          ⌄
+        </span>
+      </button>
+
+      {open ? (
+        <div className="absolute left-0 right-0 top-[calc(100%+8px)] z-40 overflow-hidden rounded-2xl border border-[#242617]/10 bg-[#f4efe4] p-1 shadow-[0_24px_70px_rgba(20,20,10,0.16)]">
+          {options.map((option) => (
+            <button
+              key={option.value || "empty"}
+              type="button"
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={`flex w-full cursor-pointer rounded-xl px-4 py-3 text-left text-sm transition ${
+                option.value === value
+                  ? "bg-[#071008] text-[#f4efe4]"
+                  : "text-[#242617]/70 hover:bg-white/60 hover:text-[#242617]"
+              }`}
+            >
+              {option.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function makePreviewId() {
+  return `preview-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+export function AlbumForm({
+  album,
+  clients,
+  action,
+  submitLabel,
+}: AlbumFormProps) {
+  const [coverSrc, setCoverSrc] = useState(album?.coverSrc ?? "");
+  const [status, setStatus] = useState(album?.status ?? "DRAFT");
+  const [clientId, setClientId] = useState(album?.clientId ?? "");
+  const [previewImages, setPreviewImages] = useState<PreviewImage[]>(() =>
+    (album?.images ?? []).map((image, index) => ({
+      id: image.id,
+      imageSrc: image.imageSrc,
+      title: image.title ?? "",
+      alt: image.alt ?? image.title ?? "",
+      order: image.order ?? index,
+    })),
+  );
+  const [previewError, setPreviewError] = useState("");
+  const [isDraggingPreviews, setIsDraggingPreviews] = useState(false);
+  const [isUploadingPreviews, startPreviewUpload] = useTransition();
+  const previewInputRef = useRef<HTMLInputElement | null>(null);
+
+  const uploadSlug = album?.slug || album?.id || "draft";
+  const isCreatingNewClient = clientId === CREATE_NEW_CLIENT_VALUE;
+
+  const clientOptions = useMemo<SelectOption[]>(
+    () => [
+      { value: "", label: "No client" },
+      { value: CREATE_NEW_CLIENT_VALUE, label: "Create new client" },
+      ...clients.map((client) => ({
+        value: client.id,
+        label: `${client.firstName} ${client.lastName ?? ""}${
+          client.email ? ` — ${client.email}` : ""
+        }`,
+      })),
+    ],
+    [clients],
+  );
+
+  const previewPayload = useMemo(
+    () =>
+      JSON.stringify(
+        previewImages.map((image, index) => ({
+          imageSrc: image.imageSrc,
+          title: image.title,
+          alt: image.alt || image.title,
+          order: index,
+        })),
+      ),
+    [previewImages],
+  );
+
+  function removePreviewImage(index: number) {
+    setPreviewImages((current) =>
+      current
+        .filter((_, imageIndex) => imageIndex !== index)
+        .map((image, imageIndex) => ({ ...image, order: imageIndex })),
+    );
+  }
+
+  function uploadPreviewFiles(files: FileList | File[]) {
+    const imageFiles = Array.from(files).filter((file) =>
+      file.type.startsWith("image/"),
+    );
+
+    if (imageFiles.length === 0) {
+      return;
+    }
+
+    setPreviewError("");
+
+    startPreviewUpload(async () => {
+      const uploaded: PreviewImage[] = [];
+
+      for (const [index, file] of imageFiles.entries()) {
+        const formData = new FormData();
+        const slotId = `${Date.now()}-${index}-${file.name}`;
+
+        formData.append("file", file);
+        formData.append("context", "client-album");
+        formData.append("entitySlug", uploadSlug);
+        formData.append("slotKey", `preview-${slotId}`);
+        formData.append("label", "Album preview image");
+
+        const result = await uploadImage(formData);
+
+        if (!result.ok) {
+          setPreviewError(result.error || "Upload failed.");
+          continue;
+        }
+
+        uploaded.push({
+          id: makePreviewId(),
+          imageSrc: result.path,
+          title: "",
+          alt: "",
+          order: previewImages.length + uploaded.length,
+        });
+      }
+
+      if (uploaded.length > 0) {
+        setPreviewImages((current) =>
+          [...current, ...uploaded].map((image, index) => ({
+            ...image,
+            order: index,
+          })),
+        );
+      }
+    });
+  }
+
+  function handlePreviewDrop(event: DragEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    setIsDraggingPreviews(false);
+    uploadPreviewFiles(event.dataTransfer.files);
+  }
+
+  return (
+    <form action={action} className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
+      <input type="hidden" name="previewImages" value={previewPayload} />
+
+      <div className="space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+            Title
+          </label>
+          <input
+            name="title"
+            required
+            defaultValue={album?.title ?? ""}
+            className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+            placeholder="Whales of Ningaloo"
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+            Slug
+          </label>
+          <input
+            name="slug"
+            defaultValue={album?.slug ?? ""}
+            className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+            placeholder="whales-of-ningaloo"
+          />
+          <p className="mt-2 text-xs text-[#242617]/35">
+            Leave empty to generate it from the title.
+          </p>
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+            Description
+          </label>
+          <textarea
+            name="description"
+            rows={1}
+            defaultValue={album?.description ?? ""}
+            className="admin-autogrow-textarea w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm leading-6 text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+            placeholder="Private gallery description shown to the client."
+          />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+            Cover image
+          </label>
+
+          <input type="hidden" name="coverSrc" value={coverSrc} />
+
+          <AdminImageDropzone
+            label="Album cover image"
+            value={coverSrc}
+            onChange={setCoverSrc}
+            context="client-album"
+            entitySlug={uploadSlug}
+            slotKey="cover"
+            ratio="4 / 3"
+          />
+        </div>
+
+        <div>
+          <div className="mb-3 flex items-end justify-between gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+                Preview images
+              </label>
+              <p className="mt-2 text-xs leading-5 text-[#242617]/40">
+                Add a few lightweight previews. The full gallery can stay in the external delivery link.
+              </p>
+            </div>
+
+            {isUploadingPreviews ? (
+              <span className="rounded-full bg-[#071008] px-4 py-2 text-[10px] font-bold uppercase tracking-[0.16em] text-[#f4efe4]">
+                Uploading
+              </span>
+            ) : null}
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            {previewImages.map((image, index) => (
+              <div
+                key={image.id}
+                className="group relative aspect-square overflow-hidden rounded-[1.4rem] border border-[#242617]/10 bg-[#e8dfcf]"
+              >
+                <img
+                  src={image.imageSrc}
+                  alt=""
+                  className="h-full w-full object-cover transition duration-300 group-hover:scale-105 group-hover:opacity-60"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => removePreviewImage(index)}
+                  className="absolute left-1/2 top-1/2 flex h-12 w-12 -translate-x-1/2 -translate-y-1/2 scale-90 cursor-pointer items-center justify-center rounded-full border border-red-900/20 bg-[#f4efe4]/90 text-3xl leading-none text-red-800 opacity-0 shadow-[0_18px_45px_rgba(80,0,0,0.18)] transition duration-300 hover:bg-red-800 hover:text-[#f4efe4] group-hover:scale-100 group-hover:opacity-100"
+                >
+                  ×
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => previewInputRef.current?.click()}
+              onDragOver={(event) => {
+                event.preventDefault();
+                setIsDraggingPreviews(true);
+              }}
+              onDragLeave={() => setIsDraggingPreviews(false)}
+              onDrop={handlePreviewDrop}
+              className={`aspect-square cursor-pointer rounded-[1.4rem] border border-dashed transition ${
+                isDraggingPreviews
+                  ? "border-[#b88a3b] bg-[#d5ad68]/10"
+                  : "border-[#242617]/15 bg-[#e8dfcf]/70 hover:border-[#b88a3b]/55"
+              }`}
+            >
+              <span className="flex h-full w-full flex-col items-center justify-center gap-3 px-4 text-center">
+                <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#242617]/12 bg-[#f4efe4]/65 text-3xl leading-none text-[#242617]/45">
+                  +
+                </span>
+                <span className="text-[9px] font-bold uppercase tracking-[0.18em] text-[#242617]/42">
+                  Add previews
+                </span>
+                <span className="text-[11px] leading-4 text-[#242617]/35">
+                  Drop multiple images or click.
+                </span>
+              </span>
+            </button>
+          </div>
+
+          <input
+            ref={previewInputRef}
+            type="file"
+            multiple
+            accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
+            className="hidden"
+            onChange={(event) => {
+              if (event.currentTarget.files) {
+                uploadPreviewFiles(event.currentTarget.files);
+              }
+
+              event.currentTarget.value = "";
+            }}
+          />
+
+          {previewError ? (
+            <p className="mt-3 text-xs font-semibold text-red-900/70">
+              {previewError}
+            </p>
+          ) : null}
+        </div>
+      </div>
+
+      <aside className="space-y-6">
+        <div className="space-y-4 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+              Status
+            </label>
+            <AdminSelect
+              name="status"
+              value={status}
+              onChange={setStatus}
+              options={[
+                { value: "DRAFT", label: "Draft" },
+                { value: "PUBLISHED", label: "Published" },
+                { value: "ARCHIVED", label: "Archived" },
+              ]}
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+              Client
+            </label>
+            <AdminSelect
+              name="clientId"
+              value={clientId}
+              formValue={isCreatingNewClient ? "" : clientId}
+              onChange={setClientId}
+              options={clientOptions}
+            />
+          </div>
+
+          {isCreatingNewClient ? (
+            <div className="rounded-2xl border border-[#242617]/10 p-4">
+              <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+                Create new client
+              </p>
+
+              <div className="grid gap-3">
+                <input
+                  name="newClientFirstName"
+                  className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+                  placeholder="First name"
+                  required={isCreatingNewClient}
+                />
+
+                <input
+                  name="newClientLastName"
+                  className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+                  placeholder="Last name"
+                />
+
+                <input
+                  name="newClientEmail"
+                  type="email"
+                  className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+                  placeholder="email@example.com"
+                />
+              </div>
+            </div>
+          ) : null}
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+                Shooting date
+              </label>
+              <input
+                type="date"
+                name="shootingDate"
+                defaultValue={
+                  album?.shootingDate
+                    ? album.shootingDate.toISOString().slice(0, 10)
+                    : ""
+                }
+                className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+                Expires at
+              </label>
+              <input
+                type="date"
+                name="expiresAt"
+                defaultValue={
+                  album?.expiresAt
+                    ? album.expiresAt.toISOString().slice(0, 10)
+                    : ""
+                }
+                className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+              Location
+            </label>
+            <input
+              name="location"
+              defaultValue={album?.location ?? ""}
+              className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+              placeholder="Ningaloo"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+              Password
+            </label>
+            <input
+              name="password"
+              type="password"
+              className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+              placeholder={
+                album?.passwordHash
+                  ? "Leave empty to keep current password"
+                  : "Set album password"
+              }
+            />
+
+            {album?.passwordHash ? (
+              <label className="mt-3 flex items-center gap-3 text-sm text-[#242617]/60">
+                <input
+                  type="checkbox"
+                  name="clearPassword"
+                  className="h-4 w-4 accent-[#b88a3b]"
+                />
+                Remove current password
+              </label>
+            ) : null}
+          </div>
+
+          <label className="flex items-center gap-3 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617]/70">
+            <input
+              type="checkbox"
+              name="allowDownload"
+              defaultChecked={album?.allowDownload ?? false}
+              className="h-4 w-4 accent-[#b88a3b]"
+            />
+            Allow downloads
+          </label>
+
+          <div className="rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 p-4">
+            <p className="mb-4 text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+              External delivery
+            </p>
+
+            <label className="block">
+              <span className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
+                Download link
+              </span>
+              <input
+                name="externalDownloadUrl"
+                type="url"
+                defaultValue={album?.externalDownloadUrl ?? ""}
+                className="w-full rounded-2xl border border-[#242617]/10 bg-white/55 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+                placeholder="https://swisstransfer.com/..."
+              />
+            </label>
+
+            <p className="mt-3 text-xs leading-5 text-[#242617]/40">
+              Use this for SwissTransfer, Google Drive, WeTransfer or any external delivery link.
+            </p>
+          </div>
+
+          <label className="flex items-center gap-3 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617]/70">
+            <input
+              type="checkbox"
+              name="allowShare"
+              defaultChecked={album?.allowShare ?? true}
+              className="h-4 w-4 accent-[#b88a3b]"
+            />
+            Allow sharing
+          </label>
+        </div>
+
+        <div className="flex flex-wrap gap-3">
+          {album?.slug ? (
+            <Link
+              href={`/client-albums/${album.slug}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#b88a3b]/60 hover:text-[#b88a3b]"
+            >
+              Access preview
+            </Link>
+          ) : null}
+
+          <button
+            type="submit"
+            className="flex-1 rounded-full bg-[#071008] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#b88a3b] hover:text-[#071008]"
+          >
+            {submitLabel}
+          </button>
+
+          <Link
+            href="/admin/albums"
+            className="rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#b88a3b]/60 hover:text-[#b88a3b]"
+          >
+            Cancel
+          </Link>
+        </div>
+      </aside>
+    </form>
+  );
+}

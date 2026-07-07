@@ -16,9 +16,77 @@ function revalidateNewsletters() {
   revalidatePath("/stories");
 }
 
+
+function getSiteUrl() {
+  return (
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    process.env.VERCEL_URL && `https://${process.env.VERCEL_URL}` ||
+    "http://localhost:3000"
+  );
+}
+
+function appendUnsubscribeFooter(html: string, email: string) {
+  const unsubscribeUrl = `${getSiteUrl()}/unsubscribe?email=${encodeURIComponent(email)}`;
+
+  const footer = `
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:20px;">
+      <tr>
+        <td align="center" style="padding:22px 24px 28px 24px;font-family:Arial,sans-serif;font-size:12px;line-height:18px;color:#777064;">
+          You are receiving this email because you subscribed to Odyssea Vision.<br />
+          <a href="${unsubscribeUrl}" style="color:#777064;text-decoration:underline;">Unsubscribe</a>
+        </td>
+      </tr>
+    </table>
+  `;
+
+  if (html.includes("</body>")) {
+    return html.replace("</body>", `${footer}</body>`);
+  }
+
+  return `${html}${footer}`;
+}
+
+function appendUnsubscribeText(text: string, email: string) {
+  const unsubscribeUrl = `${getSiteUrl()}/unsubscribe?email=${encodeURIComponent(email)}`;
+
+  return `${text}\n\nUnsubscribe: ${unsubscribeUrl}`;
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 function cleanStatus(value: string) {
-  if (value === "READY" || value === "SENT") return value;
+  if (value === "READY" || value === "SENT" || value === "SCHEDULED") {
+    return value;
+  }
+
   return "DRAFT";
+}
+
+function readScheduledAt(formData: FormData) {
+  const value = String(formData.get("scheduledAt") ?? "").trim();
+  const offsetValue = String(formData.get("scheduledAtOffsetMinutes") ?? "0");
+  const offsetMinutes = Number(offsetValue);
+
+  if (!value) {
+    return null;
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const [, year, month, day, hour, minute] = match.map(Number);
+  const safeOffset = Number.isFinite(offsetMinutes) ? offsetMinutes : 0;
+  const utcTime =
+    Date.UTC(year, month - 1, day, hour, minute, 0, 0) + safeOffset * 60_000;
+
+  const date = new Date(utcTime);
+
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 function readNewsletterFormData(formData: FormData) {
@@ -108,6 +176,104 @@ export async function deleteNewsletterCampaign(campaignId: string) {
   redirect("/admin/newsletters");
 }
 
+
+
+export async function scheduleNewsletterCampaign(
+  campaignId: string,
+  formData: FormData,
+) {
+  const existingCampaign = await db.newsletterCampaign.findUnique({
+    where: { id: campaignId },
+  });
+
+  if (!existingCampaign) {
+    throw new Error("Newsletter not found.");
+  }
+
+  const scheduledAt = readScheduledAt(formData);
+
+  if (!scheduledAt) {
+    redirect(`/admin/newsletters/${campaignId}?schedule=missing-date`);
+  }
+
+  if (scheduledAt.getTime() <= Date.now()) {
+    redirect(`/admin/newsletters/${campaignId}?schedule=past-date`);
+  }
+
+  const formValues = readNewsletterFormData(formData);
+
+  await db.newsletterCampaign.update({
+    where: { id: campaignId },
+    data: {
+      ...formValues,
+      status: "SCHEDULED",
+      scheduledAt,
+    },
+  });
+
+  revalidateNewsletters();
+
+  redirect(`/admin/newsletters/${campaignId}?schedule=scheduled`);
+}
+
+export async function sendNewsletterTestEmail(
+  campaignId: string,
+  formData: FormData,
+) {
+  const testEmail = String(formData.get("testEmail") ?? "")
+    .trim()
+    .toLowerCase();
+
+  if (!testEmail || !isValidEmail(testEmail)) {
+    redirect(`/admin/newsletters/${campaignId}?test=invalid-email`);
+  }
+
+  const existingCampaign = await db.newsletterCampaign.findUnique({
+    where: { id: campaignId },
+  });
+
+  if (!existingCampaign) {
+    throw new Error("Newsletter not found.");
+  }
+
+  const formValues = readNewsletterFormData(formData);
+
+  const campaign = await db.newsletterCampaign.update({
+    where: { id: campaignId },
+    data: {
+      ...formValues,
+      status: existingCampaign.status === "SENT" ? "READY" : formValues.status,
+    },
+  });
+
+  const html = buildNewsletterHtml(campaign);
+  const text = buildNewsletterText(campaign);
+
+  const result = await sendTransactionalEmail({
+    to: testEmail,
+    subject: `[Test] ${campaign.subject}`,
+    text: `${text}\n\nThis is a test email sent from Odyssea Vision admin.`,
+    html: html.includes("</body>")
+      ? html.replace(
+          "</body>",
+          `<p style="margin:24px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#777064;">This is a test email sent from Odyssea Vision admin.</p></body>`,
+        )
+      : `${html}<p style="margin:24px;text-align:center;font-family:Arial,sans-serif;font-size:12px;color:#777064;">This is a test email sent from Odyssea Vision admin.</p>`,
+  });
+
+  revalidateNewsletters();
+
+  if (!result.sent) {
+    redirect(`/admin/newsletters/${campaign.id}?test=smtp-not-configured`);
+  }
+
+  redirect(
+    `/admin/newsletters/${campaign.id}?test=sent&email=${encodeURIComponent(
+      testEmail,
+    )}`,
+  );
+}
+
 export async function sendNewsletterCampaign(
   campaignId: string,
   formData?: FormData,
@@ -153,8 +319,8 @@ export async function sendNewsletterCampaign(
       const result = await sendTransactionalEmail({
         to: subscriber.email,
         subject: campaign.subject,
-        text,
-        html,
+        text: appendUnsubscribeText(text, subscriber.email),
+        html: appendUnsubscribeFooter(html, subscriber.email),
       });
 
       if (result.sent) {
@@ -201,6 +367,7 @@ export async function sendNewsletterCampaign(
     data: {
       status: "SENT",
       sentAt: new Date(),
+      scheduledAt: null,
       recipientCount: sentCount,
     },
   });

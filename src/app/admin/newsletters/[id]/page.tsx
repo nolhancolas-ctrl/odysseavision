@@ -6,6 +6,8 @@ import {
   duplicateNewsletterCampaign,
   saveNewsletterCampaign,
   sendNewsletterCampaign,
+  scheduleNewsletterCampaign,
+  sendNewsletterTestEmail,
 } from "@/server/actions/newsletters";
 import { db } from "@/lib/db";
 
@@ -68,6 +70,8 @@ export default async function EditNewsletterPage({ params }: NewsletterPageProps
         activeSubscribers={activeSubscribers}
         saveAction={saveNewsletterCampaign.bind(null, campaign.id)}
         sendAction={sendNewsletterCampaign.bind(null, campaign.id)}
+        scheduleAction={scheduleNewsletterCampaign.bind(null, campaign.id)}
+        testAction={sendNewsletterTestEmail.bind(null, campaign.id)}
         deleteAction={deleteNewsletterCampaign.bind(null, campaign.id)}
         duplicateAction={duplicateNewsletterCampaign.bind(null, campaign.id)}
       />

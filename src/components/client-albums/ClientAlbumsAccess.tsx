@@ -1,3 +1,6 @@
+"use client";
+
+import { useState } from "react";
 import { clientAlbumAccessFeatures, clientAlbumImages } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
 
@@ -10,11 +13,45 @@ function renderLines(text: string) {
 }
 
 export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
+  const [password, setPassword] = useState("");
+  const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
+
   const background =
     content?.images.background ||
     content?.imageSrc ||
     clientAlbumImages.accessFond.src;
   const handwritten = content?.drawings.handwritten || "access your\ngallery";
+
+  async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!password.trim()) {
+      setStatus("error");
+      return;
+    }
+
+    setStatus("loading");
+
+    const response = await fetch("/api/client-albums/access-by-password", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password }),
+    });
+
+    const result = (await response.json().catch(() => ({}))) as {
+      ok?: boolean;
+      redirectTo?: string;
+    };
+
+    if (response.ok && result.ok && result.redirectTo) {
+      window.location.href = result.redirectTo;
+      return;
+    }
+
+    setStatus("error");
+  }
 
   return (
     <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14 md:py-20">
@@ -75,7 +112,10 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
             />
           ) : null}
 
-          <div className="absolute left-1/2 top-0 w-[min(86vw,330px)] -translate-x-1/2 rotate-[-4deg] border-[5px] border-white/70 bg-[#172016] p-7 text-[#f4efe4] shadow-2xl md:w-[350px] lg:left-0 lg:top-1/2 lg:w-[340px] lg:-translate-y-1/2 lg:translate-x-0">
+          <form
+            onSubmit={onSubmit}
+            className="absolute left-1/2 top-0 w-[min(86vw,330px)] -translate-x-1/2 rotate-[-4deg] border-[5px] border-white/70 bg-[#172016] p-7 text-[#f4efe4] shadow-2xl md:w-[350px] lg:left-0 lg:top-1/2 lg:w-[340px] lg:-translate-y-1/2 lg:translate-x-0"
+          >
             <div className="absolute left-1/2 top-[-22px] h-9 w-28 -translate-x-1/2 rotate-[2deg] bg-[#d8cdb8]/70 shadow-sm backdrop-blur-[1px]" />
 
             <p className="mb-5 font-hand text-3xl leading-[0.95] text-white/80">
@@ -93,17 +133,26 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
 
             <input
               type="password"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               placeholder="Password"
               className="mt-3 w-full border border-white/30 bg-transparent px-4 py-3 text-xs outline-none placeholder:text-white/35"
             />
 
+            {status === "error" ? (
+              <p className="mt-3 text-xs text-white/55">
+                No published gallery found for this password.
+              </p>
+            ) : null}
+
             <button
-              type="button"
-              className="mt-5 w-full cursor-pointer border border-white/35 px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] transition hover:bg-white hover:text-[#172016]"
+              type="submit"
+              disabled={status === "loading"}
+              className="mt-5 w-full cursor-pointer border border-white/35 px-5 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] transition hover:bg-white hover:text-[#172016] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              View gallery
+              {status === "loading" ? "Opening..." : "View gallery"}
             </button>
-          </div>
+          </form>
         </div>
       </div>
     </section>

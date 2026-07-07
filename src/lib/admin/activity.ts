@@ -72,16 +72,14 @@ const sources: TableSource[] = [
   {
     table: "ContactMessage",
     category: "Message",
-    hrefBase: "/admin/messages",
     titleColumns: ["subject", "name", "email"],
     descriptionColumns: ["name", "email", "message", "status"],
   },
   {
     table: "NewsletterSubscriber",
     category: "Subscriber",
-    hrefBase: "/admin/analytics/subscribers",
     titleColumns: ["email", "name"],
-    descriptionColumns: ["source", "status"],
+    descriptionColumns: ["source", "active"],
   },
 ];
 
