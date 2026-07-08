@@ -29,3 +29,9 @@ Thumbs.db
 !.vscode/extensions.json
 
 /generated/prisma
+
+# Local repair backups
+*.before-neon
+*.before-neon-fix
+*.broken-before-neon-fix
+*.before-*
