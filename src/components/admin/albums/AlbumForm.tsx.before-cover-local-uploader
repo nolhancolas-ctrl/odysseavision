@@ -200,10 +200,6 @@ export function AlbumForm({
   submitLabel,
 }: AlbumFormProps) {
   const [coverSrc, setCoverSrc] = useState(album?.coverSrc ?? "");
-  const coverInputRef = useRef<HTMLInputElement | null>(null);
-  const [coverUploadError, setCoverUploadError] = useState("");
-  const [isCoverUploading, setIsCoverUploading] = useState(false);
-  const [isCoverDragging, setIsCoverDragging] = useState(false);
   const [status, setStatus] = useState(album?.status ?? "DRAFT");
   const [clientId, setClientId] = useState(album?.clientId ?? "");
   const [previewImages, setPreviewImages] = useState<PreviewImage[]>(() =>
@@ -316,44 +312,6 @@ export function AlbumForm({
     uploadPreviewFiles(event.dataTransfer.files);
   }
 
-
-  async function uploadCoverFile(originalFile: File) {
-    setCoverUploadError("");
-    setIsCoverUploading(true);
-
-    try {
-      const file = await compressPreviewFile(originalFile);
-      const formData = new FormData();
-
-      formData.append("file", file);
-      formData.append("context", "client-album");
-      formData.append("entitySlug", album?.slug || "draft");
-      formData.append("slotKey", "cover");
-      formData.append("label", "Album cover image");
-
-      const result = await uploadPreviewImage(formData);
-
-      if (!result.ok || !result.path) {
-        setCoverUploadError(
-          `${originalFile.name}: ${result.error || "Upload failed."}`,
-        );
-        return;
-      }
-
-      setCoverSrc(result.path);
-    } catch (error) {
-      console.error("[AlbumForm] Cover upload failed:", error);
-      setCoverUploadError(`${originalFile.name}: Upload failed.`);
-    } finally {
-      setIsCoverUploading(false);
-
-      if (coverInputRef.current) {
-        coverInputRef.current.value = "";
-      }
-    }
-  }
-
-
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
       <input type="hidden" name="previewImages" value={previewPayload} />
@@ -407,100 +365,15 @@ export function AlbumForm({
 
           <input type="hidden" name="coverSrc" value={coverSrc} />
 
-          <div className="space-y-3">
-            <button
-              type="button"
-              onClick={() => coverInputRef.current?.click()}
-              onDragOver={(event) => {
-                event.preventDefault();
-                setIsCoverDragging(true);
-              }}
-              onDragLeave={() => setIsCoverDragging(false)}
-              onDrop={(event) => {
-                event.preventDefault();
-                setIsCoverDragging(false);
-
-                const file = event.dataTransfer.files[0];
-
-                if (file) {
-                  void uploadCoverFile(file);
-                }
-              }}
-              disabled={isCoverUploading}
-              className={`group relative flex min-h-[260px] w-full cursor-pointer overflow-hidden rounded-[1.75rem] border border-dashed text-left transition ${
-                isCoverDragging
-                  ? "border-[#b88a3b] bg-white/70"
-                  : "border-[#242617]/15 bg-[#f4efe4]/70 hover:bg-white/60"
-              } ${isCoverUploading ? "opacity-70" : ""}`}
-            >
-              {coverSrc ? (
-                <img
-                  src={coverSrc}
-                  alt="Album cover image"
-                  className="absolute inset-0 h-full w-full object-cover"
-                />
-              ) : (
-                <span className="flex min-h-[260px] w-full flex-col items-center justify-center gap-3 p-6 text-center">
-                  <span className="flex h-14 w-14 items-center justify-center rounded-full border border-[#242617]/10 text-3xl text-[#242617]/45">
-                    +
-                  </span>
-                  <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
-                    Album cover image
-                  </span>
-                  <span className="max-w-xs text-sm leading-6 text-[#242617]/40">
-                    {isCoverUploading
-                      ? "Uploading image..."
-                      : "Drop an image here or click to upload."}
-                  </span>
-                </span>
-              )}
-
-              {coverSrc ? (
-                <span className="absolute inset-x-4 bottom-4 rounded-2xl bg-[#071321]/72 px-4 py-3 text-xs font-semibold uppercase tracking-[0.14em] text-[#f4efe4] opacity-0 backdrop-blur transition group-hover:opacity-100">
-                  {isCoverUploading ? "Uploading..." : "Replace image"}
-                </span>
-              ) : null}
-            </button>
-
-            <input
-              ref={coverInputRef}
-              type="file"
-              accept="image/jpeg,image/png,image/webp,image/gif,image/svg+xml"
-              className="hidden"
-              onChange={(event) => {
-                const file = event.target.files?.[0];
-
-                if (file) {
-                  void uploadCoverFile(file);
-                }
-              }}
-            />
-
-            {coverSrc ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <input
-                  value={coverSrc}
-                  onChange={(event) => setCoverSrc(event.target.value)}
-                  className="min-w-0 flex-1 rounded-2xl border border-[#242617]/10 bg-white/45 px-4 py-3 text-xs text-[#242617]/60 outline-none transition focus:border-[#b88a3b]/70 focus:bg-white"
-                  placeholder="/images/example.webp"
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setCoverSrc("")}
-                  className="cursor-pointer rounded-full border border-red-900/15 px-4 py-3 text-[10px] font-semibold uppercase tracking-[0.14em] text-red-900/55 transition hover:bg-red-900 hover:text-white"
-                >
-                  Remove
-                </button>
-              </div>
-            ) : null}
-
-            {coverUploadError ? (
-              <p className="text-sm font-semibold text-[#b94a3a]">
-                {coverUploadError}
-              </p>
-            ) : null}
-          </div>
+          <AdminImageDropzone
+            label="Album cover image"
+            value={coverSrc}
+            onChange={setCoverSrc}
+            context="client-album"
+            entitySlug={uploadSlug}
+            slotKey="cover"
+            ratio="4 / 3"
+          />
         </div>
 
         <div>

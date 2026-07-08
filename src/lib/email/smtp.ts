@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { db } from "@/lib/db";
 
 export type TransactionalEmail = {
   to: string;
@@ -18,6 +19,16 @@ export type EmailResult =
       reason: "SMTP_NOT_CONFIGURED";
     };
 
+type SmtpSettingValue = {
+  host?: string;
+  port?: string;
+  secure?: boolean;
+  user?: string;
+  password?: string;
+  from?: string;
+  enabled?: boolean;
+};
+
 function parsePort(value: string | undefined, fallback: number) {
   const parsed = Number(value);
 
@@ -31,7 +42,45 @@ function parseBoolean(value: string | undefined, fallback: boolean) {
   return fallback;
 }
 
-function getSmtpConfig() {
+async function getSmtpSettingsFromDb(): Promise<SmtpSettingValue | null> {
+  try {
+    const setting = await db.siteSetting.findUnique({
+      where: { key: "smtp" },
+    });
+
+    if (!setting?.value || typeof setting.value !== "object") {
+      return null;
+    }
+
+    return setting.value as SmtpSettingValue;
+  } catch {
+    return null;
+  }
+}
+
+async function getSmtpConfig() {
+  const dbSettings = await getSmtpSettingsFromDb();
+
+  if (dbSettings?.enabled) {
+    const host = dbSettings.host || "";
+    const port = parsePort(dbSettings.port, 465);
+    const secure = Boolean(dbSettings.secure);
+    const user = dbSettings.user || "";
+    const pass = dbSettings.password || "";
+    const from =
+      dbSettings.from || (user ? `Odyssea Vision <${user}>` : "");
+
+    return {
+      host,
+      port,
+      secure,
+      user,
+      pass,
+      from,
+      configured: Boolean(host && user && pass && from),
+    };
+  }
+
   const host = process.env.SMTP_HOST || "smtp.gmail.com";
   const port = parsePort(process.env.SMTP_PORT, 465);
   const secure = parseBoolean(process.env.SMTP_SECURE, port === 465);
@@ -67,7 +116,7 @@ export function textToHtml(value: string) {
 export async function sendTransactionalEmail(
   email: TransactionalEmail,
 ): Promise<EmailResult> {
-  const config = getSmtpConfig();
+  const config = await getSmtpConfig();
 
   if (!config.configured) {
     console.warn("[email] SMTP is not configured. Email was not sent.");

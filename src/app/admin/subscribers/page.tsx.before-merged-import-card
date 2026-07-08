@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { ConfirmSubmitButton } from "@/components/admin/ConfirmSubmitButton";
-import { SubscriberEmailsTextarea } from "@/components/admin/subscribers/SubscriberEmailsTextarea";
 import { SubscriberImportFileInput } from "@/components/admin/subscribers/SubscriberImportFileInput";
 import { db } from "@/lib/db";
 import {
+  addNewsletterSubscriber,
   deleteNewsletterSubscriber,
   importNewsletterSubscribers,
   setNewsletterSubscriberActive,
@@ -164,41 +164,91 @@ export default async function AdminSubscribersPage({
       ) : null}
 
       <section className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">
-        <form action={importNewsletterSubscribers} encType="multipart/form-data">
-          <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b88a3b]">
-                Audience intake
-              </p>
-              <h2 className="mt-2 font-serif text-4xl leading-none tracking-[-0.04em] text-[#242617]">
-                Import subscribers
-              </h2>
-            </div>
+        <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b88a3b]">
+              Audience intake
+            </p>
+            <h2 className="mt-2 font-serif text-3xl text-[#242617]">
+              Add or import subscribers
+            </h2>
+          </div>
+
+          <p className="max-w-xl text-sm leading-6 text-[#242617]/50">
+            Add one contact manually or import a list. Existing contacts are
+            reactivated automatically.
+          </p>
+        </div>
+
+        <div className="mt-6 grid gap-5 xl:grid-cols-[0.78fr_1.22fr]">
+          <form
+            action={addNewsletterSubscriber}
+            className="rounded-[1.75rem] border border-[#242617]/8 bg-[#f4efe4]/55 p-5"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#242617]/42">
+              Single contact
+            </p>
+
+            <label className="mt-5 block">
+              <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+                Email
+              </span>
+              <input
+                name="email"
+                type="email"
+                required
+                placeholder="you@example.com"
+                className="mt-2 w-full rounded-[1.4rem] border border-[#242617]/10 bg-white/45 px-4 py-4 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b] focus:bg-white"
+              />
+            </label>
 
             <button
               type="submit"
-              className="w-fit cursor-pointer rounded-full bg-[#242617] px-6 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:-translate-y-0.5 hover:bg-[#b88a3b]"
+              className="mt-5 cursor-pointer rounded-full bg-[#242617] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#b88a3b]"
             >
-              Import subscribers
+              Add subscriber
             </button>
-          </div>
+          </form>
 
-          <div className="mt-6 grid gap-5 lg:grid-cols-2">
-            <div className="rounded-[1.9rem] border border-[#242617]/8 bg-[#f4efe4]/55 p-5">
-              <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[#242617]/42">
-                CSV
-              </p>
+          <form
+            action={importNewsletterSubscribers}
+            encType="multipart/form-data"
+            className="rounded-[1.75rem] border border-[#242617]/8 bg-[#f4efe4]/55 p-5"
+          >
+            <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-[#242617]/42">
+              Bulk import
+            </p>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-[0.85fr_1.15fr]">
               <SubscriberImportFileInput />
+
+              <label className="block">
+                <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+                  Paste emails
+                </span>
+                <textarea
+                  name="csvText"
+                  rows={6}
+                  placeholder="email@example.com&#10;hello@example.com&#10;team@example.com"
+                  className="mt-2 min-h-[150px] w-full resize-none rounded-[1.6rem] border border-[#242617]/10 bg-white/45 px-5 py-4 text-sm leading-6 text-[#242617] outline-none transition placeholder:text-[#242617]/35 focus:border-[#b88a3b] focus:bg-white"
+                />
+              </label>
             </div>
 
-            <div className="rounded-[1.9rem] border border-[#242617]/8 bg-[#f4efe4]/55 p-5">
-              <p className="mb-4 text-[11px] font-bold uppercase tracking-[0.2em] text-[#242617]/42">
-                Emails
+            <div className="mt-5 flex flex-col justify-between gap-3 md:flex-row md:items-center">
+              <p className="text-xs leading-5 text-[#242617]/40">
+                CSV, comma-separated, spaces or one email per line are accepted.
               </p>
-              <SubscriberEmailsTextarea />
+
+              <button
+                type="submit"
+                className="cursor-pointer rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/70 transition hover:bg-[#242617] hover:text-[#f4efe4]"
+              >
+                Import subscribers
+              </button>
             </div>
-          </div>
-        </form>
+          </form>
+        </div>
       </section>
 
       <section className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-4 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">

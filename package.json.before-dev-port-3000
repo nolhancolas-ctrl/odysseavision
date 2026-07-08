@@ -8,6 +8,7 @@
     "nodemailer": "^9.0.3",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "sharp": "^0.35.3",
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
@@ -30,7 +31,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "dev": "next dev -H 0.0.0.0 -p 3000",
+    "dev": "next dev -H 0.0.0.0 -p 3333",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",

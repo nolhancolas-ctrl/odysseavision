@@ -316,44 +316,6 @@ export function AlbumForm({
     uploadPreviewFiles(event.dataTransfer.files);
   }
 
-
-  async function uploadCoverFile(originalFile: File) {
-    setCoverUploadError("");
-    setIsCoverUploading(true);
-
-    try {
-      const file = await compressPreviewFile(originalFile);
-      const formData = new FormData();
-
-      formData.append("file", file);
-      formData.append("context", "client-album");
-      formData.append("entitySlug", album?.slug || "draft");
-      formData.append("slotKey", "cover");
-      formData.append("label", "Album cover image");
-
-      const result = await uploadPreviewImage(formData);
-
-      if (!result.ok || !result.path) {
-        setCoverUploadError(
-          `${originalFile.name}: ${result.error || "Upload failed."}`,
-        );
-        return;
-      }
-
-      setCoverSrc(result.path);
-    } catch (error) {
-      console.error("[AlbumForm] Cover upload failed:", error);
-      setCoverUploadError(`${originalFile.name}: Upload failed.`);
-    } finally {
-      setIsCoverUploading(false);
-
-      if (coverInputRef.current) {
-        coverInputRef.current.value = "";
-      }
-    }
-  }
-
-
   return (
     <form action={action} className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
       <input type="hidden" name="previewImages" value={previewPayload} />

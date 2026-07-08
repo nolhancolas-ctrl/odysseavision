@@ -314,6 +314,12 @@ export function AdminShell({ children }: { children: ReactNode }) {
                 <span>View public site</span>
               </Link>
 
+              <Link
+                href="/admin/settings"
+                className="hidden rounded-full bg-[#071321] px-5 py-3 text-xs uppercase tracking-[0.16em] text-[#f4efe4] transition hover:bg-[#142844] md:block"
+              >
+                Settings
+              </Link>
             </div>
           </div>
         </header>

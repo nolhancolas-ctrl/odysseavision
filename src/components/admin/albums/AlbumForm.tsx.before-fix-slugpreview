@@ -327,7 +327,7 @@ export function AlbumForm({
 
       formData.append("file", file);
       formData.append("context", "client-album");
-      formData.append("entitySlug", album?.slug || "draft");
+      formData.append("entitySlug", slugPreview || "draft");
       formData.append("slotKey", "cover");
       formData.append("label", "Album cover image");
 
