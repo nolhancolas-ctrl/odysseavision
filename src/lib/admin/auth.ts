@@ -38,28 +38,13 @@ function signSession(config: AdminAuthConfig, expiresAt: number) {
     .digest("hex");
 }
 
-async function ensureAdminAuthTable() {
-  await db.$executeRawUnsafe(`
-    CREATE TABLE IF NOT EXISTS AdminAuthConfig (
-      id TEXT PRIMARY KEY,
-      passwordHash TEXT NOT NULL,
-      salt TEXT NOT NULL,
-      sessionSecret TEXT NOT NULL,
-      updatedAt DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
-    )
-  `);
-}
+export async function getAdminAuthConfig(): Promise<AdminAuthConfig> {
+  const existing = await db.adminAuthConfig.findUnique({
+    where: { id: CONFIG_ID },
+  });
 
-export async function getAdminAuthConfig() {
-  await ensureAdminAuthTable();
-
-  const rows = await db.$queryRawUnsafe<AdminAuthConfig[]>(
-    "SELECT * FROM AdminAuthConfig WHERE id = ? LIMIT 1",
-    CONFIG_ID
-  );
-
-  if (rows[0]) {
-    return rows[0];
+  if (existing) {
+    return existing;
   }
 
   const salt = randomBytes(16).toString("hex");
@@ -67,23 +52,14 @@ export async function getAdminAuthConfig() {
   const sessionSecret =
     process.env.ADMIN_SESSION_SECRET || randomBytes(32).toString("hex");
 
-  await db.$executeRawUnsafe(
-    `
-      INSERT INTO AdminAuthConfig (id, passwordHash, salt, sessionSecret, updatedAt)
-      VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
-    `,
-    CONFIG_ID,
-    passwordHash,
-    salt,
-    sessionSecret
-  );
-
-  const createdRows = await db.$queryRawUnsafe<AdminAuthConfig[]>(
-    "SELECT * FROM AdminAuthConfig WHERE id = ? LIMIT 1",
-    CONFIG_ID
-  );
-
-  return createdRows[0];
+  return db.adminAuthConfig.create({
+    data: {
+      id: CONFIG_ID,
+      passwordHash,
+      salt,
+      sessionSecret,
+    },
+  });
 }
 
 export async function verifyAdminPassword(password: string) {
@@ -153,23 +129,24 @@ export async function isAdminAuthenticated() {
 }
 
 export async function updateAdminPassword(password: string) {
-  await ensureAdminAuthTable();
-
   const salt = randomBytes(16).toString("hex");
   const passwordHash = hashPassword(password, salt);
   const sessionSecret = randomBytes(32).toString("hex");
 
-  await db.$executeRawUnsafe(
-    `
-      UPDATE AdminAuthConfig
-      SET passwordHash = ?, salt = ?, sessionSecret = ?, updatedAt = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `,
-    passwordHash,
-    salt,
-    sessionSecret,
-    CONFIG_ID
-  );
+  await db.adminAuthConfig.upsert({
+    where: { id: CONFIG_ID },
+    update: {
+      passwordHash,
+      salt,
+      sessionSecret,
+    },
+    create: {
+      id: CONFIG_ID,
+      passwordHash,
+      salt,
+      sessionSecret,
+    },
+  });
 
   await setAdminSessionCookie();
 }

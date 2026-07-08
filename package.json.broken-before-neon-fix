@@ -57,4 +57,4 @@
   },
   "homepage": "https://github.com/nolhancolas-ctrl/odysseavision#readme",
   "db:seed:stories": "tsx scripts/seed-stories.ts"
-}
+}\n
