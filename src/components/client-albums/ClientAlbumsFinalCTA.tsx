@@ -11,6 +11,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 function renderLines(text: string) {
   return text.split("\n").filter(Boolean);
 }
@@ -43,6 +51,7 @@ export function ClientAlbumsFinalCTA({ content }: ClientAlbumsFinalCTAProps) {
               src={whale}
               label={fileLabel(whale, clientAlbumImages.ctaWhale.label)}
               className="absolute left-0 top-1/2 h-[145px] w-[205px] -translate-y-1/2 rotate-[-4deg] border-[5px] border-white/80 shadow-xl"
+              showWatermark={shouldShowWatermark(content, "whale")}
             />
           ) : null}
         </div>

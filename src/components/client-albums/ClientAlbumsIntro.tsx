@@ -1,10 +1,19 @@
 import { ButtonLink } from "@/components/ui/ButtonLink";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { clientAlbumImages, clientAlbumIntro } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
 
 type ClientAlbumsIntroProps = {
   content?: PublicSectionContent;
 };
+
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
 
 export function ClientAlbumsIntro({ content }: ClientAlbumsIntroProps) {
   const photo = content?.images.photo || clientAlbumImages.introTurtle.src;
@@ -13,14 +22,17 @@ export function ClientAlbumsIntro({ content }: ClientAlbumsIntroProps) {
     <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14 md:py-20">
       <div className="mx-auto grid max-w-[1100px] items-center gap-12 md:grid-cols-[0.65fr_1fr]">
         <div className="relative mx-auto w-full max-w-[260px]">
-
           {photo ? (
             <div
-              className="aspect-[0.82] bg-[#d5ccbd] bg-cover bg-center shadow-sm"
+              className="relative aspect-[0.82] overflow-hidden bg-[#d5ccbd] bg-cover bg-center shadow-sm"
               style={{
                 backgroundImage: `url(${photo})`,
               }}
-            />
+            >
+              <FrameWatermark
+                enabled={shouldShowWatermark(content, "photo")}
+              />
+            </div>
           ) : null}
         </div>
 
