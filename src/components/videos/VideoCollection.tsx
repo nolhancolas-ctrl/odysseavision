@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import type { PublicSectionContent } from "@/lib/content/site";
 import type { PublicVideo } from "@/lib/content/videos";
 import { VimeoPlayerModal } from "./VimeoPlayerModal";
@@ -83,6 +84,8 @@ export function VideoCollection({
                   style={{ backgroundImage: `url(${video.thumbnailSrc})` }}
                 />
                 <div className="absolute inset-0 bg-black/10 transition group-hover:bg-black/25" />
+                <FrameWatermark />
+
                 {video.duration ? (
                   <span className="absolute right-3 top-3 text-[9px] text-white">
                     {video.duration}

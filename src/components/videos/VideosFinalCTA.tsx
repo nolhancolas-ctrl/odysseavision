@@ -11,6 +11,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
   const background =
     content?.images.background || content?.imageSrc || videosImages.ctaFond.src;
@@ -61,6 +69,7 @@ export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
               src={duo}
               label={fileLabel(duo, videosImages.ctaDuo.label)}
               className="absolute right-0 top-1/2 h-[215px] w-[175px] -translate-y-1/2 rotate-[5deg] border-[6px] border-white/90 shadow-xl"
+              showWatermark={shouldShowWatermark(content, "duo")}
             />
           ) : null}
 

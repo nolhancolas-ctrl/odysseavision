@@ -1,3 +1,4 @@
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { featuredFilm } from "@/data/videos";
 import type { PublicVideo } from "@/lib/content/videos";
 
@@ -50,10 +51,12 @@ export function FeaturedFilm({ video }: FeaturedFilmProps) {
         ) : (
           <div
             id="featured-player"
-            className="relative flex aspect-video w-full items-center justify-center bg-[#10170d] bg-cover bg-center shadow-xl"
+            className="relative flex aspect-video w-full items-center justify-center overflow-hidden bg-[#10170d] bg-cover bg-center shadow-xl"
             style={{ backgroundImage: `url(${poster})` }}
           >
             <div className="absolute inset-0 bg-[#071321]/75" />
+            <FrameWatermark />
+
             <div className="relative px-6 text-center">
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4]">
                 Sorry

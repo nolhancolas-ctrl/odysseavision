@@ -10,6 +10,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 function renderLines(text: string) {
   return text.split("\n").filter(Boolean);
 }
@@ -68,6 +76,7 @@ export function VideosHero({ content }: VideosHeroProps) {
               src={heroCoast}
               label={fileLabel(heroCoast, videosImages.heroCoast.label)}
               className="absolute right-[-22%] top-[0px] z-20 h-[255px] w-[190px] rotate-[5deg] border-[6px] border-white/85 shadow-2xl xl:h-[300px] xl:w-[220px]"
+              showWatermark={shouldShowWatermark(content, "heroCoast")}
             />
           ) : null}
 
@@ -76,6 +85,7 @@ export function VideosHero({ content }: VideosHeroProps) {
               src={heroTurtle}
               label={fileLabel(heroTurtle, videosImages.heroTurtle.label)}
               className="absolute right-[-66%] top-[-120px] z-40 h-[165px] w-[145px] rotate-[-3deg] border-[6px] border-white/85 shadow-2xl xl:h-[195px] xl:w-[170px]"
+              showWatermark={shouldShowWatermark(content, "heroTurtle")}
             />
           ) : null}
 
@@ -84,6 +94,7 @@ export function VideosHero({ content }: VideosHeroProps) {
               src={heroRoadtrip}
               label={fileLabel(heroRoadtrip, videosImages.heroRoadtrip.label)}
               className="absolute right-[-22%] top-[-160px] z-30 h-[175px] w-[260px] rotate-[4deg] border-[6px] border-white/85 shadow-2xl"
+              showWatermark={shouldShowWatermark(content, "heroRoadtrip")}
             />
           ) : null}
 
