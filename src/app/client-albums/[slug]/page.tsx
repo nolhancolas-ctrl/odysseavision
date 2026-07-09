@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
 import { ClientAlbumPasswordGate } from "@/components/client-albums/ClientAlbumPasswordGate";
 import { db } from "@/lib/db";
 import {
@@ -159,10 +160,10 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {album.images.map((image) => (
                 <article key={image.id}>
-                  <div
-                    className="aspect-[1.35] bg-[#d8cdb8] bg-cover bg-center"
-                    style={{ backgroundImage: `url(${image.imageSrc})` }}
-                    aria-label={image.alt}
+                  <WatermarkedPhotoFrame
+                    src={image.imageSrc}
+                    alt={image.alt}
+                    className="aspect-[1.35]"
                   />
                   {image.title ? (
                     <p className="mt-3 text-xs uppercase tracking-[0.12em] text-[#242617]/45">

@@ -2,9 +2,12 @@ import "server-only";
 
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import sharp from "sharp";
 import { put } from "@vercel/blob";
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+const MAX_PHOTO_WIDTH = 2600;
+const PHOTO_WEBP_QUALITY = 84;
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -13,6 +16,14 @@ const ALLOWED_MIME_TYPES = new Set([
   "image/gif",
   "image/svg+xml",
 ]);
+
+const PROCESSABLE_PHOTO_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
+const PHOTO_PROCESS_CONTEXTS = new Set(["portfolio", "client-album"]);
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
@@ -44,6 +55,13 @@ type UploadResult = {
   storage: "blob" | "local";
 };
 
+type PreparedUpload = {
+  buffer: Buffer;
+  fileName: string;
+  size: number;
+  contentType: string;
+};
+
 export function slugifyUploadName(value: string) {
   return value
     .normalize("NFD")
@@ -66,10 +84,7 @@ function cleanFolder(value: string) {
     .join("/");
 }
 
-function getUploadFolder(
-  context: UploadContext,
-  entitySlug: string,
-) {
+function getUploadFolder(context: UploadContext, entitySlug: string) {
   const cleanSlug = slugifyUploadName(entitySlug || "draft");
 
   if (context === "portfolio") {
@@ -111,31 +126,71 @@ function getBaseName(file: File, slotKey: string) {
   return slugifyUploadName(slotKey || originalName || "image") || "image";
 }
 
-function getSafeFileName(file: File, slotKey: string) {
-  const extension = getExtension(file);
+function getSafeFileName(file: File, slotKey: string, extension?: string) {
+  const safeExtension = extension || getExtension(file);
   const baseName = getBaseName(file, slotKey);
 
-  return `${baseName}.${extension}`;
+  return `${baseName}.${safeExtension}`;
 }
 
-async function uploadToLocal({
+async function preparePhotoUpload({
   file,
   buffer,
-  folder,
-  fileName,
+  context,
+  slotKey,
 }: {
   file: File;
   buffer: Buffer;
+  context: UploadContext;
+  slotKey: string;
+}): Promise<PreparedUpload> {
+  const shouldProcess =
+    PHOTO_PROCESS_CONTEXTS.has(context) &&
+    PROCESSABLE_PHOTO_MIME_TYPES.has(file.type);
+
+  if (!shouldProcess) {
+    return {
+      buffer,
+      fileName: getSafeFileName(file, slotKey),
+      size: buffer.length,
+      contentType: file.type,
+    };
+  }
+
+  const processedBuffer = await sharp(buffer)
+    .rotate()
+    .resize({
+      width: MAX_PHOTO_WIDTH,
+      withoutEnlargement: true,
+    })
+    .webp({
+      quality: PHOTO_WEBP_QUALITY,
+      effort: 5,
+    })
+    .toBuffer();
+
+  return {
+    buffer: processedBuffer,
+    fileName: getSafeFileName(file, slotKey, "webp"),
+    size: processedBuffer.length,
+    contentType: "image/webp",
+  };
+}
+
+async function uploadToLocal({
+  prepared,
+  folder,
+}: {
+  prepared: PreparedUpload;
   folder: string;
-  fileName: string;
 }): Promise<UploadResult> {
   const publicFolder = path.join(process.cwd(), "public", "images", folder);
   await mkdir(publicFolder, { recursive: true });
 
-  const filePath = path.join(publicFolder, fileName);
-  await writeFile(filePath, buffer);
+  const filePath = path.join(publicFolder, prepared.fileName);
+  await writeFile(filePath, prepared.buffer);
 
-  const src = `/images/${folder}/${fileName}`.replace(/\/+/g, "/");
+  const src = `/images/${folder}/${prepared.fileName}`.replace(/\/+/g, "/");
 
   return {
     ok: true,
@@ -143,32 +198,28 @@ async function uploadToLocal({
     path: src,
     url: src,
     pathname: src,
-    fileName,
-    size: file.size,
-    contentType: file.type,
+    fileName: prepared.fileName,
+    size: prepared.size,
+    contentType: prepared.contentType,
     storage: "local",
   };
 }
 
 async function uploadToBlob({
-  file,
-  buffer,
+  prepared,
   folder,
-  fileName,
 }: {
-  file: File;
-  buffer: Buffer;
+  prepared: PreparedUpload;
   folder: string;
-  fileName: string;
 }): Promise<UploadResult> {
-  const pathname = `images/${folder}/${Date.now()}-${fileName}`.replace(
+  const pathname = `images/${folder}/${Date.now()}-${prepared.fileName}`.replace(
     /\/+/g,
     "/",
   );
 
-  const blob = await put(pathname, buffer, {
+  const blob = await put(pathname, prepared.buffer, {
     access: "public",
-    contentType: file.type,
+    contentType: prepared.contentType,
     addRandomSuffix: true,
   });
 
@@ -178,9 +229,9 @@ async function uploadToBlob({
     path: blob.url,
     url: blob.url,
     pathname: blob.pathname,
-    fileName,
-    size: file.size,
-    contentType: file.type,
+    fileName: prepared.fileName,
+    size: prepared.size,
+    contentType: prepared.contentType,
     storage: "blob",
   };
 }
@@ -205,23 +256,25 @@ export async function uploadImageCore(formData: FormData) {
   const slotKey = String(formData.get("slotKey") || "");
 
   const folder = getUploadFolder(context, entitySlug);
-  const fileName = getSafeFileName(file, slotKey);
   const arrayBuffer = await file.arrayBuffer();
   const buffer = Buffer.from(arrayBuffer);
 
+  const prepared = await preparePhotoUpload({
+    file,
+    buffer,
+    context,
+    slotKey,
+  });
+
   if (process.env.BLOB_READ_WRITE_TOKEN) {
     return uploadToBlob({
-      file,
-      buffer,
+      prepared,
       folder,
-      fileName,
     });
   }
 
   return uploadToLocal({
-    file,
-    buffer,
+    prepared,
     folder,
-    fileName,
   });
 }

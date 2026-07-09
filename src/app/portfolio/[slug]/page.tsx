@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
 import {
   getPublicPortfolioCategories,
   getPublicPortfolioItems,
@@ -130,12 +131,11 @@ export default async function PortfolioCategoryPage({
                   key={item.id}
                   className="mb-5 break-inside-avoid overflow-hidden bg-[#d8cdb8]"
                 >
-                  <div
-                    className={`${getGalleryAspectClass(
-                      index,
-                    )} bg-cover bg-center transition duration-700 hover:scale-[1.025]`}
-                    style={{ backgroundImage: `url(${item.imageSrc})` }}
-                    aria-label={item.title}
+                  <WatermarkedPhotoFrame
+                    src={item.imageSrc}
+                    alt={item.title}
+                    className={getGalleryAspectClass(index)}
+                    imageClassName="transition duration-700 group-hover:scale-[1.025]"
                   />
                 </figure>
               ))}
