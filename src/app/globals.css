@@ -224,38 +224,6 @@ a {
 /* HERO POSTCARDS END */
 
 
-/* Portfolio carousels */
-.home-portfolio-marquee,
-.portfolio-categories-marquee {
-  animation: portfolio-marquee 54s linear infinite;
-  animation-play-state: running !important;
-  will-change: transform;
-}
-
-.home-portfolio-marquee:hover,
-.home-portfolio-marquee *:hover,
-.portfolio-categories-marquee:hover,
-.portfolio-categories-marquee *:hover {
-  animation-play-state: running !important;
-}
-
-@keyframes portfolio-marquee {
-  from {
-    transform: translate3d(0, 0, 0);
-  }
-
-  to {
-    transform: translate3d(-50%, 0, 0);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .home-portfolio-marquee,
-  .portfolio-categories-marquee {
-    animation: none;
-  }
-}
-/* End portfolio carousels */
 
 
 button,

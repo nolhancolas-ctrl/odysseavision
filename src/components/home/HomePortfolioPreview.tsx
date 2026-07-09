@@ -11,6 +11,12 @@ type HomePortfolioPreviewProps = {
   content?: PublicSectionContent;
 };
 
+function getFeaturedCategories(categories: PublicPortfolioCategory[]) {
+  return categories
+    .filter((item) => item.title.toLowerCase() !== "vintage")
+    .slice(0, 4);
+}
+
 function PortfolioPreviewCard({
   item,
 }: {
@@ -19,7 +25,7 @@ function PortfolioPreviewCard({
   return (
     <Link
       href={item.href}
-      className="group flex min-h-[500px] w-full flex-col bg-[#30331f] p-5 transition hover:bg-[#3b3e27] md:w-[292px] md:shrink-0 xl:w-[302px]"
+      className="group flex min-h-[470px] w-full flex-col bg-[#30331f] p-5 transition hover:-translate-y-1 hover:bg-[#3b3e27]"
     >
       <p className="mb-2 font-serif text-3xl text-[#b7a879]/75">
         {item.number}
@@ -49,10 +55,12 @@ function PortfolioPreviewCard({
 export async function HomePortfolioPreview({
   content,
 }: HomePortfolioPreviewProps) {
-  const portfolioCategories = await getPublicPortfolioCategories();
+  const portfolioCategories = getFeaturedCategories(
+    await getPublicPortfolioCategories(),
+  );
 
   return (
-    <section className="overflow-hidden bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
+    <section className="bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
           <SectionLabel dark>{content?.eyebrow || "Portfolio"}</SectionLabel>
@@ -61,35 +69,19 @@ export async function HomePortfolioPreview({
           </h2>
         </div>
 
-        <div className="grid gap-6 md:hidden">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           {portfolioCategories.map((item) => (
             <PortfolioPreviewCard key={item.title} item={item} />
           ))}
         </div>
 
-        <div className="relative hidden overflow-hidden md:block">
-          <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-[#11190f] to-transparent" />
-          <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-[#11190f] to-transparent" />
-
-          <div className="home-portfolio-marquee flex w-max">
-            <div className="flex shrink-0 gap-6 pr-6">
-              {portfolioCategories.map((item) => (
-                <PortfolioPreviewCard
-                  key={`first-${item.title}`}
-                  item={item}
-                />
-              ))}
-            </div>
-
-            <div className="flex shrink-0 gap-6 pr-6" aria-hidden="true">
-              {portfolioCategories.map((item) => (
-                <PortfolioPreviewCard
-                  key={`second-${item.title}`}
-                  item={item}
-                />
-              ))}
-            </div>
-          </div>
+        <div className="mt-10 flex justify-center">
+          <Link
+            href="/portfolio"
+            className="rounded-full border border-[#f4efe4]/20 px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:border-[#b88a3b] hover:bg-[#b88a3b] hover:text-[#11190f]"
+          >
+            View portfolio
+          </Link>
         </div>
       </div>
     </section>
