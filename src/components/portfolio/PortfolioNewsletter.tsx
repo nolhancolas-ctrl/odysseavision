@@ -20,6 +20,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
   const [state, formAction, isPending] = useActionState(
     submitNewsletterForm,
@@ -54,6 +62,7 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
               src={leftPhoto}
               label={fileLabel(leftPhoto, homeImages.ctaSailboat.label)}
               className="absolute left-8 top-1/2 h-[285px] w-[245px] -translate-y-1/2 rotate-[-4deg] border-[5px] border-white/90 shadow-xl"
+              showWatermark={shouldShowWatermark(content, "leftPhoto")}
             />
           ) : null}
 
@@ -120,6 +129,7 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
               src={rightPhoto}
               label={fileLabel(rightPhoto, homeImages.ctaOceanCliff.label)}
               className="absolute right-[-185px] top-2/3 h-[185px] w-[230px] -translate-y-1/2 rotate-[3deg] border-[5px] border-white/90 shadow-xl"
+              showWatermark={shouldShowWatermark(content, "rightPhoto")}
             />
           ) : null}
         </div>

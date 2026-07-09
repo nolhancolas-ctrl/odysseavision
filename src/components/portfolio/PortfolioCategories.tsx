@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { getPublicPortfolioCategories } from "@/lib/content/portfolio";
 import type { PublicSectionContent } from "@/lib/content/site";
 
@@ -28,7 +29,9 @@ function PortfolioCategoryCard({ item }: { item: PortfolioCategory }) {
       />
       <div className="absolute inset-0 bg-black/40" />
 
-      <div className="relative flex h-full min-h-[470px] flex-col p-6">
+      <FrameWatermark />
+
+      <div className="relative z-20 flex h-full min-h-[470px] flex-col p-6">
         <p className="font-serif text-2xl text-white/55">{item.number}</p>
 
         <h2 className="font-serif text-4xl uppercase leading-none">
