@@ -10,6 +10,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 function renderHandwritten(text: string) {
   return text.split(" ").reduce<string[]>((lines, word, index) => {
     if (index === 2) {
@@ -52,6 +60,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
               src={heroWhale}
               label={fileLabel(heroWhale, storiesImages.heroWhale.label)}
               className="absolute left-[-8%] top-[5%] h-[230px] w-[190px] rotate-[-4deg] border-[6px] border-white/90 shadow-2xl"
+              showWatermark={shouldShowWatermark(content, "heroWhale")}
             />
           ) : null}
 
@@ -60,6 +69,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
               src={heroManta}
               label={fileLabel(heroManta, storiesImages.heroManta.label)}
               className="absolute left-[28%] top-[0%] h-[220px] w-[185px] rotate-[1deg] border-[6px] border-white/90 shadow-2xl"
+              showWatermark={shouldShowWatermark(content, "heroManta")}
             />
           ) : null}
 
@@ -89,6 +99,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
               src={heroElephants}
               label={fileLabel(heroElephants, storiesImages.heroElephants.label)}
               className="absolute right-[-25%] top-[28%] h-[215px] w-[185px] rotate-[5deg] border-[6px] border-white/90 shadow-2xl"
+              showWatermark={shouldShowWatermark(content, "heroElephants")}
             />
           ) : null}
 

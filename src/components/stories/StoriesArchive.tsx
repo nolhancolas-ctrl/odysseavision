@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PublicSectionContent } from "@/lib/content/site";
 import type { PublicStory } from "@/lib/content/stories";
@@ -216,12 +217,14 @@ export function StoriesArchive({
             <article className="grid items-center gap-10 border-b border-[#242617]/15 py-12 lg:grid-cols-[1.25fr_0.8fr]">
               <Link
                 href={`/stories/${primaryStory.slug}`}
-                className="block min-h-[310px] bg-[#cfc8bb] bg-cover bg-center transition-opacity hover:opacity-90 md:min-h-[390px]"
+                className="relative block min-h-[310px] overflow-hidden bg-[#cfc8bb] bg-cover bg-center transition-opacity hover:opacity-90 md:min-h-[390px]"
                 style={{
                   backgroundImage: `url(${primaryStory.imageSrc})`,
                 }}
                 aria-label={primaryStory.title}
-              />
+              >
+                <FrameWatermark />
+              </Link>
 
               <div className="relative max-w-lg">
                 <p className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-[#242617]/55">
