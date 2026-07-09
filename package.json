@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@prisma/client": "^6.19.0",
+    "@vercel/blob": "^2.6.1",
     "clsx": "^2.1.1",
     "framer-motion": "^12.40.0",
     "lucide-react": "^1.21.0",

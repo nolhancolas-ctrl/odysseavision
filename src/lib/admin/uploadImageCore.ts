@@ -1,170 +1,227 @@
+import "server-only";
+
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { put } from "@vercel/blob";
 
-export type UploadImageResult = {
-  ok: boolean;
-  error: string;
-  path: string;
+const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
+
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
+
+const EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+  "image/gif": "gif",
+  "image/svg+xml": "svg",
 };
 
-const MAX_SOURCE_FILE_SIZE = 25 * 1024 * 1024;
+type UploadContext =
+  | "portfolio"
+  | "story"
+  | "video"
+  | "client-album"
+  | "newsletter"
+  | "site"
+  | "general";
 
-const allowedMimeTypes = new Map([
-  ["image/jpeg", "jpg"],
-  ["image/png", "png"],
-  ["image/webp", "webp"],
-  ["image/gif", "gif"],
-  ["image/svg+xml", "svg"],
-]);
+type UploadResult = {
+  ok: true;
+  error?: string;
+  src: string;
+  path: string;
+  url: string;
+  pathname: string;
+  fileName: string;
+  size: number;
+  contentType: string;
+  storage: "blob" | "local";
+};
 
 export function slugifyUploadName(value: string) {
   return value
-    .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "")
-    .slice(0, 80);
+    .toLowerCase()
+    .replace(/[^a-z0-9.]+/g, "-")
+    .replace(/(^-|-$)+/g, "")
+    .slice(0, 90);
 }
 
 function cleanFolder(value: string) {
   return value
     .split("/")
-    .map((part) => slugifyUploadName(part))
+    .map((part) =>
+      slugifyUploadName(part)
+        .replace(/\.+/g, ".")
+        .replace(/(^\.|\.$)/g, ""),
+    )
     .filter(Boolean)
     .join("/");
 }
 
-function getUploadFolder(formData: FormData) {
-  const context = String(formData.get("context") ?? "misc");
-  const pageKey = String(formData.get("pageKey") ?? "");
-  const sectionKey = String(formData.get("sectionKey") ?? "");
-  const slotKey = String(formData.get("slotKey") ?? "");
-  const entitySlug = String(formData.get("entitySlug") ?? "");
+function getUploadFolder(
+  context: UploadContext,
+  entitySlug: string,
+) {
+  const cleanSlug = slugifyUploadName(entitySlug || "draft");
 
-  if (context === "website-page") {
-    return cleanFolder(`${pageKey}/${sectionKey}`);
+  if (context === "portfolio") {
+    return cleanFolder(`portfolio/${cleanSlug}`);
   }
 
   if (context === "story") {
-    return cleanFolder(`stories/${entitySlug || "draft"}`);
-  }
-
-  if (context === "portfolio") {
-    return cleanFolder(`portfolio/items/${entitySlug || "draft"}`);
-  }
-
-  if (context === "client-album") {
-    return cleanFolder(`client-albums/${entitySlug || "draft"}`);
+    return cleanFolder(`stories/${cleanSlug}`);
   }
 
   if (context === "video") {
-    return cleanFolder(`videos/${entitySlug || "draft"}/${slotKey || "thumbnail"}`);
+    return cleanFolder(`videos/${cleanSlug}`);
+  }
+
+  if (context === "client-album") {
+    return cleanFolder(`client-albums/${cleanSlug}`);
   }
 
   if (context === "newsletter") {
-    return cleanFolder(`newsletters/${entitySlug || "draft"}`);
+    return cleanFolder(`newsletters/${cleanSlug}`);
   }
 
-  if (context === "seo") {
-    return cleanFolder("seo");
+  if (context === "site") {
+    return cleanFolder(`site/${cleanSlug}`);
   }
 
-  if (context === "appearance") {
-    return cleanFolder("admin");
-  }
-
-  return cleanFolder(`uploads/${context}/${slotKey || "image"}`);
+  return cleanFolder(`uploads/${cleanSlug}`);
 }
 
-function getBaseName(formData: FormData, originalName: string) {
-  const slotKey = String(formData.get("slotKey") ?? "");
-  const label = String(formData.get("label") ?? "");
-  const fallback = originalName.replace(/\.[^.]+$/, "");
+function getExtension(file: File) {
+  const originalExtension = file.name.split(".").pop()?.toLowerCase() || "";
+  const mimeExtension = EXTENSION_BY_MIME[file.type];
 
-  return slugifyUploadName(slotKey || label || fallback || "image");
+  return mimeExtension || originalExtension || "bin";
 }
 
-async function uniqueFilePath(folder: string, baseName: string, extension: string) {
-  const absoluteFolder = path.join(process.cwd(), "public", "images", folder);
-  await mkdir(absoluteFolder, { recursive: true });
+function getBaseName(file: File, slotKey: string) {
+  const originalName = file.name.replace(/\.[a-z0-9]+$/i, "");
+  return slugifyUploadName(slotKey || originalName || "image") || "image";
+}
 
-  let index = 1;
+function getSafeFileName(file: File, slotKey: string) {
+  const extension = getExtension(file);
+  const baseName = getBaseName(file, slotKey);
 
-  while (true) {
-    const suffix = index === 1 ? "" : `-${index}`;
-    const filename = `${baseName}${suffix}.${extension}`;
-    const absolutePath = path.join(absoluteFolder, filename);
+  return `${baseName}.${extension}`;
+}
 
-    try {
-      await writeFile(absolutePath, Buffer.alloc(0), { flag: "wx" });
+async function uploadToLocal({
+  file,
+  buffer,
+  folder,
+  fileName,
+}: {
+  file: File;
+  buffer: Buffer;
+  folder: string;
+  fileName: string;
+}): Promise<UploadResult> {
+  const publicFolder = path.join(process.cwd(), "public", "images", folder);
+  await mkdir(publicFolder, { recursive: true });
 
-      return {
-        absolutePath,
-        publicPath: `/images/${folder}/${filename}`,
-      };
-    } catch {
-      index += 1;
-    }
+  const filePath = path.join(publicFolder, fileName);
+  await writeFile(filePath, buffer);
+
+  const src = `/images/${folder}/${fileName}`.replace(/\/+/g, "/");
+
+  return {
+    ok: true,
+    src,
+    path: src,
+    url: src,
+    pathname: src,
+    fileName,
+    size: file.size,
+    contentType: file.type,
+    storage: "local",
+  };
+}
+
+async function uploadToBlob({
+  file,
+  buffer,
+  folder,
+  fileName,
+}: {
+  file: File;
+  buffer: Buffer;
+  folder: string;
+  fileName: string;
+}): Promise<UploadResult> {
+  const pathname = `images/${folder}/${Date.now()}-${fileName}`.replace(
+    /\/+/g,
+    "/",
+  );
+
+  const blob = await put(pathname, buffer, {
+    access: "public",
+    contentType: file.type,
+    addRandomSuffix: true,
+  });
+
+  return {
+    ok: true,
+    src: blob.url,
+    path: blob.url,
+    url: blob.url,
+    pathname: blob.pathname,
+    fileName,
+    size: file.size,
+    contentType: file.type,
+    storage: "blob",
+  };
+}
+
+export async function uploadImageCore(formData: FormData) {
+  const file = formData.get("file");
+
+  if (!(file instanceof File)) {
+    throw new Error("No image file provided.");
   }
-}
 
-export async function uploadImageCore(
-  formData: FormData,
-): Promise<UploadImageResult> {
-  try {
-    const file = formData.get("file");
+  if (!ALLOWED_MIME_TYPES.has(file.type)) {
+    throw new Error("Unsupported image format.");
+  }
 
-    if (!(file instanceof File)) {
-      return {
-        ok: false,
-        error: "No file received.",
-        path: "",
-      };
-    }
+  if (file.size > MAX_UPLOAD_SIZE) {
+    throw new Error("Image is too large.");
+  }
 
-    if (file.size > MAX_SOURCE_FILE_SIZE) {
-      return {
-        ok: false,
-        error: "File is too large. Maximum size is 25 MB.",
-        path: "",
-      };
-    }
+  const context = String(formData.get("context") || "general") as UploadContext;
+  const entitySlug = String(formData.get("entitySlug") || "draft");
+  const slotKey = String(formData.get("slotKey") || "");
 
-    const extension = allowedMimeTypes.get(file.type);
+  const folder = getUploadFolder(context, entitySlug);
+  const fileName = getSafeFileName(file, slotKey);
+  const arrayBuffer = await file.arrayBuffer();
+  const buffer = Buffer.from(arrayBuffer);
 
-    if (!extension) {
-      return {
-        ok: false,
-        error: "Unsupported file type. Use JPG, PNG, WEBP, GIF or SVG.",
-        path: "",
-      };
-    }
-
-    const folder = getUploadFolder(formData);
-    const baseName = getBaseName(formData, file.name);
-    const buffer = Buffer.from(await file.arrayBuffer());
-
-    const { absolutePath, publicPath } = await uniqueFilePath(
+  if (process.env.BLOB_READ_WRITE_TOKEN) {
+    return uploadToBlob({
+      file,
+      buffer,
       folder,
-      baseName,
-      extension,
-    );
-
-    await writeFile(absolutePath, buffer);
-
-    return {
-      ok: true,
-      error: "",
-      path: publicPath,
-    };
-  } catch (error) {
-    console.error("[upload image core] Upload failed:", error);
-
-    return {
-      ok: false,
-      error: "Upload failed on server.",
-      path: "",
-    };
+      fileName,
+    });
   }
+
+  return uploadToLocal({
+    file,
+    buffer,
+    folder,
+    fileName,
+  });
 }
