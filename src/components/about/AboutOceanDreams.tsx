@@ -33,6 +33,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
   const ocean01 = content?.images.ocean01 || aboutImages.ocean01.src;
   const ocean02 = content?.images.ocean02 || aboutImages.ocean02.src;
@@ -58,6 +66,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
               label={fileLabel(ocean01, aboutImages.ocean01.label)}
               imagePosition="center"
               className="absolute left-[-3%] top-[4%] z-10 h-[350px] w-[245px] border-0 shadow-2xl md:h-[390px] md:w-[270px]"
+              showWatermark={shouldShowWatermark(content, "ocean01")}
             />
           ) : null}
 
@@ -67,6 +76,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
               label={fileLabel(ocean02, aboutImages.ocean02.label)}
               imagePosition="center"
               className="absolute left-[42%] top-[-80%] z-20 h-[330px] w-[215px] border-0 shadow-2xl md:h-[370px] md:w-[240px]"
+              showWatermark={shouldShowWatermark(content, "ocean02")}
             />
           ) : null}
 

@@ -11,6 +11,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 const defaultAndrewDescription = `Golden retriever energy, always up for the next adventure. Sporty, smiley and often the goofy one.
 
 Serious when it comes to driving a boat or guiding divers, he loves capturing real, raw moments through film.
@@ -67,6 +75,7 @@ export function AboutCrew({ content }: AboutCrewProps) {
                   src={andrewImage}
                   label={fileLabel(andrewImage, aboutImages.crewAndrew.label)}
                   className="h-[360px] w-full rotate-[-2deg] border-[6px] border-white/70"
+                  showWatermark={shouldShowWatermark(content, "andrew")}
                 />
               ) : null}
 
@@ -100,6 +109,7 @@ export function AboutCrew({ content }: AboutCrewProps) {
                   src={morganeImage}
                   label={fileLabel(morganeImage, aboutImages.crewMorgane.label)}
                   className="h-[360px] w-full rotate-[2deg] border-[6px] border-white/70"
+                  showWatermark={shouldShowWatermark(content, "morgane")}
                 />
               ) : null}
 

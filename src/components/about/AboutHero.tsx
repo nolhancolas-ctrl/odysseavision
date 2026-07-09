@@ -10,6 +10,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function AboutHero({ content }: AboutHeroProps) {
   const background = content?.images.background || content?.imageSrc || aboutImages.hero.src;
   const hero01 = content?.images.hero01 || aboutImages.hero01.src;
@@ -36,6 +44,7 @@ export function AboutHero({ content }: AboutHeroProps) {
               src={hero01}
               label={fileLabel(hero01, aboutImages.hero01.label)}
               className="absolute left-[2%] top-[8%] h-[255px] w-[190px] rotate-[-5deg] border-[6px] border-white/85 shadow-2xl xl:h-[300px] xl:w-[220px]"
+              showWatermark={shouldShowWatermark(content, "hero01")}
             />
           ) : null}
 
@@ -44,6 +53,7 @@ export function AboutHero({ content }: AboutHeroProps) {
               src={hero02}
               label={fileLabel(hero02, aboutImages.hero02.label)}
               className="absolute left-[46%] top-[-5%] h-[165px] w-[145px] rotate-[3deg] border-[6px] border-white/85 shadow-2xl xl:h-[195px] xl:w-[170px]"
+              showWatermark={shouldShowWatermark(content, "hero02")}
             />
           ) : null}
 

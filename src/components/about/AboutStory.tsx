@@ -12,6 +12,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 const defaultBody = `Morgane picked up a camera at 16 and instantly fell in love with the way it could freeze a feeling, a place, a moment in time.
 
 She shared that passion with Andrew, who is drawn to film and the beauty of real, unfiltered moments.
@@ -62,6 +70,7 @@ export function AboutStory({ content }: AboutStoryProps) {
               src={story01}
               label={fileLabel(story01, aboutImages.story01.label)}
               className="h-[260px] w-full sm:col-span-2 md:h-[330px]"
+              showWatermark={shouldShowWatermark(content, "story01")}
             />
           ) : null}
 
@@ -70,6 +79,7 @@ export function AboutStory({ content }: AboutStoryProps) {
               src={story02}
               label={fileLabel(story02, aboutImages.story02.label)}
               className="h-[220px] w-full"
+              showWatermark={shouldShowWatermark(content, "story02")}
             />
           ) : null}
 
@@ -78,6 +88,7 @@ export function AboutStory({ content }: AboutStoryProps) {
               src={story03}
               label={fileLabel(story03, aboutImages.story03.label)}
               className="h-[220px] w-full"
+              showWatermark={shouldShowWatermark(content, "story03")}
             />
           ) : null}
 
@@ -86,6 +97,7 @@ export function AboutStory({ content }: AboutStoryProps) {
               src={story04}
               label={fileLabel(story04, aboutImages.story04.label)}
               className="h-[220px] w-full sm:col-span-2 md:h-[270px]"
+              showWatermark={shouldShowWatermark(content, "story04")}
             />
           ) : null}
         </div>
