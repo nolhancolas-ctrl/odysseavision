@@ -35,3 +35,13 @@ Thumbs.db
 *.before-neon-fix
 *.broken-before-neon-fix
 *.before-*
+
+# Local databases and migration artifacts
+.env
+.env.*
+!.env.example
+*.db
+*.sqlite
+*.sqlite3
+backups/
+.migration/
