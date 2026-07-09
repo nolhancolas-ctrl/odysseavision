@@ -16,6 +16,7 @@ export type PublicSectionContent = {
   morganeDescription?: string;
   imageSrc?: string;
   images: Record<string, string>;
+  imageWatermarks: Record<string, boolean>;
   drawings: Record<string, string>;
   featuredVideoMode?: string;
   featuredVideoId?: string;
@@ -58,11 +59,36 @@ function readStringRecord(value: unknown): Record<string, string> {
   );
 }
 
+function readBooleanRecord(value: unknown): Record<string, boolean> {
+  if (!isObject(value)) {
+    return {};
+  }
+
+  return Object.fromEntries(
+    Object.entries(value).filter(
+      (entry): entry is [string, boolean] => typeof entry[1] === "boolean",
+    ),
+  );
+}
+
+function isWatermarkEligibleImageCategory(category: string) {
+  return category === "background" || category === "photoframe" || category === "photo";
+}
+
+function getDefaultImageWatermark(category: string) {
+  if (!isWatermarkEligibleImageCategory(category)) {
+    return false;
+  }
+
+  return category !== "background";
+}
+
 function getDefaultSectionContent(
   section: EditablePageSection,
 ): PublicSectionContent {
   const content: PublicSectionContent = {
     images: {},
+    imageWatermarks: {},
     drawings: {},
   };
 
@@ -80,6 +106,10 @@ function getDefaultSectionContent(
 
   for (const image of section.images ?? []) {
     content.images[image.key] = image.defaultSrc ?? "";
+
+    if (isWatermarkEligibleImageCategory(image.category)) {
+      content.imageWatermarks[image.key] = getDefaultImageWatermark(image.category);
+    }
   }
 
   if (!content.imageSrc) {
@@ -112,6 +142,10 @@ export function mergeSectionContent(
     images: {
       ...defaults.images,
       ...readStringRecord(savedContent.images),
+    },
+    imageWatermarks: {
+      ...defaults.imageWatermarks,
+      ...readBooleanRecord(savedContent.imageWatermarks),
     },
     drawings: {
       ...defaults.drawings,

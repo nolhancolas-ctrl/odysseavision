@@ -23,6 +23,7 @@ type SectionContent = {
   featuredVideoId?: string;
   imageSrc?: string;
   images?: Record<string, string>;
+  imageWatermarks?: Record<string, boolean>;
   drawings?: Record<string, string>;
 };
 
@@ -148,16 +149,50 @@ function getImageSlotRatio(slot: EditableImageSlot) {
   return "4 / 3";
 }
 
+function isWatermarkEligibleSlot(slot: EditableImageSlot) {
+  return (
+    slot.category === "background" ||
+    slot.category === "photoframe" ||
+    slot.category === "photo"
+  );
+}
+
+function getDefaultSlotWatermark(slot: EditableImageSlot) {
+  if (!isWatermarkEligibleSlot(slot)) {
+    return false;
+  }
+
+  return slot.category !== "background";
+}
+
+function getInitialWatermarkValue(
+  slot: EditableImageSlot,
+  content: SectionContent,
+) {
+  if (
+    content.imageWatermarks &&
+    typeof content.imageWatermarks[slot.key] === "boolean"
+  ) {
+    return content.imageWatermarks[slot.key];
+  }
+
+  return getDefaultSlotWatermark(slot);
+}
+
 function ImageSlotEditor({
   slot,
   value,
   onChange,
   sectionKey,
+  showWatermark,
+  onWatermarkChange,
 }: {
   slot: EditableImageSlot;
   value: string;
   onChange: (value: string) => void;
   sectionKey: string;
+  showWatermark: boolean;
+  onWatermarkChange: (value: boolean) => void;
 }) {
   const pageKey = getCurrentWebsitePageKey();
 
@@ -175,6 +210,26 @@ function ImageSlotEditor({
         slotKey={slot.key}
         ratio={getImageSlotRatio(slot)}
       />
+
+      {isWatermarkEligibleSlot(slot) ? (
+        <label className="mt-3 flex items-center justify-between gap-4 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/65 px-4 py-3">
+          <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+            Show watermark
+          </span>
+
+          <span className="relative inline-flex cursor-pointer items-center">
+            <input
+              type="checkbox"
+              name={`imageWatermark:${slot.key}`}
+              checked={showWatermark}
+              onChange={(event) => onWatermarkChange(event.target.checked)}
+              className="peer sr-only"
+            />
+            <span className="h-6 w-11 rounded-full border border-[#242617]/10 bg-[#242617]/15 transition peer-checked:bg-[#b88a3b]" />
+            <span className="absolute left-1 top-1 h-4 w-4 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
+          </span>
+        </label>
+      ) : null}
     </div>
   );
 }
@@ -262,6 +317,20 @@ export function PageSectionForm({
 
     for (const slot of section.images ?? []) {
       values[slot.key] = getInitialImageValue(slot, content);
+    }
+
+    return values;
+  });
+
+  const [imageWatermarkValues, setImageWatermarkValues] = useState<
+    Record<string, boolean>
+  >(() => {
+    const values: Record<string, boolean> = {};
+
+    for (const slot of section.images ?? []) {
+      if (isWatermarkEligibleSlot(slot)) {
+        values[slot.key] = getInitialWatermarkValue(slot, content);
+      }
     }
 
     return values;
@@ -417,6 +486,16 @@ export function PageSectionForm({
                         sectionKey={section.key}
                         onChange={(value) =>
                           setImageValues((current) => ({
+                            ...current,
+                            [slot.key]: value,
+                          }))
+                        }
+                        showWatermark={
+                          imageWatermarkValues[slot.key] ??
+                          getDefaultSlotWatermark(slot)
+                        }
+                        onWatermarkChange={(value) =>
+                          setImageWatermarkValues((current) => ({
                             ...current,
                             [slot.key]: value,
                           }))

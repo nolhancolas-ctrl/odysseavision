@@ -10,6 +10,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function HomeAboutPreview({ content }: HomeAboutPreviewProps) {
   const image = content?.images.photo || content?.imageSrc || homeImages.aboutDuo.src;
 
@@ -44,6 +52,7 @@ export function HomeAboutPreview({ content }: HomeAboutPreviewProps) {
           src={image}
           label={fileLabel(image, homeImages.aboutDuo.label)}
           className="h-[380px] w-full border-0 lg:h-auto"
+          showWatermark={shouldShowWatermark(content, "photo")}
         />
       ) : null}
     </section>

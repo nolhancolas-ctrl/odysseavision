@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 
 type PhotoFrameProps = {
   src: string;
@@ -9,6 +10,7 @@ type PhotoFrameProps = {
   imageClassName?: string;
   imagePosition?: string;
   showLabelWhenMissing?: boolean;
+  showWatermark?: boolean;
 };
 
 export function PhotoFrame({
@@ -18,6 +20,7 @@ export function PhotoFrame({
   imageClassName = "",
   imagePosition = "center",
   showLabelWhenMissing = true,
+  showWatermark = true,
 }: PhotoFrameProps) {
   const [hasError, setHasError] = useState(false);
 
@@ -51,6 +54,8 @@ export function PhotoFrame({
       )}
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
+
+      {!hasError ? <FrameWatermark enabled={showWatermark} /> : null}
     </div>
   );
 }

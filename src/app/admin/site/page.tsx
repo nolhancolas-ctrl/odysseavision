@@ -109,7 +109,8 @@ export default async function AdminSitePage() {
                   </p>
 
                   <p className="mt-4 text-xs uppercase tracking-[0.16em] text-[#242617]/35">
-                    Last edited {lastEdited ? lastEdited.toISOString().slice(0, 10) : "never"}
+                    Last edited{" "}
+                    {lastEdited ? lastEdited.toISOString().slice(0, 10) : "never"}
                   </p>
                 </div>
 

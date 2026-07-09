@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
+import { getPhotoWatermarkSettings } from "@/lib/content/photo-watermark";
 import { ClientAlbumPasswordGate } from "@/components/client-albums/ClientAlbumPasswordGate";
 import { db } from "@/lib/db";
 import {
@@ -59,6 +60,7 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
   }
 
   const access = await hasAlbumAccess(slug);
+  const photoWatermark = await getPhotoWatermarkSettings();
 
   if (access.requiresPassword && !access.hasAccess) {
     return (
@@ -164,6 +166,7 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
                     src={image.imageSrc}
                     alt={image.alt}
                     className="aspect-[1.35]"
+                    showWatermark={photoWatermark.enabled}
                   />
                   {image.title ? (
                     <p className="mt-3 text-xs uppercase tracking-[0.12em] text-[#242617]/45">

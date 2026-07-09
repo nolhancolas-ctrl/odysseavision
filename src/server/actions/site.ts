@@ -41,6 +41,18 @@ function getFirstImageSrc(images: Record<string, Prisma.InputJsonValue>) {
   return "";
 }
 
+function isWatermarkEligibleImageCategory(category: string) {
+  return category === "background" || category === "photoframe" || category === "photo";
+}
+
+function getDefaultImageWatermark(category: string) {
+  if (!isWatermarkEligibleImageCategory(category)) {
+    return false;
+  }
+
+  return category !== "background";
+}
+
 function getSectionContent(
   section: EditablePageSection,
   formData: FormData,
@@ -99,6 +111,24 @@ function getSectionContent(
 
   if (Object.keys(images).length > 0) {
     content.images = images;
+
+    const imageWatermarks: Record<string, Prisma.InputJsonValue> = {};
+
+    for (const image of section.images ?? []) {
+      if (!isWatermarkEligibleImageCategory(image.category)) {
+        continue;
+      }
+
+      const inputKey = `imageWatermark:${image.key}`;
+
+      imageWatermarks[image.key] = formData.has(inputKey)
+        ? formData.get(inputKey) === "on"
+        : getDefaultImageWatermark(image.category);
+    }
+
+    if (Object.keys(imageWatermarks).length > 0) {
+      content.imageWatermarks = imageWatermarks;
+    }
 
     if (!content.imageSrc) {
       const firstImage = getFirstImageSrc(images);
@@ -181,6 +211,7 @@ export async function resetPageSection(pageKey: string, sectionKey: string) {
   revalidatePath(`/admin/site/${pageKey}`);
   revalidatePath(publicPathForPage(pageKey));
 }
+
 
 
 export async function updateFeaturedFilmSelection(formData: FormData) {

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
+import { getPhotoWatermarkSettings } from "@/lib/content/photo-watermark";
 import {
   getPublicPortfolioCategories,
   getPublicPortfolioItems,
@@ -58,9 +59,10 @@ export default async function PortfolioCategoryPage({
 }: PortfolioCategoryPageProps) {
   const { slug } = await params;
 
-  const [categories, items] = await Promise.all([
+  const [categories, items, photoWatermark] = await Promise.all([
     getPublicPortfolioCategories(),
     getPublicPortfolioItems(),
+    getPhotoWatermarkSettings(),
   ]);
 
   const category = categories.find((item) => getSlugFromHref(item.href) === slug);
@@ -136,6 +138,7 @@ export default async function PortfolioCategoryPage({
                     alt={item.title}
                     className={getGalleryAspectClass(index)}
                     imageClassName="transition duration-700 group-hover:scale-[1.025]"
+                    showWatermark={photoWatermark.enabled}
                   />
                 </figure>
               ))}

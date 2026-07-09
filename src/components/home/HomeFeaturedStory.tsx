@@ -12,6 +12,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function HomeFeaturedStory({ content }: HomeFeaturedStoryProps) {
   const image = content?.images.photo || content?.imageSrc || homeImages.storyElephants.src;
 
@@ -23,6 +31,7 @@ export function HomeFeaturedStory({ content }: HomeFeaturedStoryProps) {
             src={image}
             label={fileLabel(image, homeImages.storyElephants.label)}
             className="h-[320px] w-full md:h-[420px]"
+            showWatermark={shouldShowWatermark(content, "photo")}
           />
         ) : null}
 

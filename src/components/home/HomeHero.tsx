@@ -11,6 +11,14 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function HomeHero({ content }: HomeHeroProps) {
   const background = content?.images.background || content?.imageSrc || homeImages.hero.src;
   const postalCoast = content?.images.postalCoast || homeImages.postalCoast.src;
@@ -36,6 +44,7 @@ export function HomeHero({ content }: HomeHeroProps) {
               src={postalCoast}
               label={fileLabel(postalCoast, homeImages.postalCoast.label)}
               className="absolute left-[2%] top-[12%] h-[270px] w-[200px] rotate-[-4deg] border-[6px] border-white/90 xl:h-[315px] xl:w-[232px]"
+              showWatermark={shouldShowWatermark(content, "postalCoast")}
             />
           ) : null}
 
@@ -44,6 +53,7 @@ export function HomeHero({ content }: HomeHeroProps) {
               src={postalTurtle}
               label={fileLabel(postalTurtle, homeImages.postalTurtle.label)}
               className="absolute bottom-[6%] right-[-44%] h-[155px] w-[132px] rotate-[2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[158px]"
+              showWatermark={shouldShowWatermark(content, "postalTurtle")}
             />
           ) : null}
         </div>
@@ -88,6 +98,7 @@ export function HomeHero({ content }: HomeHeroProps) {
               src={postalZebra}
               label={fileLabel(postalZebra, homeImages.postalZebra.label)}
               className="absolute right-[3%] top-[10%] h-[280px] w-[205px] rotate-[3deg] border-[6px] border-white/90 xl:right-[-30%] xl:h-[325px] xl:w-[238px]"
+              showWatermark={shouldShowWatermark(content, "postalZebra")}
             />
           ) : null}
 
@@ -96,6 +107,7 @@ export function HomeHero({ content }: HomeHeroProps) {
               src={postalManta}
               label={fileLabel(postalManta, homeImages.postalManta.label)}
               className="absolute bottom-[5%] left-[10%] h-[155px] w-[136px] rotate-[-2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[162px]"
+              showWatermark={shouldShowWatermark(content, "postalManta")}
             />
           ) : null}
         </div>
