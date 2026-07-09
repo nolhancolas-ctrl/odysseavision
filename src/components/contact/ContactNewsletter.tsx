@@ -1,6 +1,7 @@
 "use client";
 
 import { useActionState } from "react";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { contactNewsletterImages } from "@/data/contact";
 import type { PublicSectionContent } from "@/lib/content/site";
 import { submitNewsletterForm } from "@/server/actions/forms";
@@ -14,6 +15,14 @@ const initialNewsletterState = {
   message: "",
 };
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function ContactNewsletter({ content }: ContactNewsletterProps) {
   const [state, formAction, isPending] = useActionState(
     submitNewsletterForm,
@@ -21,11 +30,23 @@ export function ContactNewsletter({ content }: ContactNewsletterProps) {
   );
 
   const images = [
-    content?.images.image01 || contactNewsletterImages.image01,
-    content?.images.image02 || contactNewsletterImages.image02,
-    content?.images.image03 || contactNewsletterImages.image03,
-    content?.images.image04 || contactNewsletterImages.image04,
-  ].filter(Boolean);
+    {
+      key: "image01",
+      src: content?.images.image01 || contactNewsletterImages.image01,
+    },
+    {
+      key: "image02",
+      src: content?.images.image02 || contactNewsletterImages.image02,
+    },
+    {
+      key: "image03",
+      src: content?.images.image03 || contactNewsletterImages.image03,
+    },
+    {
+      key: "image04",
+      src: content?.images.image04 || contactNewsletterImages.image04,
+    },
+  ];
 
   return (
     <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-20 text-[#242617] md:px-14">
@@ -77,14 +98,18 @@ export function ContactNewsletter({ content }: ContactNewsletterProps) {
         </div>
 
         <div className="grid grid-cols-4 gap-3">
-          {images.map((src, index) => (
+          {images.map((image, index) => (
             <div
-              key={src}
-              className={`aspect-[0.82] bg-[#d8cfc0] bg-cover bg-center ${
+              key={image.key}
+              className={`relative aspect-[0.82] overflow-hidden bg-[#d8cfc0] bg-cover bg-center ${
                 index % 2 === 0 ? "translate-y-2" : "-translate-y-2"
               }`}
-              style={{ backgroundImage: `url(${src})` }}
-            />
+              style={{ backgroundImage: `url(${image.src})` }}
+            >
+              <FrameWatermark
+                enabled={shouldShowWatermark(content, image.key)}
+              />
+            </div>
           ))}
         </div>
       </div>

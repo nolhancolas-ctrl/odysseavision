@@ -21,6 +21,14 @@ function renderLines(text: string) {
   return text.split("\n").filter(Boolean);
 }
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 export function ContactFormSection({
   content,
   settings,
@@ -317,6 +325,7 @@ export function ContactFormSection({
                   src={panelPhoto}
                   label="form_01.png"
                   className="h-[185px] w-[285px] rotate-[2deg] border-[6px] border-white/85 shadow-2xl"
+                  showWatermark={shouldShowWatermark(content, "photo")}
                 />
               </div>
             ) : null}

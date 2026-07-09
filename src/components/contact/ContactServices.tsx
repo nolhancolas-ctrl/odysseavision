@@ -7,6 +7,14 @@ type ContactServicesProps = {
   content?: PublicSectionContent;
 };
 
+function shouldShowWatermark(
+  content: PublicSectionContent | undefined,
+  key: string,
+  defaultValue = true,
+) {
+  return content?.imageWatermarks?.[key] ?? defaultValue;
+}
+
 function ServiceIcon({ type }: { type: string }) {
   if (type === "camera") {
     return (
@@ -54,6 +62,7 @@ export function ContactServices({ content }: ContactServicesProps) {
             src={leftTall}
             label="services_left_01.png"
             className="absolute left-[70px] top-[55px] h-[285px] w-[205px] rotate-[-4deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+            showWatermark={shouldShowWatermark(content, "leftTall")}
           />
         ) : null}
 
@@ -62,6 +71,7 @@ export function ContactServices({ content }: ContactServicesProps) {
             src={leftSmall}
             label="services_left_02.png"
             className="absolute left-[25px] top-[35px] h-[155px] w-[230px] rotate-[-5deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+            showWatermark={shouldShowWatermark(content, "leftSmall")}
           />
         ) : null}
       </div>
@@ -81,6 +91,7 @@ export function ContactServices({ content }: ContactServicesProps) {
             src={rightTall}
             label="services_right_01.png"
             className="absolute right-[-80px] top-[55px] h-[285px] w-[205px] rotate-[5deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+            showWatermark={shouldShowWatermark(content, "rightTall")}
           />
         ) : null}
 
@@ -89,6 +100,7 @@ export function ContactServices({ content }: ContactServicesProps) {
             src={rightSmall}
             label="services_right_02.png"
             className="absolute right-[-100px] top-[35px] h-[155px] w-[230px] rotate-[4deg] border-[5px] border-white/85 opacity-40 shadow-xl [@media_(min-aspect-ratio:2/1)]:opacity-100"
+            showWatermark={shouldShowWatermark(content, "rightSmall")}
           />
         ) : null}
 
