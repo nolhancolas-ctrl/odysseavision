@@ -1,6 +1,8 @@
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { contactHero, contactImages } from "@/data/contact";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type ContactHeroProps = {
   content?: PublicSectionContent;
@@ -21,6 +23,7 @@ function shouldShowWatermark(
 export function ContactHero({ content }: ContactHeroProps) {
   const background =
     content?.images.background || content?.imageSrc || contactImages.hero.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const hero01 = content?.images.hero01 || contactImages.hero01.src;
   const hero02 = content?.images.hero02 || contactImages.hero02.src;
   const handwritten =
@@ -36,6 +39,7 @@ export function ContactHero({ content }: ContactHeroProps) {
           }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-[#10170d]/58" />
       <div className="absolute inset-0 bg-gradient-to-b from-black/10 via-transparent to-black/45 opacity-20" />

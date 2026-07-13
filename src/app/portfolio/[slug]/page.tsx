@@ -3,8 +3,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
-import { getPhotoWatermarkSettings } from "@/lib/content/photo-watermark";
 import {
   getPublicPortfolioCategories,
   getPublicPortfolioItems,
@@ -59,10 +59,9 @@ export default async function PortfolioCategoryPage({
 }: PortfolioCategoryPageProps) {
   const { slug } = await params;
 
-  const [categories, items, photoWatermark] = await Promise.all([
+  const [categories, items] = await Promise.all([
     getPublicPortfolioCategories(),
     getPublicPortfolioItems(),
-    getPhotoWatermarkSettings(),
   ]);
 
   const category = categories.find((item) => getSlugFromHref(item.href) === slug);
@@ -83,8 +82,9 @@ export default async function PortfolioCategoryPage({
           style={{ backgroundImage: `url(${category.image})` }}
         />
         <div className="absolute inset-0 bg-[#11190f]/68" />
+        <FrameWatermark />
 
-        <div className="relative z-10 mx-auto flex min-h-[78svh] max-w-6xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
+        <div className="relative z-20 mx-auto flex min-h-[78svh] max-w-6xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
           <Link
             href="/portfolio"
             className="mb-10 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
@@ -138,7 +138,6 @@ export default async function PortfolioCategoryPage({
                     alt={item.title}
                     className={getGalleryAspectClass(index)}
                     imageClassName="transition duration-700 group-hover:scale-[1.025]"
-                    showWatermark={photoWatermark.enabled}
                   />
                 </figure>
               ))}

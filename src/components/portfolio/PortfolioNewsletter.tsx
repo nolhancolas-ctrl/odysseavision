@@ -6,6 +6,8 @@ import { homeImages } from "@/data/home";
 import { portfolioImages } from "@/data/portfolio";
 import type { PublicSectionContent } from "@/lib/content/site";
 import { submitNewsletterForm } from "@/server/actions/forms";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type PortfolioNewsletterProps = {
   content?: PublicSectionContent;
@@ -38,6 +40,7 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
     content?.images.background ||
     content?.imageSrc ||
     portfolioImages.newsletterFond.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const leftPhoto = content?.images.leftPhoto || homeImages.ctaSailboat.src;
   const rightPhoto = content?.images.rightPhoto || homeImages.ctaOceanCliff.src;
   const stamp = content?.images.stamp || "/images/home/cta_stamp_01.png";
@@ -52,6 +55,7 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
           }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-[#222d20]/45" />
 

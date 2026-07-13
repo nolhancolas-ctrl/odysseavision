@@ -1,5 +1,7 @@
 import { aboutImages, aboutValues } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type AboutValuesProps = {
   content?: PublicSectionContent;
@@ -16,6 +18,7 @@ const valueIcons = [
 export function AboutValues({ content }: AboutValuesProps) {
   const background =
     content?.images.background || content?.imageSrc || aboutImages.valuesFond.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
 
   return (
     <section className="relative overflow-hidden bg-[#10190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
@@ -27,6 +30,7 @@ export function AboutValues({ content }: AboutValuesProps) {
           }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="relative mx-auto max-w-[1350px] text-center">
         <p className="mb-4 text-[11px] font-semibold uppercase tracking-[0.24em] text-[#f4efe4]/55">

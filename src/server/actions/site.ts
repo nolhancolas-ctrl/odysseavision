@@ -53,6 +53,25 @@ function getDefaultImageWatermark(category: string) {
   return category !== "background";
 }
 
+function readBooleanFromFormData(
+  formData: FormData,
+  key: string,
+  defaultValue: boolean,
+) {
+  const values = formData
+    .getAll(key)
+    .filter((value): value is string => typeof value === "string")
+    .map((value) => value.toLowerCase());
+
+  const value = values.at(-1);
+
+  if (!value) {
+    return defaultValue;
+  }
+
+  return ["true", "on", "1", "yes"].includes(value);
+}
+
 function getSectionContent(
   section: EditablePageSection,
   formData: FormData,
@@ -121,9 +140,11 @@ function getSectionContent(
 
       const inputKey = `imageWatermark:${image.key}`;
 
-      imageWatermarks[image.key] = formData.has(inputKey)
-        ? formData.get(inputKey) === "on"
-        : getDefaultImageWatermark(image.category);
+      imageWatermarks[image.key] = readBooleanFromFormData(
+        formData,
+        inputKey,
+        getDefaultImageWatermark(image.category),
+      );
     }
 
     if (Object.keys(imageWatermarks).length > 0) {
@@ -195,7 +216,6 @@ export async function updatePageSection(
   });
 
   revalidatePath("/admin/site");
-  revalidatePath(`/admin/site/${pageKey}`);
   revalidatePath(publicPathForPage(pageKey));
 }
 

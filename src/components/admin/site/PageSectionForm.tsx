@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition, type FormEvent } from "react";
 import { createPortal } from "react-dom";
 import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
 import type {
@@ -219,8 +219,12 @@ function ImageSlotEditor({
 
           <span className="relative inline-flex cursor-pointer items-center">
             <input
-              type="checkbox"
+              type="hidden"
               name={`imageWatermark:${slot.key}`}
+              value={showWatermark ? "true" : "false"}
+            />
+            <input
+              type="checkbox"
               checked={showWatermark}
               onChange={(event) => onWatermarkChange(event.target.checked)}
               className="peer sr-only"
@@ -355,6 +359,18 @@ export function PageSectionForm({
   const hasVisualControls =
     groupedImages.size > 0 || Boolean(section.drawings?.length);
 
+  const [, startSavingTransition] = useTransition();
+
+  function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    const formData = new FormData(event.currentTarget);
+
+    startSavingTransition(() => {
+      void updateAction(formData);
+    });
+  }
+
   const firstLineFields = section.fields.filter((field) =>
     ["ctaLabel", "eyebrow", "title"].includes(field),
   );
@@ -393,7 +409,7 @@ export function PageSectionForm({
         ) : null}
       </div>
 
-      <form action={updateAction} className="space-y-6 p-6">
+      <form onSubmit={handleSubmit} className="space-y-6 p-6">
         {firstLineFields.length > 0 ? (
           <div className="grid gap-5 lg:grid-cols-3">
             {firstLineFields.map((field) => (

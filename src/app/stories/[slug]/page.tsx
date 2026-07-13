@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { getPublicStoryBySlug } from "@/lib/content/stories";
 
 export const dynamic = "force-dynamic";
@@ -30,8 +31,9 @@ export default async function StoryPage({ params }: StoryPageProps) {
           style={{ backgroundImage: `url(${story.imageSrc})` }}
         />
         <div className="absolute inset-0 bg-[#11180f]/65" />
+        <FrameWatermark />
 
-        <div className="relative z-10 mx-auto flex min-h-[82svh] max-w-5xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
+        <div className="relative z-20 mx-auto flex min-h-[82svh] max-w-5xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
           <Link
             href="/stories"
             className="mb-10 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"

@@ -1,6 +1,8 @@
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { videosImages } from "@/data/videos";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type VideosHeroProps = {
   content?: PublicSectionContent;
@@ -25,6 +27,7 @@ function renderLines(text: string) {
 export function VideosHero({ content }: VideosHeroProps) {
   const background =
     content?.images.background || content?.imageSrc || videosImages.hero.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const heroCoast = content?.images.heroCoast || videosImages.heroCoast.src;
   const heroTurtle = content?.images.heroTurtle || videosImages.heroTurtle.src;
   const heroRoadtrip =
@@ -41,6 +44,7 @@ export function VideosHero({ content }: VideosHeroProps) {
           style={{ backgroundImage: `url(${background})` }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
       <div className="absolute inset-0 bg-[#11150d]/50" />
 
       <div className="relative z-10 mx-auto grid min-h-[100svh] max-w-[1500px] grid-cols-1 items-center px-6 pb-20 pt-28 md:px-14 lg:grid-cols-[0.75fr_1fr_0.75fr] lg:gap-10">

@@ -276,11 +276,13 @@ export function StoriesArchive({
                       className="group block"
                     >
                       <div
-                        className="aspect-[1.42] bg-[#d4cdc0] bg-cover bg-center transition duration-700 group-hover:opacity-90"
+                        className="relative aspect-[1.42] overflow-hidden bg-[#d4cdc0] bg-cover bg-center transition duration-700 group-hover:opacity-90"
                         style={{
                           backgroundImage: `url(${story.imageSrc})`,
                         }}
-                      />
+                      >
+                        <FrameWatermark />
+                      </div>
 
                       <div className="p-5">
                         <p className="text-[8px] font-semibold uppercase tracking-[0.13em] text-[#242617]/55">

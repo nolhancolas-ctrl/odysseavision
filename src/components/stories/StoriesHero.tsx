@@ -1,6 +1,8 @@
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { storiesImages } from "@/data/stories";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type StoriesHeroProps = {
   content?: PublicSectionContent;
@@ -36,6 +38,7 @@ function renderHandwritten(text: string) {
 export function StoriesHero({ content }: StoriesHeroProps) {
   const background =
     content?.images.background || content?.imageSrc || storiesImages.hero.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const heroWhale = content?.images.heroWhale || storiesImages.heroWhale.src;
   const heroManta = content?.images.heroManta || storiesImages.heroManta.src;
   const heroElephants =
@@ -50,6 +53,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
           style={{ backgroundImage: `url(${background})` }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-[#11180f]/55" />
 

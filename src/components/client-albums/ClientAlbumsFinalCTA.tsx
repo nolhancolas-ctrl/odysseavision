@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { clientAlbumImages } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type ClientAlbumsFinalCTAProps = {
   content?: PublicSectionContent;
@@ -28,6 +30,7 @@ export function ClientAlbumsFinalCTA({ content }: ClientAlbumsFinalCTAProps) {
     content?.images.background ||
     content?.imageSrc ||
     clientAlbumImages.ctaFond.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const whale = content?.images.whale || clientAlbumImages.ctaWhale.src;
   const handwritten = content?.drawings.handwritten || "we’re here\nfor you!";
 
@@ -41,6 +44,7 @@ export function ClientAlbumsFinalCTA({ content }: ClientAlbumsFinalCTAProps) {
           }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-[#11190f]/55" />
 

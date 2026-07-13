@@ -2,6 +2,8 @@ import { ButtonLink } from "@/components/ui/ButtonLink";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { homeImages } from "@/data/home";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type HomeHeroProps = {
   content?: PublicSectionContent;
@@ -21,6 +23,7 @@ function shouldShowWatermark(
 
 export function HomeHero({ content }: HomeHeroProps) {
   const background = content?.images.background || content?.imageSrc || homeImages.hero.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const postalCoast = content?.images.postalCoast || homeImages.postalCoast.src;
   const postalTurtle = content?.images.postalTurtle || homeImages.postalTurtle.src;
   const postalZebra = content?.images.postalZebra || homeImages.postalZebra.src;
@@ -34,6 +37,7 @@ export function HomeHero({ content }: HomeHeroProps) {
           backgroundImage: `linear-gradient(rgba(10, 14, 8, 0.47), rgba(10, 14, 8, 0.58)), url(${background})`,
         }}
       />
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/60" />
 

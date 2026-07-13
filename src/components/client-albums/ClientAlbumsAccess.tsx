@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { clientAlbumAccessFeatures, clientAlbumImages } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type ClientAlbumsAccessProps = {
   content?: PublicSectionContent;
@@ -20,6 +22,7 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
     content?.images.background ||
     content?.imageSrc ||
     clientAlbumImages.accessFond.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const handwritten = content?.drawings.handwritten || "access your\ngallery";
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -111,6 +114,7 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
               }}
             />
           ) : null}
+          <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
           <form
             onSubmit={onSubmit}

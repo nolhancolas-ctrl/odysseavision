@@ -2,6 +2,8 @@ import Link from "next/link";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { videosImages } from "@/data/videos";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type VideosFinalCTAProps = {
   content?: PublicSectionContent;
@@ -22,6 +24,7 @@ function shouldShowWatermark(
 export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
   const background =
     content?.images.background || content?.imageSrc || videosImages.ctaFond.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const stamp = content?.images.stamp || "/images/videos/cta_stamp_01.png";
   const duo = content?.images.duo || videosImages.ctaDuo.src;
   const leaf = content?.images.leaf || "/images/videos/cta_leaf_01.png";
@@ -34,6 +37,7 @@ export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
           style={{ backgroundImage: `url(${background})` }}
         />
       ) : null}
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
       <div className="absolute inset-0 bg-[#11190f]/50" />
 
       <div className="relative mx-auto flex min-h-[180px] max-w-[1400px] items-center justify-center">

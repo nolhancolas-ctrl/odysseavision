@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { FloatingBackButton } from "@/components/admin/site/FloatingBackButton";
 import { PageSectionForm } from "@/components/admin/site/PageSectionForm";
 import { FeaturedFilmSelectorForm } from "@/components/admin/site/FeaturedFilmSelectorForm";
 import { VideosVimeoStatus } from "@/components/admin/site/VideosVimeoStatus";
@@ -50,7 +49,6 @@ export default async function EditWebsitePage({ params }: PageProps) {
 
   return (
     <div className="space-y-8">
-      <FloatingBackButton href="/admin/site" />
       <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">

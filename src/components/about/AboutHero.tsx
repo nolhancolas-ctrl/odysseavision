@@ -1,6 +1,8 @@
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { aboutImages } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
+import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type AboutHeroProps = {
   content?: PublicSectionContent;
@@ -20,6 +22,7 @@ function shouldShowWatermark(
 
 export function AboutHero({ content }: AboutHeroProps) {
   const background = content?.images.background || content?.imageSrc || aboutImages.hero.src;
+  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const hero01 = content?.images.hero01 || aboutImages.hero01.src;
   const hero02 = content?.images.hero02 || aboutImages.hero02.src;
   const drawing01 = content?.images.drawing01 || "/images/about/hero_drawing_01.png";
@@ -34,6 +37,7 @@ export function AboutHero({ content }: AboutHeroProps) {
           backgroundPosition: "right center",
         }}
       />
+      <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-black/60" />
 

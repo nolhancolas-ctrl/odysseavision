@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
+import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
-import { getPhotoWatermarkSettings } from "@/lib/content/photo-watermark";
 import { ClientAlbumPasswordGate } from "@/components/client-albums/ClientAlbumPasswordGate";
 import { db } from "@/lib/db";
 import {
@@ -60,7 +60,6 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
   }
 
   const access = await hasAlbumAccess(slug);
-  const photoWatermark = await getPhotoWatermarkSettings();
 
   if (access.requiresPassword && !access.hasAccess) {
     return (
@@ -73,8 +72,9 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
             style={{ backgroundImage: `url(${album.coverSrc})` }}
           />
           <div className="absolute inset-0 bg-[#11190f]/78" />
+          <FrameWatermark />
 
-          <div className="relative z-10 mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-32 md:px-14">
+          <div className="relative z-20 mx-auto flex min-h-screen max-w-4xl flex-col justify-center px-6 py-32 md:px-14">
             <Link
               href="/client-albums"
               className="mb-10 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/55 transition hover:text-white"
@@ -112,8 +112,9 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
           style={{ backgroundImage: `url(${album.coverSrc})` }}
         />
         <div className="absolute inset-0 bg-[#11190f]/65" />
+        <FrameWatermark />
 
-        <div className="relative z-10 mx-auto flex min-h-[78svh] max-w-5xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
+        <div className="relative z-20 mx-auto flex min-h-[78svh] max-w-5xl flex-col justify-end px-6 pb-20 pt-36 md:px-14">
           <Link
             href="/client-albums"
             className="mb-10 inline-block text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60 transition hover:text-white"
@@ -166,7 +167,6 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
                     src={image.imageSrc}
                     alt={image.alt}
                     className="aspect-[1.35]"
-                    showWatermark={photoWatermark.enabled}
                   />
                   {image.title ? (
                     <p className="mt-3 text-xs uppercase tracking-[0.12em] text-[#242617]/45">
