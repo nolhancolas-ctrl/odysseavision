@@ -677,11 +677,11 @@ Always chasing the light.`,
         fields: ["ctaLabel", "eyebrow", "title", "description"],
         defaults: {
           eyebrow: "Featured gallery",
-          title: "Wildlife",
+          title: "Vintage",
           description:
-            "Quiet encounters, fleeting moments and a deep respect for all living creatures.",
+            "Soft textures, timeless frames and nostalgic travel moments from our visual archive.",
           ctaLabel: "View full gallery",
-          ctaHref: "/portfolio/wildlife",
+          ctaHref: "/portfolio/vintage",
         },
         images: [
           {
@@ -725,7 +725,7 @@ Always chasing the light.`,
           {
             key: "handwritten",
             label: "Featured handwritten text",
-            defaultText: "The best wildlife moments are the ones you never planned.",
+            defaultText: "Some photographs feel like they already belong to memory.",
           },
         ],
       },

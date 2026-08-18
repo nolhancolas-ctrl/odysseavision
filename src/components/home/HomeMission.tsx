@@ -4,6 +4,9 @@ type HomeMissionProps = {
   content?: PublicSectionContent;
 };
 
+const missionCreamFilter =
+  "invert(1) grayscale(0.05) sepia(0.8) saturate(0.95) hue-rotate(340deg) brightness(1.02) contrast(0.9)";
+
 const defaultMissionItems = [
   {
     iconKey: "oceanIcon",
@@ -30,17 +33,18 @@ export function HomeMission({ content }: HomeMissionProps) {
     content?.images.turtle || "/images/home/mission_turtle_transparent_01.png";
 
   return (
-    <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 text-[#242617] md:px-14 md:py-20">
+    <section className="relative overflow-hidden bg-[#11190f] px-6 py-16 text-[#f4efe4] md:px-14 md:py-20">
       {turtle ? (
         <img
           src={turtle}
           alt=""
-          className="pointer-events-none absolute right-[-51px] top-[-21px] hidden w-104 opacity-30 md:block"
+          className="pointer-events-none absolute right-[-51px] top-[-21px] hidden w-104 opacity-34 md:block"
+          style={{ filter: missionCreamFilter }}
         />
       ) : null}
 
       <div className="mx-auto max-w-7xl text-center">
-        <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#596044]">
+        <p className="mb-4 text-[11px] uppercase tracking-[0.24em] text-[#b7a879]">
           {content?.eyebrow || "Our mission"}
         </p>
 
@@ -59,14 +63,17 @@ export function HomeMission({ content }: HomeMissionProps) {
                     <img
                       src={icon}
                       alt=""
-                      className="h-60 w-40 object-contain opacity-75"
+                      className="h-60 w-40 object-contain opacity-82"
+                      style={{ filter: missionCreamFilter }}
                     />
                   ) : null}
                 </div>
-                <h3 className="mb-4 text-[12px] font-semibold uppercase tracking-[0.18em]">
+
+                <h3 className="mb-4 text-[12px] font-semibold uppercase tracking-[0.18em] text-[#f4efe4]">
                   {item.title}
                 </h3>
-                <p className="mx-auto max-w-xs text-sm leading-7 text-[#333525]/70">
+
+                <p className="mx-auto max-w-xs text-sm leading-7 text-[#f4efe4]/72">
                   {item.text}
                 </p>
               </div>

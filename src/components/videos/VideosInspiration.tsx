@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { WatermarkedPhotoFrame } from "@/components/ui/WatermarkedPhotoFrame";
 import { videosImages } from "@/data/videos";
 import type { PublicSectionContent } from "@/lib/content/site";
 
@@ -7,37 +5,14 @@ type VideosInspirationProps = {
   content?: PublicSectionContent;
 };
 
-function shouldShowWatermark(
-  content: PublicSectionContent | undefined,
-  key: string,
-  defaultValue = true,
-) {
-  return content?.imageWatermarks?.[key] ?? defaultValue;
-}
-
 export function VideosInspiration({ content }: VideosInspirationProps) {
   const images = [
-    {
-      key: "image01",
-      src: content?.images.image01 || videosImages.inspiration01.src,
-    },
-    {
-      key: "image02",
-      src: content?.images.image02 || videosImages.inspiration02.src,
-    },
-    {
-      key: "image03",
-      src: content?.images.image03 || videosImages.inspiration03.src,
-    },
-    {
-      key: "image04",
-      src: content?.images.image04 || videosImages.inspiration04.src,
-    },
-    {
-      key: "image05",
-      src: content?.images.image05 || videosImages.inspiration05.src,
-    },
-  ].filter((image) => Boolean(image.src));
+    content?.images.image01 || videosImages.inspiration01.src,
+    content?.images.image02 || videosImages.inspiration02.src,
+    content?.images.image03 || videosImages.inspiration03.src,
+    content?.images.image04 || videosImages.inspiration04.src,
+    content?.images.image05 || videosImages.inspiration05.src,
+  ].filter(Boolean);
 
   return (
     <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14">
@@ -57,23 +32,16 @@ export function VideosInspiration({ content }: VideosInspirationProps) {
             {content?.description ||
               "We love creating films that bring you closer to the wild places we explore and the stories that deserve to be told."}
           </p>
-
-          <Link
-            href="/stories"
-            className="mt-7 inline-block bg-[#414832] px-6 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white"
-          >
-            {content?.ctaLabel || "Follow our journey →"}
-          </Link>
         </div>
 
         <div className="grid h-[330px] grid-cols-5 overflow-hidden">
           {images.map((image, index) => (
-            <WatermarkedPhotoFrame
-              key={image.key}
-              src={image.src}
-              alt={image.key}
-              className={index % 2 === 0 ? "translate-y-4" : "-translate-y-2"}
-              showWatermark={shouldShowWatermark(content, image.key)}
+            <div
+              key={image}
+              className={`bg-cover bg-center ${
+                index % 2 === 0 ? "translate-y-4" : "-translate-y-2"
+              }`}
+              style={{ backgroundImage: `url(${image})` }}
             />
           ))}
         </div>

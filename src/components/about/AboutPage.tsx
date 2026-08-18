@@ -16,9 +16,9 @@ export async function AboutPage() {
     <main className="min-h-screen bg-[#f4efe4] text-[#242617]">
       <SiteHeader active="About" />
       <AboutHero content={sections.hero} />
-      <AboutStory content={sections.story} />
-      <AboutOceanDreams content={sections["ocean-dreams"]} />
       <AboutCrew content={sections.crew} />
+      <AboutOceanDreams content={sections["ocean-dreams"]} />
+      <AboutStory content={sections.story} />
       <AboutValues content={sections.values} />
       <AboutFinalCTA content={sections["final-cta"]} />
       <SiteFooter />

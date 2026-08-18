@@ -11,10 +11,17 @@ type HomePortfolioPreviewProps = {
   content?: PublicSectionContent;
 };
 
+const HOME_PORTFOLIO_ORDER = ["ocean", "landscape", "portrait", "wildlife"] as const;
+
 function getFeaturedCategories(categories: PublicPortfolioCategory[]) {
-  return categories
-    .filter((item) => item.title.toLowerCase() !== "vintage")
-    .slice(0, 4);
+  const normalizedCategories = categories.map((item) => ({
+    item,
+    title: item.title.toLowerCase(),
+  }));
+
+  return HOME_PORTFOLIO_ORDER.map((wantedTitle) =>
+    normalizedCategories.find(({ title }) => title.includes(wantedTitle))?.item,
+  ).filter((item): item is PublicPortfolioCategory => Boolean(item));
 }
 
 function PortfolioPreviewCard({
@@ -39,6 +46,7 @@ function PortfolioPreviewCard({
         src={item.image}
         label={item.label}
         className="mb-6 h-52 w-full [&_img]:object-center"
+        showWatermark={false}
       />
 
       <p className="mb-5 text-sm leading-6 text-[#f4efe4]/70">
@@ -55,12 +63,10 @@ function PortfolioPreviewCard({
 export async function HomePortfolioPreview({
   content,
 }: HomePortfolioPreviewProps) {
-  const portfolioCategories = getFeaturedCategories(
-    await getPublicPortfolioCategories(),
-  );
+  const portfolioCategories = getFeaturedCategories(await getPublicPortfolioCategories());
 
   return (
-    <section className="bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
+    <section className="overflow-hidden bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
           <SectionLabel dark>{content?.eyebrow || "Portfolio"}</SectionLabel>
@@ -73,15 +79,6 @@ export async function HomePortfolioPreview({
           {portfolioCategories.map((item) => (
             <PortfolioPreviewCard key={item.title} item={item} />
           ))}
-        </div>
-
-        <div className="mt-10 flex justify-center">
-          <Link
-            href="/portfolio"
-            className="rounded-full border border-[#f4efe4]/20 px-6 py-4 text-[11px] font-semibold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:border-[#b88a3b] hover:bg-[#b88a3b] hover:text-[#11190f]"
-          >
-            View portfolio
-          </Link>
         </div>
       </div>
     </section>

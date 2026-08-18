@@ -1,13 +1,18 @@
 "use client";
 
+import Link from "next/link";
 import { useState } from "react";
 import { clientAlbumAccessFeatures, clientAlbumImages } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
-import { FrameWatermark } from "@/components/ui/FrameWatermark";
-import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
 
 type ClientAlbumsAccessProps = {
   content?: PublicSectionContent;
+};
+
+type ClientAlbumsAccessSecondaryContent = PublicSectionContent & {
+  secondaryTitle?: string;
+  secondaryDescription?: string;
+  secondaryCtaLabel?: string;
 };
 
 function renderLines(text: string) {
@@ -15,6 +20,7 @@ function renderLines(text: string) {
 }
 
 export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
+  const secondaryContent = content as ClientAlbumsAccessSecondaryContent | undefined;
   const [password, setPassword] = useState("");
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
@@ -22,8 +28,7 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
     content?.images.background ||
     content?.imageSrc ||
     clientAlbumImages.accessFond.src;
-  const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const handwritten = content?.drawings.handwritten || "access your\ngallery";
+  const handwritten = (content?.drawings.handwritten || "access your\ngallery").replace(/your\s*gallery/i, "your\ngallery");
 
   async function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -57,7 +62,7 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
   }
 
   return (
-    <section className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14 md:py-20">
+    <section id="easy-secure-access" className="relative overflow-hidden bg-[#f4efe4] px-6 py-16 md:px-14 md:py-20">
       <div className="mx-auto grid max-w-[1450px] items-center gap-12 lg:grid-cols-[0.55fr_1.45fr]">
         <div>
           <p className="text-[9px] font-semibold uppercase tracking-[0.2em] text-[#242617]/55">
@@ -114,7 +119,6 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
               }}
             />
           ) : null}
-          <FrameWatermark enabled={showBackgroundWatermark} mode="background" />
 
           <form
             onSubmit={onSubmit}
@@ -122,11 +126,13 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
           >
             <div className="absolute left-1/2 top-[-22px] h-9 w-28 -translate-x-1/2 rotate-[2deg] bg-[#d8cdb8]/70 shadow-sm backdrop-blur-[1px]" />
 
-            <p className="mb-5 font-hand text-3xl leading-[0.95] text-white/80">
-              {renderLines(handwritten).map((line) => (
-                <span key={line}>
+            <p className="mb-5 font-hand text-3xl leading-[1.02] text-white/80">
+              {renderLines(handwritten).map((line, index) => (
+                <span
+                  key={line}
+                  className={index === 1 ? "mt-2 block" : "block"}
+                >
                   {line}
-                  <br />
                 </span>
               ))}
             </p>
@@ -158,6 +164,23 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="relative mx-auto mt-14 max-w-xl text-center">
+        <p className="text-sm font-semibold uppercase tracking-[0.08em] text-[#242617]/75">
+          {secondaryContent?.secondaryTitle || "Can’t find your gallery?"}
+        </p>
+
+        <p className="mt-3 text-sm text-[#242617]/55">
+          {secondaryContent?.secondaryDescription || "Send us a message and we’ll help you out."}
+        </p>
+
+        <Link
+          href="/contact"
+          className="mt-7 inline-block border border-[#242617]/30 px-10 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#242617]/75 transition hover:bg-[#11190f] hover:text-[#f4efe4]"
+        >
+          {secondaryContent?.secondaryCtaLabel || "Contact us"}
+        </Link>
       </div>
     </section>
   );

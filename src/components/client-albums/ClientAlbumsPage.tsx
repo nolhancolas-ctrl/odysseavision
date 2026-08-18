@@ -20,8 +20,8 @@ export async function ClientAlbumsPage() {
     <main className="min-h-screen bg-[#f4efe4] text-[#242617]">
       <SiteHeader active="Client Albums" />
       <ClientAlbumsHero content={sections.hero} />
-      <ClientAlbumsIntro content={sections.intro} />
       <ClientAlbumsRecent content={sections.recent} albums={albums} />
+      <ClientAlbumsIntro content={sections.intro} />
       <ClientAlbumsAccess content={sections.access} />
       <ClientAlbumsFinalCTA content={sections["final-cta"]} />
       <SiteFooter />

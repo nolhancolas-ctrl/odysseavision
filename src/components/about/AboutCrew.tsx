@@ -1,5 +1,4 @@
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
-import { ButtonLink } from "@/components/ui/ButtonLink";
 import { aboutImages } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
 
@@ -9,14 +8,6 @@ type AboutCrewProps = {
 
 function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
-}
-
-function shouldShowWatermark(
-  content: PublicSectionContent | undefined,
-  key: string,
-  defaultValue = true,
-) {
-  return content?.imageWatermarks?.[key] ?? defaultValue;
 }
 
 const defaultAndrewDescription = `Golden retriever energy, always up for the next adventure. Sporty, smiley and often the goofy one.
@@ -75,7 +66,6 @@ export function AboutCrew({ content }: AboutCrewProps) {
                   src={andrewImage}
                   label={fileLabel(andrewImage, aboutImages.crewAndrew.label)}
                   className="h-[360px] w-full rotate-[-2deg] border-[6px] border-white/70"
-                  showWatermark={shouldShowWatermark(content, "andrew")}
                 />
               ) : null}
 
@@ -93,12 +83,6 @@ export function AboutCrew({ content }: AboutCrewProps) {
               <div className="mt-5">
                 <Paragraphs text={andrewDescription} />
               </div>
-
-              <div className="mt-8">
-                <ButtonLink href="/contact" variant="light" className="min-w-44">
-                  Read more
-                </ButtonLink>
-              </div>
             </div>
           </article>
 
@@ -109,7 +93,6 @@ export function AboutCrew({ content }: AboutCrewProps) {
                   src={morganeImage}
                   label={fileLabel(morganeImage, aboutImages.crewMorgane.label)}
                   className="h-[360px] w-full rotate-[2deg] border-[6px] border-white/70"
-                  showWatermark={shouldShowWatermark(content, "morgane")}
                 />
               ) : null}
 
@@ -126,12 +109,6 @@ export function AboutCrew({ content }: AboutCrewProps) {
 
               <div className="mt-5">
                 <Paragraphs text={morganeDescription} />
-              </div>
-
-              <div className="mt-8">
-                <ButtonLink href="/contact" variant="light" className="min-w-44">
-                  Read more
-                </ButtonLink>
               </div>
             </div>
           </article>

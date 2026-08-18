@@ -21,14 +21,6 @@ function renderLines(text: string) {
   return text.split("\n").filter(Boolean);
 }
 
-function shouldShowWatermark(
-  content: PublicSectionContent | undefined,
-  key: string,
-  defaultValue = true,
-) {
-  return content?.imageWatermarks?.[key] ?? defaultValue;
-}
-
 export function ContactFormSection({
   content,
   settings,
@@ -52,6 +44,19 @@ export function ContactFormSection({
   const panelText =
     content?.body ||
     "We believe in real connections,\nwild places and telling\nstories that matter.";
+
+  const visibleContactInfo = settings.contactInfo.filter((item) => {
+    const title = item.title.trim().toLowerCase();
+    const value = item.value.trim().toLowerCase();
+
+    return (
+      item.visible &&
+      !title.includes("location") &&
+      !title.includes("based") &&
+      !value.includes("land & sea") &&
+      !value.includes("land and sea")
+    );
+  });
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
@@ -85,9 +90,9 @@ export function ContactFormSection({
   }, [state.status]);
 
   return (
-    <section className="relative overflow-hidden bg-[#f4efe4]">
+    <section className="relative overflow-hidden bg-[#c9c4a8]">
       <div className="grid min-h-[860px] lg:grid-cols-[1.05fr_0.95fr]">
-        <div className="relative px-6 py-16 md:px-14 md:py-20 lg:pr-24">
+        <div className="relative bg-[#c9c4a8] px-6 py-16 md:px-14 md:py-20 lg:pr-24">
           {ornament ? (
             <img
               src={ornament}
@@ -158,7 +163,7 @@ export function ContactFormSection({
                   role="listbox"
                   aria-label="Project type"
                   aria-hidden={!projectTypeOpen}
-                  className={`absolute right-0 top-[calc(100%+6px)] z-50 w-full origin-top border border-[#242617]/20 bg-[#f4efe4] p-1 shadow-[0_14px_30px_rgba(36,38,23,0.16)] transition-[opacity,transform] duration-200 ease-out ${
+                  className={`absolute right-0 top-[calc(100%+6px)] z-50 w-full origin-top border border-[#242617]/20 bg-[#d8d4bd] p-1 shadow-[0_14px_30px_rgba(36,38,23,0.16)] transition-[opacity,transform] duration-200 ease-out ${
                     projectTypeOpen
                       ? "pointer-events-auto translate-y-0 scale-100 opacity-100"
                       : "pointer-events-none -translate-y-1 scale-[0.98] opacity-0"
@@ -238,7 +243,7 @@ export function ContactFormSection({
             aria-hidden="true"
           >
             <div
-              className="absolute inset-y-0 left-0 w-[76px] bg-[#c9c0b1]/45"
+              className="absolute inset-y-0 left-0 w-[76px] bg-[#9fa28a]/55"
               style={{
                 clipPath:
                   "polygon(0 0, 62% 0, 72% 4%, 58% 8%, 70% 13%, 61% 18%, 76% 24%, 59% 29%, 71% 35%, 63% 42%, 74% 49%, 58% 56%, 69% 63%, 60% 70%, 73% 77%, 57% 84%, 68% 91%, 61% 96%, 72% 100%, 0 100%)",
@@ -246,7 +251,7 @@ export function ContactFormSection({
             />
 
             <div
-              className="absolute inset-y-0 left-0 w-[68px] bg-[#f4efe4] drop-shadow-[2px_0_2px_rgba(10,14,9,0.18)]"
+              className="absolute inset-y-0 left-0 w-[68px] bg-[#c9c4a8] drop-shadow-[2px_0_2px_rgba(10,14,9,0.18)]"
               style={{
                 clipPath:
                   "polygon(0 0, 56% 0, 66% 5%, 51% 10%, 64% 15%, 54% 21%, 69% 27%, 50% 33%, 63% 39%, 55% 46%, 67% 53%, 49% 60%, 61% 67%, 53% 74%, 66% 81%, 48% 88%, 60% 94%, 54% 100%, 0 100%)",
@@ -262,7 +267,7 @@ export function ContactFormSection({
             <div className="my-7 h-px w-12 bg-white/35" />
 
             <div className="space-y-8">
-              {settings.contactInfo.filter((item) => item.visible).map((item) => (
+              {visibleContactInfo.map((item) => (
                 <div key={item.title} className="grid grid-cols-[46px_1fr] gap-5">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg border border-white/25 text-lg text-white/65">
                     {item.title === "Email"
@@ -325,7 +330,6 @@ export function ContactFormSection({
                   src={panelPhoto}
                   label="form_01.png"
                   className="h-[185px] w-[285px] rotate-[2deg] border-[6px] border-white/85 shadow-2xl"
-                  showWatermark={shouldShowWatermark(content, "photo")}
                 />
               </div>
             ) : null}

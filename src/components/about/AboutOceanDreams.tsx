@@ -33,14 +33,6 @@ function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
 }
 
-function shouldShowWatermark(
-  content: PublicSectionContent | undefined,
-  key: string,
-  defaultValue = true,
-) {
-  return content?.imageWatermarks?.[key] ?? defaultValue;
-}
-
 export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
   const ocean01 = content?.images.ocean01 || aboutImages.ocean01.src;
   const ocean02 = content?.images.ocean02 || aboutImages.ocean02.src;
@@ -51,7 +43,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
       <div className="absolute inset-0 bg-gradient-to-r from-black/20 via-transparent to-black/20" />
 
       <div className="relative mx-auto grid max-w-[1350px] items-center gap-12 lg:grid-cols-[0.9fr_1fr] lg:gap-16">
-        <div className="relative mx-auto h-[410px] w-full max-w-[560px] md:h-[460px] lg:mx-0">
+        <div className="relative mx-auto h-[410px] w-full max-w-[560px] md:h-[460px] lg:mx-0 translate-x-6 md:translate-x-8">
           {drawing ? (
             <img
               src={drawing}
@@ -65,8 +57,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
               src={ocean01}
               label={fileLabel(ocean01, aboutImages.ocean01.label)}
               imagePosition="center"
-              className="absolute left-[-3%] top-[4%] z-10 h-[350px] w-[245px] border-0 shadow-2xl md:h-[390px] md:w-[270px]"
-              showWatermark={shouldShowWatermark(content, "ocean01")}
+              className="absolute left-[-13%] rotate-[-2deg] top-[0%] z-10 h-[350px] w-[245px] border-[6px] border-[#f4efe4] shadow-2xl md:h-[390px] md:w-[270px]"
             />
           ) : null}
 
@@ -75,14 +66,13 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
               src={ocean02}
               label={fileLabel(ocean02, aboutImages.ocean02.label)}
               imagePosition="center"
-              className="absolute left-[42%] top-[-80%] z-20 h-[330px] w-[215px] border-0 shadow-2xl md:h-[370px] md:w-[240px]"
-              showWatermark={shouldShowWatermark(content, "ocean02")}
+              className="absolute left-[45%] top-[-70%] rotate-[3deg] z-20 h-[330px] w-[215px] border-[6px] border-[#f4efe4] shadow-2xl md:h-[370px] md:w-[240px]"
             />
           ) : null}
 
-          <div className="absolute left-[-65px] top-[100px] z-30 h-7 w-24 -rotate-12 bg-[#d8c7a8]/90 shadow-md" />
+          <div className="absolute left-[-125px] top-[50px] z-30 h-7 w-24 -rotate-12 bg-[#d8c7a8]/90 shadow-md" />
 
-          <p className="absolute bottom-[0px] left-[42%] z-30 max-w-[230px] -rotate-6 font-hand text-xl leading-8 text-[#f4efe4]/72">
+          <p className="absolute bottom-[-20px] left-[-2%] z-30 max-w-[230px] -rotate-6 font-hand text-xl leading-8 text-[#f4efe4]/72">
             {(content?.drawings.handwritten || "home is where the ocean is")
               .split(",")
               .map((line) => (
@@ -111,13 +101,16 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
 
               return (
                 <div key={item.text} className="grid grid-cols-[54px_1fr] gap-4">
-                  <div
-                    className="mt-0 h-12 w-12 bg-center bg-no-repeat opacity-80"
-                    style={{
-                      backgroundImage: icon ? `url(${icon})` : undefined,
-                      backgroundSize: "220%",
-                    }}
-                  />
+                  <div className="mt-0 flex h-12 w-12 items-center justify-center overflow-visible">
+                    {icon ? (
+                      <img
+                        src={icon}
+                        alt=""
+                        aria-hidden="true"
+                        className="h-[100px] w-[100px] max-w-none shrink-0 object-contain opacity-85 brightness-0 invert"
+                      />
+                    ) : null}
+                  </div>
 
                   <p className="max-w-[230px] text-[13px] font-medium leading-6 text-[#f4efe4]/66">
                     {item.text}
