@@ -45,3 +45,4 @@ Thumbs.db
 *.sqlite3
 backups/
 .migration/
+.vercel

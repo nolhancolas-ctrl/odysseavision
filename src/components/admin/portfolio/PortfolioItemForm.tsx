@@ -309,6 +309,10 @@ export function PortfolioItemForm({
   action,
   submitLabel,
 }: PortfolioItemFormProps) {
+  const itemWithWatermark = item as (PortfolioItem & {
+    watermark?: string | null;
+  }) | null;
+
   const [status, setStatus] = useState<StatusValue>(parseStatus(item?.status));
   const [categoryId, setCategoryId] = useState<CategoryValue | "">(
     item?.categoryId ?? "",
@@ -317,7 +321,14 @@ export function PortfolioItemForm({
   const [categoryName, setCategoryName] = useState("");
   const [imageSrc, setImageSrc] = useState(item?.imageSrc ?? "");
   const [imageError, setImageError] = useState("");
+  const [order, setOrder] = useState(item?.order ?? 0);
+  const [featured, setFeatured] = useState(item?.featured ?? false);
+  const [watermark, setWatermark] = useState(
+    itemWithWatermark?.watermark ?? "NONE",
+  );
+
   const uploadSlug = item?.slug || item?.id || "draft";
+  const watermarkEnabled = watermark === "ANDREW" || watermark === "MORGANE";
 
   return (
     <form
@@ -345,188 +356,290 @@ export function PortfolioItemForm({
       <input type="hidden" name="imageSrc" value={imageSrc} />
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="categoryId" value={categoryId} />
+      <input type="hidden" name="watermark" value={watermark} />
+      <input type="hidden" name="tags" value={item?.tags ?? ""} />
 
-      <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-        <div className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+      <section className="grid w-full min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(300px,420px)]">
+        <section className="h-full min-w-0 rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <h2 className="font-serif text-3xl">Content</h2>
 
           <div className="mt-6 grid gap-5">
-            <label>
+            <label className="min-w-0">
               <span className={labelClass}>Title</span>
               <input
                 name="title"
                 required
                 defaultValue={item?.title ?? ""}
                 placeholder="Wild escape in Iceland"
-                className={inputClass}
+                className={`${inputClass} min-w-0`}
               />
             </label>
 
-            <label>
+            <label className="min-w-0">
               <span className={labelClass}>Slug</span>
               <input
                 name="slug"
                 defaultValue={item?.slug ?? ""}
                 placeholder="wild-escape-iceland"
-                className={inputClass}
+                className={`${inputClass} min-w-0`}
               />
               <p className="mt-2 text-xs leading-5 text-[#11170f]/45">
                 Leave empty to generate it automatically from the title.
               </p>
             </label>
 
-            <label>
+            <label className="min-w-0">
               <span className={labelClass}>Description</span>
               <textarea
                 name="description"
-                rows={5}
+                rows={4}
                 defaultValue={item?.description ?? ""}
                 placeholder="Short description displayed on portfolio cards."
-                className={inputClass}
+                className={`${inputClass} min-w-0`}
               />
             </label>
 
-            <div className="grid gap-5 md:grid-cols-2">
-              <label>
+            <div className="grid min-w-0 gap-5 md:grid-cols-2">
+              <label className="min-w-0">
                 <span className={labelClass}>Location</span>
                 <input
                   name="location"
                   defaultValue={item?.location ?? ""}
                   placeholder="Iceland"
-                  className={inputClass}
+                  className={`${inputClass} min-w-0`}
                 />
               </label>
 
-              <label>
+              <label className="min-w-0">
                 <span className={labelClass}>Date</span>
                 <input
                   type="date"
                   name="date"
                   defaultValue={formatDateInput(item?.date)}
-                  className={inputClass}
+                  className={`${inputClass} min-w-0`}
                 />
               </label>
             </div>
 
-            <label>
+            <label className="min-w-0">
               <span className={labelClass}>Tags</span>
               <input
                 name="tags"
                 defaultValue={item?.tags ?? ""}
                 placeholder="ocean, wildlife, travel"
-                className={inputClass}
+                className={`${inputClass} min-w-0`}
               />
             </label>
           </div>
-        </div>
+        </section>
 
-        <div className="space-y-5">
-          <div className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-            <h2 className="font-serif text-3xl">Image</h2>
+        <section className="min-w-0 overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+          <h2 className="font-serif text-3xl">Publishing</h2>
 
-            <div className="mt-6">
-              <span className={labelClass}>Image</span>
+          <div className="mt-6 grid min-w-0 gap-4">
+            <div className="min-w-0">
+              <span className={labelClass}>Status</span>
+              <div className="mt-2 grid min-w-0 grid-cols-3 rounded-2xl border border-[#11170f]/10 bg-[#f4efe4]/80 p-1">
+                {(["DRAFT", "PUBLISHED", "ARCHIVED"] as const).map((value) => {
+                  const selected = status === value;
 
-              <div className="mt-2">
-                <AdminImageDropzone
-                  label="Portfolio image"
-                  value={imageSrc}
-                  onChange={(value) => {
-                    setImageSrc(value);
-                    setImageError("");
+                  return (
+                    <button
+                      key={value}
+                      type="button"
+                      onClick={() => setStatus(value)}
+                      className={[
+                        "min-w-0 truncate rounded-xl px-2 py-3 text-[10px] font-bold uppercase tracking-[0.12em] transition",
+                        selected
+                          ? "bg-[#242617] text-[#f4efe4]"
+                          : "text-[#11170f]/45 hover:text-[#11170f]",
+                      ].join(" ")}
+                    >
+                      {value === "PUBLISHED" ? "Live" : value}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="min-w-0 overflow-hidden">
+              <span className={labelClass}>Category</span>
+              <CategorySelect
+                value={categoryId}
+                categories={categories}
+                error={categoryError}
+                onChange={(value) => {
+                  setCategoryId(value);
+                  setCategoryError("");
+                }}
+              />
+            </div>
+
+            {categoryId === "__new__" ? (
+              <label className="min-w-0">
+                <span className={labelClass}>New category name</span>
+                <input
+                  name="categoryName"
+                  value={categoryName}
+                  onChange={(event) => {
+                    setCategoryName(event.target.value);
+                    setCategoryError("");
                   }}
-                  context="portfolio"
-                  entitySlug={uploadSlug}
-                  slotKey="image"
-                  ratio="4 / 3"
+                  placeholder="New category"
+                  className={`${inputClass} min-w-0`}
                 />
+              </label>
+            ) : null}
+
+            <div className="min-w-0">
+              <span className={labelClass}>Display order</span>
+              <div className="mt-2 flex h-[54px] min-w-0 overflow-hidden rounded-2xl border border-[#11170f]/10 bg-[#f4efe4]/80">
+                <button
+                  type="button"
+                  onClick={() => setOrder((current) => current - 1)}
+                  className="w-12 shrink-0 border-r border-[#11170f]/10 text-xl text-[#11170f]/45 transition hover:bg-[#e8dfcf] hover:text-[#11170f]"
+                >
+                  −
+                </button>
+
+                <input
+                  name="order"
+                  type="number"
+                  value={order}
+                  onChange={(event) => setOrder(Number(event.target.value) || 0)}
+                  className="min-w-0 flex-1 bg-transparent px-4 text-center text-sm text-[#11170f] outline-none"
+                />
+
+                <button
+                  type="button"
+                  onClick={() => setOrder((current) => current + 1)}
+                  className="w-12 shrink-0 border-l border-[#11170f]/10 text-xl text-[#11170f]/45 transition hover:bg-[#e8dfcf] hover:text-[#11170f]"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+
+            <label className="flex min-w-0 items-center gap-3 rounded-2xl border border-[#11170f]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#11170f]/65">
+              <input
+                type="checkbox"
+                name="featured"
+                checked={featured}
+                onChange={(event) => setFeatured(event.target.checked)}
+                className="h-4 w-4 shrink-0 accent-[#b88a3b]"
+              />
+              <span className="truncate">Featured item</span>
+            </label>
+
+            <div className="min-w-0 rounded-2xl border border-[#11170f]/10 bg-[#f4efe4]/70 p-4">
+              <div className="flex min-w-0 items-center justify-between gap-4">
+                <div className="min-w-0">
+                  <p className={labelClass}>Watermark</p>
+                  <p className="mt-1 truncate text-xs text-[#11170f]/42">
+                    {watermark === "ANDREW"
+                      ? "Andrew"
+                      : watermark === "MORGANE"
+                        ? "Morgane"
+                        : "None"}
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  aria-pressed={watermarkEnabled}
+                  onClick={() => setWatermark(watermarkEnabled ? "NONE" : "ANDREW")}
+                  className={[
+                    "relative h-8 w-14 shrink-0 rounded-full border transition",
+                    watermarkEnabled
+                      ? "border-[#b88a3b]/40 bg-[#242617]"
+                      : "border-[#242617]/12 bg-[#e8dfcf]",
+                  ].join(" ")}
+                >
+                  <span
+                    className={[
+                      "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition",
+                      watermarkEnabled ? "left-7" : "left-1",
+                    ].join(" ")}
+                  />
+                </button>
               </div>
 
-              {imageError ? (
-                <p className="mt-2 text-xs font-semibold text-red-900/70">
-                  {imageError}
-                </p>
+              {watermarkEnabled ? (
+                <div className="mt-4 grid min-w-0 grid-cols-2 rounded-full border border-[#242617]/10 bg-[#e8dfcf]/80 p-1">
+                  {(["ANDREW", "MORGANE"] as const).map((owner) => {
+                    const selected = watermark === owner;
+
+                    return (
+                      <button
+                        key={owner}
+                        type="button"
+                        onClick={() => setWatermark(owner)}
+                        className={[
+                          "truncate rounded-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.12em] transition",
+                          selected
+                            ? "bg-[#242617] text-[#f4efe4]"
+                            : "text-[#242617]/45 hover:text-[#242617]",
+                        ].join(" ")}
+                      >
+                        {owner === "ANDREW" ? "Andrew" : "Morgane"}
+                      </button>
+                    );
+                  })}
+                </div>
               ) : null}
             </div>
           </div>
-
-          <div className="rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-            <h2 className="font-serif text-3xl">Publishing</h2>
-
-            <div className="mt-6 grid gap-5">
-              <label>
-                <span className={labelClass}>Status</span>
-                <StatusSelect value={status} onChange={setStatus} />
-              </label>
-
-              <label>
-                <span className={labelClass}>Category</span>
-                <CategorySelect
-                  value={categoryId}
-                  categories={categories}
-                  error={categoryError}
-                  onChange={(value) => {
-                    setCategoryId(value);
-                    setCategoryError("");
-                  }}
-                />
-              </label>
-
-              {categoryId === "__new__" ? (
-                <label>
-                  <span className={labelClass}>New category name</span>
-                  <input
-                    name="categoryName"
-                    value={categoryName}
-                    onChange={(event) => {
-                      setCategoryName(event.target.value);
-                      setCategoryError("");
-                    }}
-                    placeholder="Vintage"
-                    className={inputClass}
-                  />
-                </label>
-              ) : (
-                <input type="hidden" name="categoryName" value="" />
-              )}
-
-              <label>
-                <span className={labelClass}>Display order</span>
-                <input
-                  type="number"
-                  name="order"
-                  defaultValue={item?.order ?? 0}
-                  className={inputClass}
-                />
-              </label>
-
-              <label className="flex items-center gap-3 rounded-2xl border border-[#11170f]/10 bg-[#f4efe4]/50 px-4 py-3">
-                <input
-                  type="checkbox"
-                  name="featured"
-                  defaultChecked={item?.featured ?? false}
-                  className="h-4 w-4 accent-[#071321]"
-                />
-                <span className="text-sm text-[#11170f]/68">
-                  Featured item
-                </span>
-              </label>
-            </div>
-          </div>
-        </div>
+        </section>
       </section>
 
-      <div className="flex flex-col gap-3 sm:flex-row">
+      <section className="w-full min-w-0 rounded-3xl border border-[#11170f]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <div className="flex flex-col justify-between gap-3 border-b border-[#11170f]/10 pb-5 md:flex-row md:items-end">
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b88a3b]">
+              Portfolio image
+            </p>
+            <h2 className="mt-2 font-serif text-3xl">Image</h2>
+          </div>
+
+          <p className="max-w-lg text-xs leading-5 text-[#11170f]/42">
+            Preview is intentionally contained here. The full-resolution image is
+            kept for the public portfolio.
+          </p>
+        </div>
+
+        <div className="mt-6 mx-auto w-full max-w-[760px] overflow-hidden rounded-[1.75rem]">
+          <AdminImageDropzone
+            label="Portfolio image"
+            value={imageSrc}
+            onChange={(value) => {
+              setImageSrc(value);
+              setImageError("");
+            }}
+            context="portfolio"
+            entitySlug={uploadSlug}
+            slotKey="image"
+            ratio="16 / 9"
+          />
+        </div>
+
+        {imageError ? (
+          <p className="mt-3 rounded-2xl border border-red-900/15 bg-red-900/5 px-4 py-3 text-xs text-red-900/65">
+            {imageError}
+          </p>
+        ) : null}
+      </section>
+
+      <div className="sticky bottom-5 z-20 flex flex-wrap gap-3 rounded-[2rem] border border-[#242617]/10 bg-[#f4efe4]/90 p-4 shadow-[0_20px_60px_rgba(20,20,10,0.16)] backdrop-blur">
         <button
           type="submit"
-          className="cursor-pointer rounded-full bg-[#071321] px-7 py-4 text-xs font-semibold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#142844]"
+          className="cursor-pointer rounded-full bg-[#242617] px-7 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:-translate-y-0.5 hover:bg-[#b88a3b]"
         >
           {submitLabel}
         </button>
 
         <a
           href="/admin/portfolio"
-          className="rounded-full border border-[#11170f]/12 px-7 py-4 text-center text-xs font-semibold uppercase tracking-[0.18em] text-[#11170f]/55 transition hover:bg-[#071321] hover:text-[#f4efe4]"
+          className="rounded-full border border-[#242617]/10 px-7 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#b88a3b] hover:text-[#242617]"
         >
           Cancel
         </a>

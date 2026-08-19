@@ -10,6 +10,8 @@ type SeoEditorProps = {
   resetAction: (formData: FormData) => Promise<void>;
 };
 
+type WatermarkOwner = "andrew" | "morgane";
+
 type FieldProps = {
   label: string;
   help?: string;
@@ -355,6 +357,18 @@ export function SeoEditor({
   const [twitterCreator, setTwitterCreator] = useState(settings.twitterCreator);
   const [twitterImage, setTwitterImage] = useState(settings.twitterImage);
 
+  const [watermarkEnabled, setWatermarkEnabled] = useState(
+    settings.watermarks.enabled,
+  );
+  const [watermarkDefaultOwner, setWatermarkDefaultOwner] =
+    useState<WatermarkOwner>(settings.watermarks.defaultOwner);
+  const [watermarkAndrewSrc, setWatermarkAndrewSrc] = useState(
+    settings.watermarks.andrewSrc,
+  );
+  const [watermarkMorganeSrc, setWatermarkMorganeSrc] = useState(
+    settings.watermarks.morganeSrc,
+  );
+
   const [pages, setPages] = useState(settings.pages);
 
   const payload = useMemo(
@@ -378,6 +392,12 @@ export function SeoEditor({
         twitterCard,
         twitterCreator,
         twitterImage,
+        watermarks: {
+          enabled: watermarkEnabled,
+          defaultOwner: watermarkDefaultOwner,
+          andrewSrc: watermarkAndrewSrc,
+          morganeSrc: watermarkMorganeSrc,
+        },
         pages,
       }),
     [
@@ -513,6 +533,72 @@ export function SeoEditor({
         </div>
       </Category>
       </div>
+
+      <Category
+        eyebrow="Protection"
+        title="Watermarks"
+        description="Keep watermarks available, choose the default author mark and update Andrew / Morgane watermark files."
+      >
+        <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
+          <section className="rounded-[1.5rem] border border-[#242617]/10 bg-[#f4efe4]/55 p-5">
+            <div className="grid gap-5">
+              <CheckboxField
+                checked={watermarkEnabled}
+                onChange={setWatermarkEnabled}
+                label="Enable watermarks site-wide"
+              />
+
+              <Field
+                label="Default watermark owner"
+                help="Used by generic site images when no specific owner is selected."
+              >
+                <select
+                  value={watermarkDefaultOwner}
+                  onChange={(event) =>
+                    setWatermarkDefaultOwner(event.target.value as WatermarkOwner)
+                  }
+                  className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition focus:border-[#b88a3b]/70"
+                >
+                  <option value="andrew">Andrew</option>
+                  <option value="morgane">Morgane</option>
+                </select>
+              </Field>
+
+              <p className="rounded-2xl border border-[#242617]/10 bg-white/35 px-4 py-3 text-xs leading-5 text-[#242617]/45">
+                Watermarks are currently available as an option, but the default
+                setting is off. Turn this on only when Andrew and Morgane want
+                watermarks visible on the public website.
+              </p>
+            </div>
+          </section>
+
+          <section className="grid gap-5 md:grid-cols-2">
+            <Field label="Andrew watermark">
+              <AdminImageDropzone
+                label="Andrew watermark"
+                value={watermarkAndrewSrc}
+                onChange={setWatermarkAndrewSrc}
+                context="seo"
+                entitySlug="watermarks"
+                slotKey="andrew-watermark"
+                ratio="1 / 1"
+              />
+            </Field>
+
+            <Field label="Morgane watermark">
+              <AdminImageDropzone
+                label="Morgane watermark"
+                value={watermarkMorganeSrc}
+                onChange={setWatermarkMorganeSrc}
+                context="seo"
+                entitySlug="watermarks"
+                slotKey="morgane-watermark"
+                ratio="1 / 1"
+              />
+            </Field>
+          </section>
+        </div>
+      </Category>
 
       <Category
         eyebrow="Sharing"

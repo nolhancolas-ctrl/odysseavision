@@ -5,7 +5,7 @@ type HomeMissionProps = {
 };
 
 const missionCreamFilter =
-  "invert(1) grayscale(0.05) sepia(0.8) saturate(0.95) hue-rotate(340deg) brightness(1.02) contrast(0.9)";
+  "invert(1) grayscale(0.05) sepia(0.4) saturate(0.0) hue-rotate(340deg) brightness(1.02) contrast(0.9)";
 
 const defaultMissionItems = [
   {

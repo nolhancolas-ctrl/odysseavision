@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
+import { StoryContent } from "@/components/stories/StoryContent";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { getPublicStoryBySlug } from "@/lib/content/stories";
 
@@ -71,14 +72,7 @@ export default async function StoryPage({ params }: StoryPageProps) {
 
           <div className="my-10 h-px w-full bg-[#242617]/15" />
 
-          <div className="space-y-6 text-sm leading-8 text-[#242617]/68">
-            {(story.content || story.description)
-              .split("\n")
-              .filter(Boolean)
-              .map((paragraph: string) => (
-                <p key={paragraph}>{paragraph}</p>
-              ))}
-          </div>
+          <StoryContent content={story.content || story.description} />
 
           <Link
             href="/stories"

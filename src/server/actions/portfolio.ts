@@ -25,6 +25,14 @@ function parseStatus(value: string) {
   return "DRAFT";
 }
 
+function parseWatermark(value: string) {
+  if (value === "ANDREW" || value === "MORGANE") {
+    return value;
+  }
+
+  return "NONE";
+}
+
 async function getUniquePortfolioSlug(baseSlug: string, excludeId?: string) {
   const base = slugify(baseSlug) || "portfolio-item";
   let slug = base;
@@ -117,6 +125,7 @@ export async function createPortfolioItem(formData: FormData) {
       order: parseOrder(clean(formData.get("order"))),
       tags: clean(formData.get("tags")) || null,
       imageSrc,
+      watermark: parseWatermark(clean(formData.get("watermark"))),
       categoryId,
     },
   });
@@ -153,6 +162,7 @@ export async function updatePortfolioItem(id: string, formData: FormData) {
       order: parseOrder(clean(formData.get("order"))),
       tags: clean(formData.get("tags")) || null,
       imageSrc,
+      watermark: parseWatermark(clean(formData.get("watermark"))),
       categoryId,
     },
   });

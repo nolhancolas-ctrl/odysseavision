@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, DragEvent, useMemo, useRef, useState } from "react";
+import { ChangeEvent, DragEvent, useEffect, useMemo, useRef, useState } from "react";
 import { createPortfolioGalleryPhotos } from "@/server/actions/portfolio-gallery-photos";
 
 type PortfolioCategoryOption = {
@@ -9,10 +9,13 @@ type PortfolioCategoryOption = {
   slug: string;
 };
 
+type PhotoWatermark = "NONE" | "ANDREW" | "MORGANE";
+
 type UploadedPhoto = {
   imageSrc: string;
   title: string;
   originalName: string;
+  watermark: PhotoWatermark;
 };
 
 type PortfolioGalleryBulkUploaderProps = {
@@ -153,6 +156,138 @@ function resolveUploadedSrc(payload: unknown) {
   return findImageUrl(payload);
 }
 
+function getWatermarkEnabled(watermark: PhotoWatermark) {
+  return watermark === "ANDREW" || watermark === "MORGANE";
+}
+
+function watermarkOwnerLabel(watermark: PhotoWatermark) {
+  if (watermark === "MORGANE") return "Morgane";
+  if (watermark === "ANDREW") return "Andrew";
+  return "None";
+}
+
+function StatusDropdown({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement | null>(null);
+
+  const options = [
+    {
+      value: "PUBLISHED",
+      label: "Published",
+      description: "Visible on the public portfolio.",
+    },
+    {
+      value: "DRAFT",
+      label: "Draft",
+      description: "Hidden until ready.",
+    },
+  ];
+
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  useEffect(() => {
+    const close = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
+    };
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", close);
+    document.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", close);
+      document.removeEventListener("keydown", closeOnEscape);
+    };
+  }, []);
+
+  return (
+    <div ref={menuRef} className="relative mt-3">
+      <button
+        type="button"
+        onClick={() => setOpen((current) => !current)}
+        className={[
+          "flex min-h-[58px] w-full cursor-pointer items-center justify-between gap-5 rounded-2xl border bg-white/55 px-4 py-3 text-left transition",
+          open
+            ? "border-[#b88a3b]/70 shadow-[0_12px_30px_rgba(36,38,23,0.08)]"
+            : "border-[#242617]/10 hover:border-[#b88a3b]/55",
+        ].join(" ")}
+      >
+        <span>
+          <span className="block text-sm font-semibold text-[#242617]">
+            {selected.label}
+          </span>
+          <span className="mt-1 block text-xs leading-5 text-[#242617]/42">
+            {selected.description}
+          </span>
+        </span>
+
+        <span
+          className={[
+            "h-2.5 w-2.5 shrink-0 border-r border-t border-[#242617]/55 transition-transform duration-200",
+            open ? "-translate-y-0.5 rotate-[135deg]" : "rotate-[45deg]",
+          ].join(" ")}
+        />
+      </button>
+
+      <div
+        className={[
+          "absolute left-0 right-0 top-[calc(100%+8px)] z-50 overflow-hidden rounded-2xl border border-[#242617]/12 bg-[#f4efe4] p-1 shadow-[0_18px_45px_rgba(36,38,23,0.16)] transition-all duration-200",
+          open
+            ? "pointer-events-auto translate-y-0 opacity-100"
+            : "pointer-events-none -translate-y-2 opacity-0",
+        ].join(" ")}
+      >
+        {options.map((option) => {
+          const isSelected = option.value === value;
+
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => {
+                onChange(option.value);
+                setOpen(false);
+              }}
+              className={[
+                "block w-full cursor-pointer rounded-xl px-4 py-3 text-left transition",
+                isSelected
+                  ? "bg-[#242617] text-[#f4efe4]"
+                  : "text-[#242617]/60 hover:bg-[#e8dfcf] hover:text-[#242617]",
+              ].join(" ")}
+            >
+              <span className="block text-[10px] font-bold uppercase tracking-[0.18em]">
+                {option.label}
+              </span>
+              <span
+                className={[
+                  "mt-1 block text-xs leading-5",
+                  isSelected ? "text-[#f4efe4]/62" : "text-[#242617]/42",
+                ].join(" ")}
+              >
+                {option.description}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+
 export function PortfolioGalleryBulkUploader({
   categories,
   defaultCategoryId,
@@ -220,6 +355,7 @@ export function PortfolioGalleryBulkUploader({
           imageSrc,
           title: titleFromFileName(file.name),
           originalName: file.name,
+          watermark: "NONE",
         });
       }
 
@@ -252,6 +388,14 @@ export function PortfolioGalleryBulkUploader({
     }
   }
 
+  function updatePhoto(index: number, patch: Partial<UploadedPhoto>) {
+    setPhotos((currentPhotos) =>
+      currentPhotos.map((photo, photoIndex) =>
+        photoIndex === index ? { ...photo, ...patch } : photo,
+      ),
+    );
+  }
+
   function removePhoto(index: number) {
     setPhotos((currentPhotos) =>
       currentPhotos.filter((_, photoIndex) => photoIndex !== index),
@@ -259,156 +403,205 @@ export function PortfolioGalleryBulkUploader({
   }
 
   return (
-    <form action={createPortfolioGalleryPhotos}>
+    <form
+      id="portfolio-gallery-upload-form"
+      action={createPortfolioGalleryPhotos}
+      className="contents"
+    >
       <input type="hidden" name="images" value={JSON.stringify(photos)} />
       <input type="hidden" name="returnTo" value={returnTo} />
 
-      <div className="grid gap-6 xl:grid-cols-[0.7fr_1.3fr]">
-        <aside className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">
-          <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b88a3b]">
-            Destination
-          </p>
-
-          <label className="mt-6 block">
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
-              Portfolio category
-            </span>
-
-            {lockedCategory ? (
-              <>
-                <input type="hidden" name="categoryId" value={categoryId} />
-                <div className="mt-3 rounded-2xl border border-[#242617]/10 bg-white/55 px-4 py-4 text-sm text-[#242617]">
-                  {selectedCategory?.name || "Selected category"}
-                </div>
-              </>
-            ) : (
-              <select
-                name="categoryId"
-                value={categoryId}
-                onChange={(event) => setCategoryId(event.target.value)}
-                className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-white/55 px-4 py-4 text-sm text-[#242617] outline-none focus:border-[#b88a3b]"
-              >
-                {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
-                    {category.name}
-                  </option>
-                ))}
-              </select>
-            )}
-          </label>
-
-          <label className="mt-5 block">
-            <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
-              Status
-            </span>
-            <select
-              name="status"
-              value={status}
-              onChange={(event) => setStatus(event.target.value)}
-              className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-white/55 px-4 py-4 text-sm text-[#242617] outline-none focus:border-[#b88a3b]"
-            >
-              <option value="PUBLISHED">Published</option>
-              <option value="DRAFT">Draft</option>
-            </select>
-          </label>
-        </aside>
-
-        <section className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">
-          <div
-            onDragOver={(event) => {
-              event.preventDefault();
-              setDragging(true);
-            }}
-            onDragLeave={() => setDragging(false)}
-            onDrop={handleDrop}
-            onClick={() => inputRef.current?.click()}
-            className={[
-              "flex min-h-[250px] cursor-pointer flex-col items-center justify-center rounded-[1.8rem] border border-dashed px-6 py-10 text-center transition",
-              dragging
-                ? "border-[#b88a3b] bg-[#b88a3b]/10"
-                : "border-[#242617]/14 bg-[#f4efe4]/55 hover:border-[#b88a3b]/60 hover:bg-[#f4efe4]/80",
-            ].join(" ")}
+      {lockedCategory ? (
+        <input type="hidden" name="categoryId" value={categoryId} />
+      ) : (
+        <label className="block rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+            Portfolio category
+          </span>
+          <select
+            name="categoryId"
+            value={categoryId}
+            onChange={(event) => setCategoryId(event.target.value)}
+            className="mt-3 h-[58px] w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 text-sm text-[#242617] outline-none focus:border-[#b88a3b]"
           >
-            <input
-              ref={inputRef}
-              type="file"
-              accept="image/*"
-              multiple
-              className="sr-only"
-              onChange={handleInputChange}
-            />
+            {categories.map((category) => (
+              <option key={category.id} value={category.id}>
+                {category.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
-            <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[#242617]/10 text-3xl text-[#242617]/45">
-              ↑
-            </span>
+      <section className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)] xl:col-start-2">
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={handleDrop}
+          onClick={() => inputRef.current?.click()}
+          className={[
+            "flex min-h-[252px] cursor-pointer flex-col items-center justify-center rounded-[1.8rem] border border-dashed px-6 py-10 text-center transition",
+            dragging
+              ? "border-[#b88a3b] bg-[#b88a3b]/10"
+              : "border-[#242617]/14 bg-[#f4efe4]/55 hover:border-[#b88a3b]/60 hover:bg-[#f4efe4]/80",
+          ].join(" ")}
+        >
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            className="sr-only"
+            onChange={handleInputChange}
+          />
 
-            <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-[#242617]/45">
-              {uploading ? "Uploading..." : "Drop photos or click to upload"}
+          <span className="flex h-16 w-16 items-center justify-center rounded-full border border-[#242617]/10 text-3xl text-[#242617]/45">
+            ↑
+          </span>
+
+          <p className="mt-5 text-xs font-bold uppercase tracking-[0.22em] text-[#242617]/45">
+            {uploading ? "Uploading..." : "Drop photos or click to upload"}
+          </p>
+        </div>
+
+        {error ? (
+          <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">
+            {error}
+          </p>
+        ) : null}
+      </section>
+
+      {photos.length > 0 ? (
+        <section className="overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_22px_70px_rgba(20,20,10,0.07)] xl:col-span-2">
+          <div className="flex flex-col justify-between gap-4 border-b border-[#242617]/10 p-6 md:flex-row md:items-end">
+            <div>
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b88a3b]">
+                Pending upload
+              </p>
+
+              <h3 className="mt-2 font-serif text-3xl leading-none tracking-[-0.04em] text-[#242617]">
+                Photos ready to save
+              </h3>
+            </div>
+
+            <p className="text-xs uppercase tracking-[0.16em] text-[#242617]/42">
+              {photos.length} {photos.length === 1 ? "photo" : "photos"} ready
             </p>
           </div>
 
-          {error ? (
-            <p className="mt-4 rounded-2xl border border-red-500/20 bg-red-500/10 px-4 py-3 text-sm text-red-700">
-              {error}
-            </p>
-          ) : null}
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(270px,320px))] justify-start gap-5 p-6">
+            {photos.map((photo, index) => {
+              const watermarkEnabled = getWatermarkEnabled(photo.watermark);
 
-          {photos.length > 0 ? (
-            <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {photos.map((photo, index) => (
+              return (
                 <article
                   key={`${photo.imageSrc}-${index}`}
                   className="overflow-hidden rounded-[1.5rem] border border-[#242617]/10 bg-[#f4efe4]/60"
                 >
                   <div
-                    className="aspect-[1.25] bg-cover bg-center"
+                    className="aspect-[4/3] bg-cover bg-center"
                     style={{ backgroundImage: `url(${photo.imageSrc})` }}
                   />
 
-                  <div className="p-4">
-                    <input
-                      value={photo.title}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setPhotos((currentPhotos) =>
-                          currentPhotos.map((currentPhoto, photoIndex) =>
-                            photoIndex === index
-                              ? { ...currentPhoto, title: value }
-                              : currentPhoto,
-                          ),
-                        );
-                      }}
-                      className="w-full rounded-xl border border-[#242617]/10 bg-white/45 px-3 py-2 text-xs text-[#242617] outline-none focus:border-[#b88a3b]"
-                    />
+                  <div className="space-y-4 p-4">
+                    <div>
+                      <p className="truncate text-sm font-semibold text-[#242617]">
+                        {photo.title || "Untitled photo"}
+                      </p>
+                      <p className="mt-1 truncate text-xs text-[#242617]/38">
+                        {photo.originalName}
+                      </p>
+                    </div>
+
+                    <div className="rounded-2xl border border-[#242617]/10 bg-white/45 p-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <div>
+                          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+                            Watermark
+                          </p>
+                          <p className="mt-1 text-xs text-[#242617]/40">
+                            {watermarkOwnerLabel(photo.watermark)}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          aria-pressed={watermarkEnabled}
+                          onClick={() =>
+                            updatePhoto(index, {
+                              watermark: watermarkEnabled ? "NONE" : "ANDREW",
+                            })
+                          }
+                          className={[
+                            "relative h-8 w-14 rounded-full border transition",
+                            watermarkEnabled
+                              ? "border-[#b88a3b]/40 bg-[#242617]"
+                              : "border-[#242617]/12 bg-[#e8dfcf]",
+                          ].join(" ")}
+                        >
+                          <span
+                            className={[
+                              "absolute top-1 h-6 w-6 rounded-full bg-white shadow transition",
+                              watermarkEnabled ? "left-7" : "left-1",
+                            ].join(" ")}
+                          />
+                        </button>
+                      </div>
+
+                      {watermarkEnabled ? (
+                        <div className="mt-4 grid grid-cols-2 rounded-full border border-[#242617]/10 bg-[#e8dfcf]/80 p-1">
+                          {(["ANDREW", "MORGANE"] as const).map((owner) => {
+                            const selected = photo.watermark === owner;
+
+                            return (
+                              <button
+                                key={owner}
+                                type="button"
+                                onClick={() =>
+                                  updatePhoto(index, { watermark: owner })
+                                }
+                                className={[
+                                  "rounded-full px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] transition",
+                                  selected
+                                    ? "bg-[#242617] text-[#f4efe4]"
+                                    : "text-[#242617]/45 hover:text-[#242617]",
+                                ].join(" ")}
+                              >
+                                {owner === "ANDREW" ? "Andrew" : "Morgane"}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
 
                     <button
                       type="button"
                       onClick={() => removePhoto(index)}
-                      className="mt-3 cursor-pointer text-[10px] font-bold uppercase tracking-[0.16em] text-[#242617]/40 transition hover:text-red-700"
+                      className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#242617]/40 transition hover:text-red-700"
                     >
                       Remove
                     </button>
                   </div>
                 </article>
-              ))}
-            </div>
-          ) : null}
+              );
+            })}
+          </div>
 
-          <div className="mt-8 flex flex-col justify-between gap-4 border-t border-[#242617]/8 pt-5 md:flex-row md:items-center">
-            <p className="text-xs uppercase tracking-[0.16em] text-[#242617]/42">
-              {photos.length} {photos.length === 1 ? "photo" : "photos"} ready
-            </p>
-
+          <div className="flex justify-end border-t border-[#242617]/8 p-6">
             <button
               type="submit"
               disabled={uploading || photos.length === 0}
-              className="w-fit cursor-pointer rounded-full bg-[#242617] px-6 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:-translate-y-0.5 hover:bg-[#b88a3b] disabled:cursor-not-allowed disabled:opacity-40"
+              className="w-fit cursor-pointer rounded-full bg-[#242617] px-7 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:-translate-y-0.5 hover:bg-[#b88a3b] disabled:cursor-not-allowed disabled:opacity-40"
             >
               {submitLabel}
             </button>
           </div>
         </section>
-      </div>
+      ) : null}
     </form>
   );
 }

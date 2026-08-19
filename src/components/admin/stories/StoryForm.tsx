@@ -344,7 +344,80 @@ export function StoryForm({
   const [categoryError, setCategoryError] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [imageSrc, setImageSrc] = useState(story?.imageSrc ?? "");
+  const [content, setContent] = useState(story?.content ?? "");
+  const contentRef = useRef<HTMLTextAreaElement>(null);
   const uploadSlug = story?.slug || "draft";
+
+  function updateContentSelection(
+    nextContent: string,
+    selectionStart: number,
+    selectionEnd: number,
+  ) {
+    setContent(nextContent);
+
+    requestAnimationFrame(() => {
+      contentRef.current?.focus();
+      contentRef.current?.setSelectionRange(selectionStart, selectionEnd);
+    });
+  }
+
+  function applyInlineFormat(before: string, after = before, fallback = "text") {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const selectedText = content.slice(start, end) || fallback;
+    const nextContent =
+      content.slice(0, start) + before + selectedText + after + content.slice(end);
+
+    updateContentSelection(
+      nextContent,
+      start + before.length,
+      start + before.length + selectedText.length,
+    );
+  }
+
+  function applyHeadingFormat(prefix: "## " | "### ") {
+    const textarea = contentRef.current;
+    if (!textarea) return;
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    if (start === end) {
+      const lineStart = content.lastIndexOf("\n", start - 1) + 1;
+      const nextLineBreak = content.indexOf("\n", start);
+      const lineEnd = nextLineBreak === -1 ? content.length : nextLineBreak;
+      const line = content.slice(lineStart, lineEnd);
+      const cleanedLine = line.replace(/^#{2,3}\s+/, "").trim();
+      const replacement = `${prefix}${cleanedLine || "Subtitle"}`;
+      const nextContent =
+        content.slice(0, lineStart) + replacement + content.slice(lineEnd);
+
+      updateContentSelection(
+        nextContent,
+        lineStart + prefix.length,
+        lineStart + replacement.length,
+      );
+      return;
+    }
+
+    const selectedText = content.slice(start, end);
+    const replacement = selectedText
+      .split("\n")
+      .map((line) => {
+        if (!line.trim()) return line;
+        return `${prefix}${line.replace(/^#{2,3}\s+/, "")}`;
+      })
+      .join("\n");
+
+    updateContentSelection(
+      content.slice(0, start) + replacement + content.slice(end),
+      start,
+      start + replacement.length,
+    );
+  }
 
   return (
     <form
@@ -397,11 +470,50 @@ export function StoryForm({
           />
         </Field>
 
-        <Field label="Full content">
+        <Field
+          label="Full content"
+          help="Select text, then use the toolbar. The formatting is saved as lightweight Markdown."
+        >
+          <div className="mb-3 flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => applyInlineFormat("**", "**", "bold text")}
+              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
+            >
+              Bold
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyInlineFormat("*", "*", "italic text")}
+              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
+            >
+              Italic
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyHeadingFormat("## ")}
+              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
+            >
+              Title
+            </button>
+
+            <button
+              type="button"
+              onClick={() => applyHeadingFormat("### ")}
+              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
+            >
+              Subtitle
+            </button>
+          </div>
+
           <textarea
+            ref={contentRef}
             name="content"
             rows={12}
-            defaultValue={story?.content ?? ""}
+            value={content}
+            onChange={(event) => setContent(event.target.value)}
             className={textareaClass()}
             placeholder="Write the full story here. Use line breaks to separate paragraphs."
           />

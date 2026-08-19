@@ -7,11 +7,12 @@ import {
 } from "@/lib/content/portfolio";
 import type { PublicSectionContent } from "@/lib/content/site";
 
+
+const HOME_PORTFOLIO_ORDER = ["ocean", "wildlife", "landscape", "portrait"] as const;
+
 type HomePortfolioPreviewProps = {
   content?: PublicSectionContent;
 };
-
-const HOME_PORTFOLIO_ORDER = ["ocean", "landscape", "portrait", "wildlife"] as const;
 
 function getFeaturedCategories(categories: PublicPortfolioCategory[]) {
   const normalizedCategories = categories.map((item) => ({
@@ -63,7 +64,12 @@ function PortfolioPreviewCard({
 export async function HomePortfolioPreview({
   content,
 }: HomePortfolioPreviewProps) {
-  const portfolioCategories = getFeaturedCategories(await getPublicPortfolioCategories());
+  const portfolioCategories = getFeaturedCategories(
+    await getPublicPortfolioCategories(),
+  ).map((item, index) => ({
+    ...item,
+    number: String(index + 1).padStart(2, "0"),
+  }));
 
   return (
     <section className="overflow-hidden bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">

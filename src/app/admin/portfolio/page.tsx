@@ -218,12 +218,7 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
                       </ConfirmSubmitButton>
                     </form>
 
-                    <Link
-                      href={`/admin/portfolio/categories/${category.id}`}
-                      className="w-full rounded-full bg-[#071008] px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-[#f4efe4] transition hover:bg-[#b88a3b] hover:text-[#071008] md:w-32"
-                    >
-                      Add content
-                    </Link>
+
                   </div>
                 </article>
               );

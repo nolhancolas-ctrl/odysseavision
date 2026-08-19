@@ -11,6 +11,7 @@ type PhotoFrameProps = {
   imagePosition?: string;
   showLabelWhenMissing?: boolean;
   showWatermark?: boolean;
+  watermarkOwner?: "default" | "andrew" | "morgane";
 };
 
 export function PhotoFrame({
@@ -21,6 +22,7 @@ export function PhotoFrame({
   imagePosition = "center",
   showLabelWhenMissing = true,
   showWatermark = true,
+  watermarkOwner = "default",
 }: PhotoFrameProps) {
   const [hasError, setHasError] = useState(false);
 
@@ -55,7 +57,7 @@ export function PhotoFrame({
 
       <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/35 via-transparent to-white/5" />
 
-      {!hasError ? <FrameWatermark enabled={showWatermark} /> : null}
+      {!hasError ? <FrameWatermark enabled={showWatermark} owner={watermarkOwner} /> : null}
     </div>
   );
 }

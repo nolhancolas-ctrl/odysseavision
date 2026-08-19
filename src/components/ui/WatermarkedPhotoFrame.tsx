@@ -6,6 +6,7 @@ type WatermarkedPhotoFrameProps = {
   className?: string;
   imageClassName?: string;
   showWatermark?: boolean;
+  watermarkOwner?: "default" | "andrew" | "morgane";
 };
 
 export function WatermarkedPhotoFrame({
@@ -14,6 +15,7 @@ export function WatermarkedPhotoFrame({
   className = "",
   imageClassName = "",
   showWatermark = true,
+  watermarkOwner = "default",
 }: WatermarkedPhotoFrameProps) {
   return (
     <div
@@ -35,7 +37,7 @@ export function WatermarkedPhotoFrame({
         style={{ backgroundImage: `url(${src})` }}
       />
 
-      <FrameWatermark enabled={showWatermark} />
+      <FrameWatermark enabled={showWatermark} owner={watermarkOwner} />
     </div>
   );
 }

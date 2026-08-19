@@ -217,10 +217,13 @@ async function uploadToBlob({
     "/",
   );
 
+  const blobToken = process.env.BLOB_READ_WRITE_TOKEN;
+
   const blob = await put(pathname, prepared.buffer, {
     access: "public",
     contentType: prepared.contentType,
     addRandomSuffix: true,
+    ...(blobToken ? { token: blobToken } : {}),
   });
 
   return {

@@ -4,6 +4,15 @@ import { editablePages } from "@/data/sitePages";
 
 export const SEO_SETTING_KEY = "seo";
 
+export type WatermarkOwner = "andrew" | "morgane";
+
+export type WatermarkSettings = {
+  enabled: boolean;
+  defaultOwner: WatermarkOwner;
+  andrewSrc: string;
+  morganeSrc: string;
+};
+
 export type PageSeoSettings = {
   pageKey: string;
   label: string;
@@ -37,6 +46,8 @@ export type SeoSettings = {
   twitterCard: "summary" | "summary_large_image";
   twitterCreator: string;
   twitterImage: string;
+
+  watermarks: WatermarkSettings;
 
   pages: PageSeoSettings[];
 };
@@ -91,6 +102,13 @@ export const defaultSeoSettings: SeoSettings = {
   twitterCreator: "@odyssea.vision",
   twitterImage: "/images/home/hero_fond.png",
 
+  watermarks: {
+    enabled: false,
+    defaultOwner: "andrew",
+    andrewSrc: "/images/admin/odyssea_logo.png",
+    morganeSrc: "/images/admin/odyssea_logo.png",
+  },
+
   pages: defaultPageSeo(),
 };
 
@@ -108,6 +126,23 @@ function boolValue(value: unknown, fallback: boolean) {
 
 function normalizeTwitterCard(value: unknown): "summary" | "summary_large_image" {
   return value === "summary" ? "summary" : "summary_large_image";
+}
+
+function normalizeWatermarkOwner(value: unknown): WatermarkOwner {
+  return value === "morgane" ? "morgane" : "andrew";
+}
+
+function normalizeWatermarkSettings(value: unknown): WatermarkSettings {
+  if (!isObject(value)) {
+    return defaultSeoSettings.watermarks;
+  }
+
+  return {
+    enabled: boolValue(value.enabled, defaultSeoSettings.watermarks.enabled),
+    defaultOwner: normalizeWatermarkOwner(value.defaultOwner),
+    andrewSrc: textValue(value.andrewSrc, defaultSeoSettings.watermarks.andrewSrc),
+    morganeSrc: textValue(value.morganeSrc, defaultSeoSettings.watermarks.morganeSrc),
+  };
 }
 
 function normalizePageSeo(value: unknown, fallback: PageSeoSettings) {
@@ -193,6 +228,8 @@ export function normalizeSeoSettings(value: unknown): SeoSettings {
       value.twitterImage,
       defaultSeoSettings.twitterImage,
     ),
+
+    watermarks: normalizeWatermarkSettings(value.watermarks),
 
     pages,
   };

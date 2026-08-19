@@ -22,6 +22,12 @@ function getSlugFromHref(href: string) {
   return href.split("/").filter(Boolean).at(-1) ?? "";
 }
 
+function getWatermarkOwner(value: string) {
+  if (value === "ANDREW") return "andrew";
+  if (value === "MORGANE") return "morgane";
+  return "default";
+}
+
 function getGalleryAspectClass(index: number) {
   const variants = [
     "aspect-[4/5]",
@@ -138,6 +144,8 @@ export default async function PortfolioCategoryPage({
                     alt={item.title}
                     className={getGalleryAspectClass(index)}
                     imageClassName="transition duration-700 group-hover:scale-[1.025]"
+                    showWatermark={item.watermark !== "NONE"}
+                    watermarkOwner={getWatermarkOwner(item.watermark)}
                   />
                 </figure>
               ))}

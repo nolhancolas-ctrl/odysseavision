@@ -164,7 +164,7 @@ export default async function AdminSubscribersPage({
       ) : null}
 
       <section className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_22px_70px_rgba(20,20,10,0.07)]">
-        <form action={importNewsletterSubscribers} encType="multipart/form-data">
+        <form action={importNewsletterSubscribers}>
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b88a3b]">

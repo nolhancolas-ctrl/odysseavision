@@ -132,7 +132,13 @@ function titleCase(value: string) {
 
 async function getTableNames() {
   const rows = await db.$queryRawUnsafe<{ name: string }[]>(
-    "SELECT name FROM sqlite_master WHERE type = 'table' ORDER BY name"
+    `
+      SELECT table_name AS name
+      FROM information_schema.tables
+      WHERE table_schema = 'public'
+        AND table_type = 'BASE TABLE'
+      ORDER BY table_name
+    `
   );
 
   return rows
@@ -141,9 +147,13 @@ async function getTableNames() {
 }
 
 async function getColumns(table: string) {
-  const rows = await db.$queryRawUnsafe<{ name: string }[]>(
-    `PRAGMA table_info(${quoteIdentifier(table)})`
-  );
+  const rows = await db.$queryRaw<{ name: string }[]>`
+    SELECT column_name AS name
+    FROM information_schema.columns
+    WHERE table_schema = 'public'
+      AND table_name = ${table}
+    ORDER BY ordinal_position
+  `;
 
   return rows.map((row) => row.name);
 }

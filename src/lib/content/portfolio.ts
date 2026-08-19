@@ -21,6 +21,7 @@ export type PublicPortfolioItem = {
   location: string;
   date: string;
   featured: boolean;
+  watermark: string;
 };
 
 function formatNumber(index: number) {
@@ -106,6 +107,7 @@ export async function getPublicPortfolioItems(): Promise<PublicPortfolioItem[]> 
         location: "",
         date: "",
         featured: index === 0,
+        watermark: "NONE",
       }));
     }
 
@@ -120,6 +122,7 @@ export async function getPublicPortfolioItems(): Promise<PublicPortfolioItem[]> 
       location: item.location ?? "",
       date: item.date ? item.date.toISOString() : "",
       featured: item.featured,
+      watermark: item.watermark,
     }));
   } catch {
     return portfolioPreviewItems.map((item, index) => ({
@@ -133,6 +136,7 @@ export async function getPublicPortfolioItems(): Promise<PublicPortfolioItem[]> 
       location: "",
       date: "",
       featured: index === 0,
+      watermark: "NONE",
     }));
   }
 }

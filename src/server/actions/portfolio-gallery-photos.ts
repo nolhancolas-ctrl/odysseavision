@@ -8,6 +8,7 @@ type UploadedPhoto = {
   imageSrc: string;
   title?: string;
   originalName?: string;
+  watermark?: string;
 };
 
 function slugify(value: string) {
@@ -28,6 +29,22 @@ function safeAdminReturn(value: FormDataEntryValue | null) {
   }
 
   return "/admin/portfolio/photos";
+}
+
+function parseWatermark(value: string) {
+  if (value === "ANDREW" || value === "MORGANE") {
+    return value;
+  }
+
+  return "NONE";
+}
+
+async function setPortfolioItemWatermark(itemId: string, watermark: string) {
+  await db.$executeRaw`
+    UPDATE "PortfolioItem"
+    SET "watermark" = ${watermark}
+    WHERE "id" = ${itemId}
+  `;
 }
 
 function getTitleFromFileName(fileName: string, fallback: string) {
@@ -77,28 +94,36 @@ export async function createPortfolioGalleryPhotos(formData: FormData) {
 
   const timestamp = Date.now();
 
-  await db.portfolioItem.createMany({
-    data: validImages.map((image, index) => {
+  await Promise.all(
+    validImages.map(async (image, index) => {
       const title = getTitleFromFileName(
         image.title || image.originalName || "",
         `${category.name} ${existingCount + index + 1}`,
       );
 
-      return {
-        title,
-        slug: `${category.slug}-${slugify(title)}-${timestamp}-${index}`,
-        description: null,
-        imageSrc: image.imageSrc,
-        categoryId,
-        location: null,
-        date: null,
-        featured: false,
-        status: status === "DRAFT" ? "DRAFT" : "PUBLISHED",
-        order: existingCount + index,
-      };
+      const created = await db.portfolioItem.create({
+        data: {
+          title,
+          slug: `${category.slug}-${slugify(title)}-${timestamp}-${index}`,
+          description: null,
+          imageSrc: image.imageSrc,
+          categoryId,
+          location: null,
+          date: null,
+          featured: false,
+          status: status === "DRAFT" ? "DRAFT" : "PUBLISHED",
+          order: existingCount + index,
+        },
+      });
+
+      await setPortfolioItemWatermark(
+        created.id,
+        parseWatermark(image.watermark || "NONE"),
+      );
+
+      return created;
     }),
-    skipDuplicates: true,
-  });
+  );
 
   revalidatePath("/portfolio");
   revalidatePath(`/portfolio/${category.slug}`);

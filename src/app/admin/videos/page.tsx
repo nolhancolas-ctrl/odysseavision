@@ -35,7 +35,7 @@ export default async function AdminVideosPage() {
             Videos
           </h1>
           <p className="mt-3 max-w-2xl text-sm leading-7 text-[#242617]/55">
-            Add Vimeo films, manage thumbnails, descriptions, categories and featured videos.
+            Add Vimeo films, manage thumbnails, descriptions, categories and featured videos. Upload videos to Vimeo first, then paste the Vimeo URL here.
           </p>
         </div>
 
