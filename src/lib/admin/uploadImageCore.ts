@@ -22,7 +22,15 @@ const PROCESSABLE_PHOTO_MIME_TYPES = new Set([
   "image/webp",
 ]);
 
-const PHOTO_PROCESS_CONTEXTS = new Set(["portfolio", "client-album"]);
+const PHOTO_PROCESS_CONTEXTS = new Set([
+  "portfolio",
+  "client-album",
+  "site",
+  "story",
+  "video",
+  "newsletter",
+  "general",
+]);
 
 const EXTENSION_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",

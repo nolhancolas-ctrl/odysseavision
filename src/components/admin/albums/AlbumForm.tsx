@@ -9,6 +9,7 @@ import {
   useTransition,
 } from "react";
 import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
+import { compressImageBeforeUpload } from "@/lib/admin/clientImageCompression";
 import type { Client, ClientAlbum, ClientAlbumImage } from "@prisma/client";
 
 const CREATE_NEW_CLIENT_VALUE = "__create_new_client__";
@@ -277,7 +278,8 @@ export function AlbumForm({
         const formData = new FormData();
         const slotId = `${Date.now()}-${index}-${file.name}`;
 
-        formData.append("file", file);
+        const preparedFile = await compressImageBeforeUpload(file);
+  formData.append("file", preparedFile);
         formData.append("context", "client-album");
         formData.append("entitySlug", uploadSlug);
         formData.append("slotKey", `preview-${slotId}`);
@@ -325,7 +327,8 @@ export function AlbumForm({
       const file = await compressPreviewFile(originalFile);
       const formData = new FormData();
 
-      formData.append("file", file);
+      const preparedFile = await compressImageBeforeUpload(file);
+  formData.append("file", preparedFile);
       formData.append("context", "client-album");
       formData.append("entitySlug", album?.slug || "draft");
       formData.append("slotKey", "cover");

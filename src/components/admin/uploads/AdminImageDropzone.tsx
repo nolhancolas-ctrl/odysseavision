@@ -1,10 +1,8 @@
 "use client";
 
 import { DragEvent, useRef, useState, useTransition } from "react";
-import {
-  renameUploadedImage,
-  uploadImage,
-} from "@/server/actions/uploads";
+import { compressImageBeforeUpload } from "@/lib/admin/clientImageCompression";
+import { renameUploadedImage } from "@/server/actions/uploads";
 
 export type AdminImageUploadContext =
   | "website-page"
@@ -38,6 +36,82 @@ function isLocalImagePath(value: string) {
   return value.startsWith("/images/");
 }
 
+type UploadApiResult = {
+  ok: boolean;
+  error?: string;
+  path: string;
+  src?: string;
+  url?: string;
+};
+
+function getApiContext(context: AdminImageUploadContext) {
+  if (context === "website-page" || context === "appearance") {
+    return "site";
+  }
+
+  if (context === "misc") {
+    return "general";
+  }
+
+  return context;
+}
+
+function getApiEntitySlug({
+  context,
+  pageKey,
+  sectionKey,
+  entitySlug,
+}: {
+  context: AdminImageUploadContext;
+  pageKey: string;
+  sectionKey: string;
+  entitySlug: string;
+}) {
+  if (entitySlug) {
+    return entitySlug;
+  }
+
+  if (context === "website-page") {
+    return [pageKey, sectionKey].filter(Boolean).join("-") || "website-page";
+  }
+
+  if (context === "appearance") {
+    return "appearance";
+  }
+
+  return "draft";
+}
+
+async function uploadImageViaApi(formData: FormData): Promise<UploadApiResult> {
+  const response = await fetch("/api/admin/uploads/image", {
+    method: "POST",
+    body: formData,
+  });
+
+  const payload = await response.json().catch(() => null);
+
+  if (!response.ok || !payload?.ok) {
+    return {
+      ok: false,
+      error:
+        payload?.error ||
+        payload?.message ||
+        `Upload failed with status ${response.status}.`,
+      path: "",
+    };
+  }
+
+  const path = payload.path || payload.src || payload.url || "";
+
+  return {
+    ok: Boolean(path),
+    error: path ? "" : "Upload succeeded but returned no image URL.",
+    path,
+    src: payload.src,
+    url: payload.url,
+  };
+}
+
 export function AdminImageDropzone({
   label,
   value,
@@ -64,17 +138,27 @@ export function AdminImageDropzone({
 
     setError("");
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("context", context);
-    formData.append("pageKey", pageKey);
-    formData.append("sectionKey", sectionKey);
-    formData.append("slotKey", slotKey);
-    formData.append("entitySlug", entitySlug);
-    formData.append("label", label);
-
     startTransition(async () => {
-      const result = await uploadImage(formData);
+      const preparedFile = await compressImageBeforeUpload(file);
+
+      const formData = new FormData();
+      formData.append("file", preparedFile);
+      formData.append("context", getApiContext(context));
+      formData.append("pageKey", pageKey);
+      formData.append("sectionKey", sectionKey);
+      formData.append("slotKey", slotKey);
+      formData.append(
+        "entitySlug",
+        getApiEntitySlug({
+          context,
+          pageKey,
+          sectionKey,
+          entitySlug,
+        }),
+      );
+      formData.append("label", label);
+
+      const result = await uploadImageViaApi(formData);
 
       if (!result.ok) {
         setError(result.error || "Upload failed.");
