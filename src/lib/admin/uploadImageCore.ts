@@ -276,6 +276,10 @@ export async function uploadImageCore(formData: FormData) {
     });
   }
 
+  if (process.env.VERCEL) {
+    throw new Error("Missing BLOB_READ_WRITE_TOKEN in Vercel runtime.");
+  }
+
   return uploadToLocal({
     prepared,
     folder,
