@@ -6,6 +6,7 @@ import type { PublicSectionContent } from "@/lib/content/site";
 
 type HomeFeaturedStoryProps = {
   content?: PublicSectionContent;
+  storyHref?: string;
 };
 
 function fileLabel(src: string, fallback: string) {
@@ -20,7 +21,10 @@ function shouldShowWatermark(
   return content?.imageWatermarks?.[key] ?? defaultValue;
 }
 
-export function HomeFeaturedStory({ content }: HomeFeaturedStoryProps) {
+export function HomeFeaturedStory({
+  content,
+  storyHref = "/stories",
+}: HomeFeaturedStoryProps) {
   const image = content?.images.photo || content?.imageSrc || homeImages.storyElephants.src;
 
   return (
@@ -51,7 +55,7 @@ export function HomeFeaturedStory({ content }: HomeFeaturedStoryProps) {
 
           <div className="mt-8">
             <ButtonLink
-              href={content?.ctaHref || "/stories/the-reality-behind-elephant-tours"}
+              href={storyHref}
               variant="light"
               className="min-w-48"
             >

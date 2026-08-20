@@ -434,13 +434,13 @@ export function StoryForm({
           setCategoryError("Please name the new category.");
         }
       }}
-      className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]"
+      className="grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
     >
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="imageSrc" value={imageSrc} />
 
-      <div className="space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+      <div className="min-w-0 space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
         <Field label="Title">
           <input
             name="title"
@@ -520,18 +520,20 @@ export function StoryForm({
         </Field>
       </div>
 
-      <aside className="space-y-6">
+      <aside className="min-w-0 space-y-6">
         <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <Field label="Cover image">
-            <AdminImageDropzone
-              label="Story cover image"
-              value={imageSrc}
-              onChange={setImageSrc}
-              context="story"
-              entitySlug={uploadSlug}
-              slotKey="cover"
-              ratio="4 / 3"
-            />
+            <div className="mx-auto w-full max-w-[560px]">
+              <AdminImageDropzone
+                label="Story cover image"
+                value={imageSrc}
+                onChange={setImageSrc}
+                context="story"
+                entitySlug={uploadSlug}
+                slotKey="cover"
+                ratio="4 / 3"
+              />
+            </div>
           </Field>
         </div>
 

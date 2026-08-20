@@ -5,8 +5,8 @@ import path from "path";
 import { put } from "@vercel/blob";
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
-const MAX_PHOTO_WIDTH = 2600;
-const PHOTO_WEBP_QUALITY = 84;
+const MAX_PHOTO_WIDTH = 2200;
+const PHOTO_WEBP_QUALITY = 82;
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -178,6 +178,16 @@ async function preparePhotoUpload({
         effort: 5,
       })
       .toBuffer();
+
+    // Never store a processed version that is larger than the source.
+    if (processedBuffer.length >= buffer.length) {
+      return {
+        buffer,
+        fileName: getSafeFileName(file, slotKey),
+        size: buffer.length,
+        contentType: file.type,
+      };
+    }
 
     return {
       buffer: processedBuffer,

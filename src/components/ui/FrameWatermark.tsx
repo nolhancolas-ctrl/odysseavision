@@ -142,7 +142,18 @@ export function FrameWatermark({
     setImageError(false);
   }, [src]);
 
-  if (!enabled || !settings.enabled || !src || imageError) return null;
+  const hasExplicitOwner =
+    owner === "andrew" || owner === "morgane";
+
+  // An explicit watermark selected on a photo is authoritative.
+  // The global toggle only controls frames using the default owner.
+  const shouldRender =
+    enabled &&
+    (hasExplicitOwner || settings.enabled);
+
+  if (!shouldRender || !src || imageError) {
+    return null;
+  }
 
   return (
     <div

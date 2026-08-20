@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 
 function slugify(value: string) {
   return value
@@ -128,6 +129,11 @@ export async function updateStory(id: string, formData: FormData) {
   const category = await resolveCategory(formData);
   const data = getStoryData(formData);
 
+  const previous = await db.story.findUnique({
+    where: { id },
+    select: { imageSrc: true },
+  });
+
   await db.story.update({
     where: { id },
     data: {
@@ -136,14 +142,32 @@ export async function updateStory(id: string, formData: FormData) {
     },
   });
 
+  if (
+    previous?.imageSrc &&
+    previous.imageSrc !== data.imageSrc
+  ) {
+    await deleteBlobsIfUnreferenced([
+      previous.imageSrc,
+    ]);
+  }
+
   revalidateStories();
   redirect("/admin/stories");
 }
 
 export async function deleteStory(id: string) {
+  const previous = await db.story.findUnique({
+    where: { id },
+    select: { imageSrc: true },
+  });
+
   await db.story.delete({
     where: { id },
   });
+
+  await deleteBlobsIfUnreferenced([
+    previous?.imageSrc,
+  ]);
 
   revalidateStories();
 }

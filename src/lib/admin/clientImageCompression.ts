@@ -4,7 +4,7 @@ const COMPRESSIBLE_TYPES = new Set([
   "image/webp",
 ]);
 
-const TARGET_MAX_BYTES = 3.8 * 1024 * 1024;
+const TARGET_MAX_BYTES = 1.6 * 1024 * 1024;
 
 type CompressionAttempt = {
   maxSize: number;
@@ -12,9 +12,10 @@ type CompressionAttempt = {
 };
 
 const ATTEMPTS: CompressionAttempt[] = [
-  { maxSize: 2200, quality: 0.84 },
-  { maxSize: 1800, quality: 0.8 },
-  { maxSize: 1400, quality: 0.76 },
+  { maxSize: 2200, quality: 0.80 },
+  { maxSize: 2000, quality: 0.76 },
+  { maxSize: 1800, quality: 0.72 },
+  { maxSize: 1600, quality: 0.68 },
 ];
 
 function canUseCanvasCompression(file: File) {

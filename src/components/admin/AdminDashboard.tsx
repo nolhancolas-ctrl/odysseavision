@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { StorageUsageCard } from "@/components/admin/StorageUsageCard";
 import { adminQuickActions } from "@/data/admin";
 import { getAdminDashboardData } from "@/lib/admin/dashboard";
 
@@ -119,6 +120,8 @@ export async function AdminDashboard() {
           </Link>
         ))}
       </section>
+
+      <StorageUsageCard />
 
       <section className="grid gap-5 xl:grid-cols-3 xl:h-[70vh] xl:min-h-[560px]">
         <article className="relative flex h-full min-h-0 flex-col overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 
 type UploadedPhoto = {
   imageSrc: string;
@@ -39,13 +40,6 @@ function parseWatermark(value: string) {
   return "NONE";
 }
 
-async function setPortfolioItemWatermark(itemId: string, watermark: string) {
-  await db.$executeRaw`
-    UPDATE "PortfolioItem"
-    SET "watermark" = ${watermark}
-    WHERE "id" = ${itemId}
-  `;
-}
 
 function getTitleFromFileName(fileName: string, fallback: string) {
   const clean = fileName
@@ -101,7 +95,7 @@ export async function createPortfolioGalleryPhotos(formData: FormData) {
         `${category.name} ${existingCount + index + 1}`,
       );
 
-      const created = await db.portfolioItem.create({
+      return db.portfolioItem.create({
         data: {
           title,
           slug: `${category.slug}-${slugify(title)}-${timestamp}-${index}`,
@@ -113,15 +107,14 @@ export async function createPortfolioGalleryPhotos(formData: FormData) {
           featured: false,
           status: status === "DRAFT" ? "DRAFT" : "PUBLISHED",
           order: existingCount + index,
+
+          // The Blob always remains the clean photo.
+          // Watermark ownership is display metadata only.
+          watermark: parseWatermark(
+            image.watermark || "NONE",
+          ),
         },
       });
-
-      await setPortfolioItemWatermark(
-        created.id,
-        parseWatermark(image.watermark || "NONE"),
-      );
-
-      return created;
     }),
   );
 
@@ -152,6 +145,10 @@ export async function deletePortfolioGalleryPhoto(
   await db.portfolioItem.delete({
     where: { id: itemId },
   });
+
+  await deleteBlobsIfUnreferenced([
+    item.imageSrc,
+  ]);
 
   revalidatePath("/admin/portfolio");
   revalidatePath(returnTo);

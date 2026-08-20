@@ -203,7 +203,7 @@ export function AdminImageDropzone({
   };
 
   return (
-    <div className="w-full">
+    <div className="min-w-0 w-full max-w-full">
       <div className="mb-3">
         {isEditingPath ? (
           <div className="flex gap-2">
@@ -292,7 +292,7 @@ export function AdminImageDropzone({
         }}
         onDragLeave={() => setIsDragging(false)}
         onDrop={handleDrop}
-        className={`group relative w-full cursor-pointer overflow-hidden rounded-[1.75rem] border border-dashed transition ${
+        className={`group relative min-w-0 w-full max-w-full cursor-pointer overflow-hidden rounded-[1.75rem] border border-dashed transition ${
           isDragging
             ? "border-[#b88a3b] bg-[#d5ad68]/10"
             : "border-[#242617]/12 bg-[#e8dfcf]"
@@ -304,7 +304,7 @@ export function AdminImageDropzone({
             <img
               src={value}
               alt=""
-              className="h-full w-full object-cover transition duration-300 group-hover:opacity-45"
+              className="h-full w-full object-contain transition duration-300 group-hover:opacity-45"
             />
 
             <button
@@ -316,9 +316,15 @@ export function AdminImageDropzone({
                 setRenameValue("");
                 setIsEditingPath(false);
               }}
-              className="absolute left-1/2 top-1/2 flex h-16 w-16 -translate-x-1/2 -translate-y-1/2 scale-90 cursor-pointer items-center justify-center rounded-full border border-red-900/20 bg-[#f4efe4]/90 text-4xl leading-none text-red-800 opacity-0 shadow-[0_18px_45px_rgba(80,0,0,0.18)] transition duration-300 hover:bg-red-800 hover:text-[#f4efe4] group-hover:scale-100 group-hover:opacity-100"
+              className="absolute left-1/2 top-1/2 grid h-16 w-16 -translate-x-1/2 -translate-y-1/2 scale-90 cursor-pointer place-items-center rounded-full border border-red-900/20 bg-[#f4efe4]/90 p-0 text-red-800 opacity-0 shadow-[0_18px_45px_rgba(80,0,0,0.18)] transition duration-300 hover:bg-red-800 hover:text-[#f4efe4] group-hover:scale-100 group-hover:opacity-100"
             >
-              ×
+              <span
+                className="relative block h-6 w-6"
+                aria-hidden="true"
+              >
+                <span className="absolute left-1/2 top-1/2 h-[2.5px] w-6 -translate-x-1/2 -translate-y-1/2 rotate-45 rounded-full bg-current" />
+                <span className="absolute left-1/2 top-1/2 h-[2.5px] w-6 -translate-x-1/2 -translate-y-1/2 -rotate-45 rounded-full bg-current" />
+              </span>
             </button>
 
             <div className="pointer-events-none absolute bottom-4 left-4 rounded-full bg-[#071321]/75 px-4 py-2 text-[9px] font-bold uppercase tracking-[0.16em] text-[#f4efe4] opacity-0 transition group-hover:opacity-100">

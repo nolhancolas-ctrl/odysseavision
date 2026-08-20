@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 
 function clean(value: FormDataEntryValue | null) {
   if (typeof value !== "string") return "";
@@ -149,6 +150,11 @@ export async function updatePortfolioItem(id: string, formData: FormData) {
   const slug = await getUniquePortfolioSlug(wantedSlug, id);
   const categoryId = await resolveCategory(formData);
 
+  const previous = await db.portfolioItem.findUnique({
+    where: { id },
+    select: { imageSrc: true },
+  });
+
   await db.portfolioItem.update({
     where: { id },
     data: {
@@ -167,6 +173,15 @@ export async function updatePortfolioItem(id: string, formData: FormData) {
     },
   });
 
+  if (
+    previous?.imageSrc &&
+    previous.imageSrc !== imageSrc
+  ) {
+    await deleteBlobsIfUnreferenced([
+      previous.imageSrc,
+    ]);
+  }
+
   revalidatePath("/");
   revalidatePath("/portfolio");
   revalidatePath("/admin/portfolio");
@@ -176,9 +191,18 @@ export async function updatePortfolioItem(id: string, formData: FormData) {
 }
 
 export async function deletePortfolioItem(id: string) {
+  const previous = await db.portfolioItem.findUnique({
+    where: { id },
+    select: { imageSrc: true },
+  });
+
   await db.portfolioItem.delete({
     where: { id },
   });
+
+  await deleteBlobsIfUnreferenced([
+    previous?.imageSrc,
+  ]);
 
   revalidatePath("/");
   revalidatePath("/portfolio");

@@ -419,6 +419,10 @@ export function SeoEditor({
       twitterCard,
       twitterCreator,
       twitterImage,
+      watermarkEnabled,
+      watermarkDefaultOwner,
+      watermarkAndrewSrc,
+      watermarkMorganeSrc,
       pages,
     ],
   );

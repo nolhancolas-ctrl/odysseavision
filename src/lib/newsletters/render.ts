@@ -72,6 +72,99 @@ function paragraphsFromText(value: string) {
     .join("");
 }
 
+
+function renderInlineMarkdown(value: string) {
+  return escapeHtml(value)
+    .replace(
+      /\*\*([^*\n]+?)\*\*/g,
+      '<strong style="font-weight:700;">$1</strong>',
+    )
+    .replace(
+      /\*([^*\n]+?)\*/g,
+      '<em style="font-style:italic;">$1</em>',
+    );
+}
+
+function renderFormattedText(value: string) {
+  const lines = value
+    .replace(/\r\n/g, "\n")
+    .split("\n");
+
+  const parts: string[] = [];
+  let paragraphLines: string[] = [];
+
+  function flushParagraph() {
+    if (paragraphLines.length === 0) {
+      return;
+    }
+
+    const paragraph = paragraphLines
+      .map((line) => renderInlineMarkdown(line))
+      .join("<br />");
+
+    parts.push(
+      `<p style="margin:0 0 16px 0;">${paragraph}</p>`,
+    );
+
+    paragraphLines = [];
+  }
+
+  for (const line of lines) {
+    const titleMatch =
+      line.match(
+        /^(?:Title:\s*)?##\s+(.+)$/i,
+      );
+
+    const subtitleMatch =
+      line.match(
+        /^(?:Subtitle:\s*)?###\s+(.+)$/i,
+      );
+
+    if (subtitleMatch) {
+      flushParagraph();
+
+      parts.push(
+        `<h3 style="margin:8px 0 12px 0;color:#242617;font-family:Georgia,'Times New Roman',serif;font-size:21px;line-height:1.2;font-weight:500;letter-spacing:-0.02em;">${renderInlineMarkdown(
+          subtitleMatch[1],
+        )}</h3>`,
+      );
+
+      continue;
+    }
+
+    if (titleMatch) {
+      flushParagraph();
+
+      parts.push(
+        `<h2 style="margin:10px 0 14px 0;color:#242617;font-family:Georgia,'Times New Roman',serif;font-size:30px;line-height:1.08;font-weight:500;letter-spacing:-0.03em;">${renderInlineMarkdown(
+          titleMatch[1],
+        )}</h2>`,
+      );
+
+      continue;
+    }
+
+    if (!line.trim()) {
+      flushParagraph();
+      continue;
+    }
+
+    paragraphLines.push(line);
+  }
+
+  flushParagraph();
+
+  return parts.join("");
+}
+
+function stripNewsletterMarkdown(value: string) {
+  return value
+    .replace(/^#{2,3}\s+/gm, "")
+    .replace(/\*\*([^*\n]+?)\*\*/g, "$1")
+    .replace(/\*([^*\n]+?)\*/g, "$1");
+}
+
+
 function parseBodyPayload(input: BuildNewsletterHtmlInput): NewsletterBlock[] {
   const body = input.body?.trim() ?? "";
 
@@ -146,26 +239,19 @@ function renderBlock(block: NewsletterBlock) {
   }
 
   if (block.type === "text") {
-    const text = escapeHtml(block.text || "");
+    const text = block.text || "";
 
-    if (!text) {
+    if (!text.trim()) {
       return "";
     }
 
-    const paragraphs = text
-      .split(/\n{2,}/)
-      .map((paragraph) => paragraph.trim())
-      .filter(Boolean)
-      .map(
-        (paragraph) =>
-          `<p style="margin:0 0 16px 0;">${paragraph.replace(/\n/g, "<br />")}</p>`,
-      )
-      .join("");
+    const content =
+      renderFormattedText(text);
 
     return `
       <tr>
         <td style="padding:0 34px 12px 34px;color:#242617;font-family:Arial,Helvetica,sans-serif;font-size:15px;line-height:1.8;">
-          ${paragraphs}
+          ${content}
         </td>
       </tr>
     `;
@@ -309,7 +395,12 @@ export function buildNewsletterText(input: BuildNewsletterHtmlInput) {
     }
 
     if ((block.type === "text" || block.type === "quote") && block.text) {
-      lines.push(block.text, "");
+      lines.push(
+        block.type === "text"
+          ? stripNewsletterMarkdown(block.text)
+          : block.text,
+        "",
+      );
     }
 
     if (block.type === "image" && block.src) {

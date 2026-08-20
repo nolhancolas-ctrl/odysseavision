@@ -181,6 +181,221 @@ function AutoTextarea({
   );
 }
 
+
+function NewsletterFormattedTextarea({
+  value,
+  onChange,
+  placeholder,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  const ref = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const textarea = ref.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    textarea.style.height = "auto";
+    textarea.style.height = `${textarea.scrollHeight}px`;
+  }, [value]);
+
+  function updateSelection(
+    nextValue: string,
+    selectionStart: number,
+    selectionEnd: number,
+  ) {
+    onChange(nextValue);
+
+    requestAnimationFrame(() => {
+      ref.current?.focus();
+      ref.current?.setSelectionRange(
+        selectionStart,
+        selectionEnd,
+      );
+    });
+  }
+
+  function applyInlineFormat(
+    before: string,
+    after = before,
+    fallback = "text",
+  ) {
+    const textarea = ref.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    const selectedText =
+      value.slice(start, end) || fallback;
+
+    const nextValue =
+      value.slice(0, start) +
+      before +
+      selectedText +
+      after +
+      value.slice(end);
+
+    updateSelection(
+      nextValue,
+      start + before.length,
+      start + before.length + selectedText.length,
+    );
+  }
+
+  function applyHeadingFormat(
+    prefix: "## " | "### ",
+  ) {
+    const textarea = ref.current;
+
+    if (!textarea) {
+      return;
+    }
+
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+
+    if (start === end) {
+      const lineStart =
+        value.lastIndexOf("\n", start - 1) + 1;
+
+      const nextLineBreak =
+        value.indexOf("\n", start);
+
+      const lineEnd =
+        nextLineBreak === -1
+          ? value.length
+          : nextLineBreak;
+
+      const line =
+        value.slice(lineStart, lineEnd);
+
+      const cleanedLine = line
+        .replace(/^#{2,3}\s+/, "")
+        .trim();
+
+      const replacement =
+        `${prefix}${cleanedLine || (
+          prefix === "## "
+            ? "Title"
+            : "Subtitle"
+        )}`;
+
+      const nextValue =
+        value.slice(0, lineStart) +
+        replacement +
+        value.slice(lineEnd);
+
+      updateSelection(
+        nextValue,
+        lineStart + prefix.length,
+        lineStart + replacement.length,
+      );
+
+      return;
+    }
+
+    const selectedText =
+      value.slice(start, end);
+
+    const replacement = selectedText
+      .split("\n")
+      .map((line) => {
+        if (!line.trim()) {
+          return line;
+        }
+
+        return `${prefix}${line.replace(
+          /^#{2,3}\s+/,
+          "",
+        )}`;
+      })
+      .join("\n");
+
+    updateSelection(
+      value.slice(0, start) +
+        replacement +
+        value.slice(end),
+      start,
+      start + replacement.length,
+    );
+  }
+
+  return (
+    <div>
+      <div className="mb-3 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={() =>
+            applyInlineFormat(
+              "**",
+              "**",
+              "bold text",
+            )
+          }
+          className={smallButtonClass()}
+        >
+          Bold
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            applyInlineFormat(
+              "*",
+              "*",
+              "italic text",
+            )
+          }
+          className={smallButtonClass()}
+        >
+          Italic
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            applyHeadingFormat("## ")
+          }
+          className={smallButtonClass()}
+        >
+          Title
+        </button>
+
+        <button
+          type="button"
+          onClick={() =>
+            applyHeadingFormat("### ")
+          }
+          className={smallButtonClass()}
+        >
+          Subtitle
+        </button>
+      </div>
+
+      <textarea
+        ref={ref}
+        value={value}
+        rows={1}
+        onChange={(event) =>
+          onChange(event.target.value)
+        }
+        className={`${textareaClass()} min-h-[120px] overflow-hidden`}
+        placeholder={placeholder}
+      />
+    </div>
+  );
+}
+
+
 function Field({
   label,
   help,
@@ -319,10 +534,15 @@ function BlockEditor({
       ) : null}
 
       {block.type === "text" ? (
-        <Field label="Text">
-          <AutoTextarea
+        <Field
+          label="Text"
+          help="Select text, then use the toolbar. Formatting is saved as lightweight Markdown."
+        >
+          <NewsletterFormattedTextarea
             value={block.text ?? ""}
-            onChange={(value) => onChange({ text: value })}
+            onChange={(value) =>
+              onChange({ text: value })
+            }
             placeholder="Write your text..."
           />
         </Field>

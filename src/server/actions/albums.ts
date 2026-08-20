@@ -4,6 +4,7 @@ import { createHash } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 
 type AlbumPreviewImage = {
   imageSrc: string;
@@ -181,6 +182,18 @@ export async function updateClientAlbum(id: string, formData: FormData) {
   const client = await resolveClient(formData);
   const data = getAlbumData(formData);
   const previewImages = parseAlbumPreviewImages(formData);
+
+  const previous = await db.clientAlbum.findUnique({
+    where: { id },
+    select: {
+      coverSrc: true,
+      images: {
+        select: {
+          imageSrc: true,
+        },
+      },
+    },
+  });
   const password = String(formData.get("password") ?? "").trim();
   const clearPassword = formData.get("clearPassword") === "on";
 
@@ -196,14 +209,40 @@ export async function updateClientAlbum(id: string, formData: FormData) {
 
   await saveAlbumPreviewImages(album.id, previewImages);
 
+  await deleteBlobsIfUnreferenced([
+    previous?.coverSrc,
+    ...(previous?.images.map(
+      (image) => image.imageSrc,
+    ) ?? []),
+  ]);
+
   revalidateAlbums(album.slug);
   redirect("/admin/albums");
 }
 
 export async function deleteClientAlbum(id: string) {
+  const previous = await db.clientAlbum.findUnique({
+    where: { id },
+    select: {
+      coverSrc: true,
+      images: {
+        select: {
+          imageSrc: true,
+        },
+      },
+    },
+  });
+
   await db.clientAlbum.delete({
     where: { id },
   });
+
+  await deleteBlobsIfUnreferenced([
+    previous?.coverSrc,
+    ...(previous?.images.map(
+      (image) => image.imageSrc,
+    ) ?? []),
+  ]);
 
   revalidateAlbums();
 }

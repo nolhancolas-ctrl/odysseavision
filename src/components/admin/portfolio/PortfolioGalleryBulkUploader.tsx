@@ -51,13 +51,14 @@ const ACCEPTED_IMAGE_MIME_TYPES = new Set([
   "image/svg+xml",
 ]);
 
-const PORTFOLIO_TARGET_MAX_BYTES = 3.8 * 1024 * 1024;
+const PORTFOLIO_TARGET_MAX_BYTES = 1.8 * 1024 * 1024;
 
 const PORTFOLIO_COMPRESSION_ATTEMPTS = [
-  { maxSize: 2200, quality: 0.82 },
-  { maxSize: 1800, quality: 0.76 },
-  { maxSize: 1400, quality: 0.7 },
-  { maxSize: 1100, quality: 0.64 },
+  { maxSize: 2200, quality: 0.80 },
+  { maxSize: 2000, quality: 0.76 },
+  { maxSize: 1800, quality: 0.72 },
+  { maxSize: 1600, quality: 0.68 },
+  { maxSize: 1400, quality: 0.64 },
 ];
 
 function isAcceptedImageFile(file: File) {

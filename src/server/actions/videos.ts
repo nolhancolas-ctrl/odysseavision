@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 import { extractVimeoId } from "@/lib/vimeo";
 
 function slugify(value: string) {
@@ -109,6 +110,11 @@ export async function updateVideo(id: string, formData: FormData) {
   const category = await resolveCategory(formData);
   const data = getVideoData(formData);
 
+  const previous = await db.video.findUnique({
+    where: { id },
+    select: { thumbnailSrc: true },
+  });
+
   await db.video.update({
     where: { id },
     data: {
@@ -117,14 +123,32 @@ export async function updateVideo(id: string, formData: FormData) {
     },
   });
 
+  if (
+    previous?.thumbnailSrc &&
+    previous.thumbnailSrc !== data.thumbnailSrc
+  ) {
+    await deleteBlobsIfUnreferenced([
+      previous.thumbnailSrc,
+    ]);
+  }
+
   revalidateVideos();
   redirect("/admin/videos");
 }
 
 export async function deleteVideo(id: string) {
+  const previous = await db.video.findUnique({
+    where: { id },
+    select: { thumbnailSrc: true },
+  });
+
   await db.video.delete({
     where: { id },
   });
+
+  await deleteBlobsIfUnreferenced([
+    previous?.thumbnailSrc,
+  ]);
 
   revalidateVideos();
 }

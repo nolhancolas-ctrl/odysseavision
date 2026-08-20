@@ -46,65 +46,6 @@ type UploadResult = {
 };
 
 
-async function compressPreviewFile(file: File) {
-  if (!file.type.startsWith("image/")) {
-    return file;
-  }
-
-  if (file.type === "image/svg+xml" || file.type === "image/gif") {
-    return file;
-  }
-
-  const maxSize = 2200;
-  const quality = 0.82;
-  const imageUrl = URL.createObjectURL(file);
-
-  try {
-    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.onload = () => resolve(img);
-      img.onerror = reject;
-      img.src = imageUrl;
-    });
-
-    const scale = Math.min(1, maxSize / Math.max(image.width, image.height));
-
-    if (scale === 1 && file.size < 4 * 1024 * 1024) {
-      return file;
-    }
-
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(image.width * scale));
-    canvas.height = Math.max(1, Math.round(image.height * scale));
-
-    const context = canvas.getContext("2d");
-
-    if (!context) {
-      return file;
-    }
-
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
-
-    const blob = await new Promise<Blob | null>((resolve) => {
-      canvas.toBlob(resolve, "image/webp", quality);
-    });
-
-    if (!blob) {
-      return file;
-    }
-
-    const cleanName = file.name.replace(/\.[^.]+$/, "") || "preview";
-
-    return new File([blob], `${cleanName}.webp`, {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
-  } finally {
-    URL.revokeObjectURL(imageUrl);
-  }
-}
-
-
 async function uploadPreviewImage(formData: FormData): Promise<UploadResult> {
   const response = await fetch("/api/admin/uploads/image", {
     method: "POST",
@@ -274,12 +215,11 @@ export function AlbumForm({
       const uploaded: PreviewImage[] = [];
 
       for (const [index, originalFile] of imageFiles.entries()) {
-        const file = await compressPreviewFile(originalFile);
+        const preparedFile = await compressImageBeforeUpload(originalFile);
         const formData = new FormData();
-        const slotId = `${Date.now()}-${index}-${file.name}`;
+        const slotId = `${Date.now()}-${index}-${preparedFile.name}`;
 
-        const preparedFile = await compressImageBeforeUpload(file);
-  formData.append("file", preparedFile);
+        formData.append("file", preparedFile);
         formData.append("context", "client-album");
         formData.append("entitySlug", uploadSlug);
         formData.append("slotKey", `preview-${slotId}`);
@@ -324,11 +264,10 @@ export function AlbumForm({
     setIsCoverUploading(true);
 
     try {
-      const file = await compressPreviewFile(originalFile);
+      const preparedFile = await compressImageBeforeUpload(originalFile);
       const formData = new FormData();
 
-      const preparedFile = await compressImageBeforeUpload(file);
-  formData.append("file", preparedFile);
+      formData.append("file", preparedFile);
       formData.append("context", "client-album");
       formData.append("entitySlug", album?.slug || "draft");
       formData.append("slotKey", "cover");

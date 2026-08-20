@@ -46,12 +46,29 @@ export default async function EditStoryPage({ params }: EditStoryPageProps) {
           </p>
         </div>
 
-        <Link
-          href="/admin/stories"
-          className="rounded-full border border-[#242617]/15 px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:text-[#071321]"
-        >
-          Back
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href={
+              story.status === "PUBLISHED"
+                ? `/stories/${story.slug}`
+                : `/preview/stories/${story.id}`
+            }
+            target="_blank"
+            rel="noreferrer"
+            className="rounded-full bg-[#071321] px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#142844]"
+          >
+            {story.status === "PUBLISHED"
+              ? "View story"
+              : "Preview story"}
+          </Link>
+
+          <Link
+            href="/admin/stories"
+            className="rounded-full border border-[#242617]/15 px-6 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:text-[#071321]"
+          >
+            Back
+          </Link>
+        </div>
       </section>
 
       <StoryForm

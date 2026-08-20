@@ -80,7 +80,10 @@ function parseStoryContent(content: string): StoryBlock[] {
       continue;
     }
 
-    const heading = /^(#{2,3})\s+(.+)$/.exec(trimmed);
+    const heading =
+      /^(?:(?:Title|Subtitle):\s*)?(#{2,3})\s+(.+)$/i.exec(
+        trimmed,
+      );
 
     if (heading) {
       flushParagraph();
