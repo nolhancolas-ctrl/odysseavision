@@ -2,7 +2,6 @@ import "server-only";
 
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import sharp from "sharp";
 import { put } from "@vercel/blob";
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
@@ -157,24 +156,40 @@ async function preparePhotoUpload({
     };
   }
 
-  const processedBuffer = await sharp(buffer)
-    .rotate()
-    .resize({
-      width: MAX_PHOTO_WIDTH,
-      withoutEnlargement: true,
-    })
-    .webp({
-      quality: PHOTO_WEBP_QUALITY,
-      effort: 5,
-    })
-    .toBuffer();
+  try {
+    const sharp = (await import("sharp")).default;
 
-  return {
-    buffer: processedBuffer,
-    fileName: getSafeFileName(file, slotKey, "webp"),
-    size: processedBuffer.length,
-    contentType: "image/webp",
-  };
+    const processedBuffer = await sharp(buffer)
+      .rotate()
+      .resize({
+        width: MAX_PHOTO_WIDTH,
+        withoutEnlargement: true,
+      })
+      .webp({
+        quality: PHOTO_WEBP_QUALITY,
+        effort: 5,
+      })
+      .toBuffer();
+
+    return {
+      buffer: processedBuffer,
+      fileName: getSafeFileName(file, slotKey, "webp"),
+      size: processedBuffer.length,
+      contentType: "image/webp",
+    };
+  } catch (error) {
+    console.error("[admin upload] Sharp processing skipped:", {
+      message: error instanceof Error ? error.message : "Unknown sharp error.",
+      name: error instanceof Error ? error.name : "UnknownError",
+    });
+
+    return {
+      buffer,
+      fileName: getSafeFileName(file, slotKey),
+      size: buffer.length,
+      contentType: file.type,
+    };
+  }
 }
 
 async function uploadToLocal({
