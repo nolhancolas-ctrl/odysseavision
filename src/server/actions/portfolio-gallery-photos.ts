@@ -163,3 +163,51 @@ export async function deletePortfolioGalleryPhoto(
 
   redirect(returnTo);
 }
+
+export async function reorderPortfolioGalleryPhotos(
+  categoryId: string,
+  orderedIds: string[],
+) {
+  if (!categoryId || !Array.isArray(orderedIds)) {
+    throw new Error("Invalid portfolio order.");
+  }
+
+  const category = await db.portfolioCategory.findUnique({
+    where: { id: categoryId },
+    select: {
+      slug: true,
+      items: {
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  if (!category) {
+    throw new Error("Portfolio category not found.");
+  }
+
+  const currentIds = new Set(category.items.map((item) => item.id));
+
+  if (
+    orderedIds.length !== currentIds.size ||
+    orderedIds.some((id) => !currentIds.has(id))
+  ) {
+    throw new Error("Portfolio items changed. Reload the page and try again.");
+  }
+
+  await db.$transaction(
+    orderedIds.map((id, order) =>
+      db.portfolioItem.update({
+        where: { id },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidatePath("/portfolio");
+  revalidatePath(`/portfolio/${category.slug}`);
+  revalidatePath("/admin/portfolio");
+  revalidatePath(`/admin/portfolio/categories/${categoryId}/edit`);
+}

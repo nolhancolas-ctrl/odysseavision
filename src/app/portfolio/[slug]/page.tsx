@@ -28,19 +28,6 @@ function getWatermarkOwner(value: string) {
   return "default";
 }
 
-function getGalleryAspectClass(index: number) {
-  const variants = [
-    "aspect-[4/5]",
-    "aspect-[1.35]",
-    "aspect-square",
-    "aspect-[3/2]",
-    "aspect-[5/6]",
-    "aspect-[1.18]",
-  ];
-
-  return variants[index % variants.length];
-}
-
 export async function generateMetadata({
   params,
 }: PortfolioCategoryPageProps): Promise<Metadata> {
@@ -134,7 +121,7 @@ export default async function PortfolioCategoryPage({
 
           {categoryItems.length > 0 ? (
             <div className="columns-1 gap-5 sm:columns-2 xl:columns-3">
-              {categoryItems.map((item, index) => (
+              {categoryItems.map((item) => (
                 <figure
                   key={item.id}
                   className="mb-5 break-inside-avoid overflow-hidden bg-[#d8cdb8]"
@@ -142,8 +129,8 @@ export default async function PortfolioCategoryPage({
                   <WatermarkedPhotoFrame
                     src={item.imageSrc}
                     alt={item.title}
-                    className={getGalleryAspectClass(index)}
-                    imageClassName="transition duration-700 group-hover:scale-[1.025]"
+                    preserveAspectRatio
+                    imageClassName="transition duration-500 group-hover:opacity-95"
                     showWatermark={item.watermark !== "NONE"}
                     watermarkOwner={getWatermarkOwner(item.watermark)}
                   />

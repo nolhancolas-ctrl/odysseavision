@@ -92,7 +92,7 @@ export async function getPublicPortfolioItems(): Promise<PublicPortfolioItem[]> 
       include: {
         category: true,
       },
-      orderBy: [{ featured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { createdAt: "asc" }],
     });
 
     if (items.length === 0) {

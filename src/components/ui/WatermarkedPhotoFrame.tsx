@@ -7,6 +7,7 @@ type WatermarkedPhotoFrameProps = {
   imageClassName?: string;
   showWatermark?: boolean;
   watermarkOwner?: "default" | "andrew" | "morgane";
+  preserveAspectRatio?: boolean;
 };
 
 export function WatermarkedPhotoFrame({
@@ -16,15 +17,42 @@ export function WatermarkedPhotoFrame({
   imageClassName = "",
   showWatermark = true,
   watermarkOwner = "default",
+  preserveAspectRatio = false,
 }: WatermarkedPhotoFrameProps) {
+  const containerClassName = [
+    "group relative overflow-hidden bg-[#d8cdb8]",
+    className,
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  if (preserveAspectRatio) {
+    return (
+      <div className={containerClassName}>
+        <img
+          src={src}
+          alt={alt}
+          loading="lazy"
+          decoding="async"
+          className={[
+            "block h-auto w-full",
+            imageClassName,
+          ]
+            .filter(Boolean)
+            .join(" ")}
+        />
+
+        <FrameWatermark
+          enabled={showWatermark}
+          owner={watermarkOwner}
+        />
+      </div>
+    );
+  }
+
   return (
     <div
-      className={[
-        "group relative overflow-hidden bg-[#d8cdb8]",
-        className,
-      ]
-        .filter(Boolean)
-        .join(" ")}
+      className={containerClassName}
       aria-label={alt}
     >
       <div
@@ -37,7 +65,10 @@ export function WatermarkedPhotoFrame({
         style={{ backgroundImage: `url(${src})` }}
       />
 
-      <FrameWatermark enabled={showWatermark} owner={watermarkOwner} />
+      <FrameWatermark
+        enabled={showWatermark}
+        owner={watermarkOwner}
+      />
     </div>
   );
 }

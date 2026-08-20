@@ -2,9 +2,9 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { PortfolioCategoryForm } from "@/components/admin/portfolio/PortfolioCategoryForm";
 import { PortfolioGalleryBulkUploader } from "@/components/admin/portfolio/PortfolioGalleryBulkUploader";
+import { PortfolioPhotoSorter } from "@/components/admin/portfolio/PortfolioPhotoSorter";
 import { db } from "@/lib/db";
 import { updatePortfolioCategory } from "@/server/actions/portfolio-categories";
-import { deletePortfolioGalleryPhoto } from "@/server/actions/portfolio-gallery-photos";
 
 export const dynamic = "force-dynamic";
 
@@ -28,12 +28,6 @@ function getSingleParam(
   return value;
 }
 
-function watermarkLabel(value?: string | null) {
-  if (value === "ANDREW") return "Andrew watermark";
-  if (value === "MORGANE") return "Morgane watermark";
-  return "No watermark";
-}
-
 export default async function EditPortfolioCategoryPage({
   params,
   searchParams,
@@ -47,7 +41,7 @@ export default async function EditPortfolioCategoryPage({
     where: { id },
     include: {
       items: {
-        orderBy: [{ featured: "desc" }, { order: "asc" }, { createdAt: "desc" }],
+        orderBy: [{ order: "asc" }, { createdAt: "asc" }],
       },
       _count: {
         select: {
@@ -161,62 +155,19 @@ export default async function EditPortfolioCategoryPage({
             this gallery.
           </div>
         ) : (
-          <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,340px))] justify-start gap-0">
-            {category.items.map((item) => (
-              <article
-                key={item.id}
-                className="border-b border-r border-[#242617]/8 p-5"
-              >
-                <div
-                  className="aspect-[4/3] rounded-2xl bg-[#e8dfcf] bg-cover bg-center"
-                  style={{ backgroundImage: `url(${item.imageSrc})` }}
-                />
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/45">
-                    {item.status}
-                  </span>
-
-                  {item.featured ? (
-                    <span className="rounded-full border border-[#b88a3b]/25 bg-[#b88a3b]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#b88a3b]">
-                      Featured
-                    </span>
-                  ) : null}
-
-                  <span className="rounded-full border border-[#242617]/10 bg-[#f4efe4]/55 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/45">
-                    {watermarkLabel(item.watermark)}
-                  </span>
-                </div>
-
-                <h3 className="mt-3 font-serif text-3xl uppercase leading-none tracking-[-0.04em] text-[#242617]">
-                  {item.title}
-                </h3>
-
-                <p className="mt-2 text-xs text-[#242617]/35">
-                  Order {item.order}
-                </p>
-
-                <div className="mt-5 flex flex-wrap gap-2">
-                  <Link
-                    href={`/admin/portfolio/${item.id}`}
-                    className="rounded-full border border-[#242617]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
-                  >
-                    Edit photo
-                  </Link>
-
-                  <form action={deletePortfolioGalleryPhoto.bind(null, item.id)}>
-                    <input type="hidden" name="returnTo" value={returnTo} />
-                    <button
-                      type="submit"
-                      className="cursor-pointer rounded-full border border-red-900/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900"
-                    >
-                      Delete
-                    </button>
-                  </form>
-                </div>
-              </article>
-            ))}
-          </div>
+          <PortfolioPhotoSorter
+            categoryId={category.id}
+            returnTo={returnTo}
+            initialItems={category.items.map((item) => ({
+              id: item.id,
+              title: item.title,
+              imageSrc: item.imageSrc,
+              status: item.status,
+              featured: item.featured,
+              watermark: item.watermark,
+              order: item.order,
+            }))}
+          />
         )}
       </section>
     </div>
