@@ -43,46 +43,126 @@ function titleFromFileName(fileName: string) {
     .trim();
 }
 
+const ACCEPTED_IMAGE_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/svg+xml",
+]);
+
+const PORTFOLIO_TARGET_MAX_BYTES = 3.8 * 1024 * 1024;
+
+const PORTFOLIO_COMPRESSION_ATTEMPTS = [
+  { maxSize: 2200, quality: 0.82 },
+  { maxSize: 1800, quality: 0.76 },
+  { maxSize: 1400, quality: 0.7 },
+  { maxSize: 1100, quality: 0.64 },
+];
+
+function isAcceptedImageFile(file: File) {
+  return ACCEPTED_IMAGE_MIME_TYPES.has(file.type);
+}
+
+function getUnsupportedFormatMessage(fileName?: string) {
+  return `${
+    fileName ? `${fileName}: ` : ""
+  }Unsupported file format. Please upload JPG, PNG, WEBP, GIF or SVG.`;
+}
+
+async function loadImageFromFile(file: File) {
+  const imageUrl = URL.createObjectURL(file);
+
+  try {
+    const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("Could not read this image file."));
+      img.src = imageUrl;
+    });
+
+    return {
+      image,
+      dispose: () => URL.revokeObjectURL(imageUrl),
+    };
+  } catch (error) {
+    URL.revokeObjectURL(imageUrl);
+    throw error;
+  }
+}
+
 async function compressImageToWebp(file: File) {
+  if (!isAcceptedImageFile(file)) {
+    throw new Error(getUnsupportedFormatMessage(file.name));
+  }
+
   if (file.type === "image/svg+xml" || file.type === "image/gif") {
+    if (file.size > PORTFOLIO_TARGET_MAX_BYTES) {
+      throw new Error(
+        `${file.name}: Image is too large. Please upload a lighter JPG, PNG or WEBP file.`,
+      );
+    }
+
     return file;
   }
 
-  if (!file.type.startsWith("image/")) {
-    return file;
+  const { image, dispose } = await loadImageFromFile(file);
+
+  try {
+    let bestFile = file;
+
+    for (const attempt of PORTFOLIO_COMPRESSION_ATTEMPTS) {
+      const scale = Math.min(
+        1,
+        attempt.maxSize / Math.max(image.width, image.height),
+      );
+
+      const canvas = document.createElement("canvas");
+      canvas.width = Math.max(1, Math.round(image.width * scale));
+      canvas.height = Math.max(1, Math.round(image.height * scale));
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        continue;
+      }
+
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+      const blob = await new Promise<Blob | null>((resolve) => {
+        canvas.toBlob(resolve, "image/webp", attempt.quality);
+      });
+
+      if (!blob) {
+        continue;
+      }
+
+      const name = file.name.replace(/\.[a-z0-9]+$/i, ".webp");
+      const compressedFile = new File([blob], name, {
+        type: "image/webp",
+        lastModified: Date.now(),
+      });
+
+      if (compressedFile.size < bestFile.size) {
+        bestFile = compressedFile;
+      }
+
+      if (compressedFile.size <= PORTFOLIO_TARGET_MAX_BYTES) {
+        return compressedFile;
+      }
+    }
+
+    if (bestFile.size > PORTFOLIO_TARGET_MAX_BYTES) {
+      throw new Error(
+        `${file.name}: Image is still too large after compression. Please export a smaller JPG or PNG.`,
+      );
+    }
+
+    return bestFile;
+  } finally {
+    dispose();
   }
-
-  const bitmap = await createImageBitmap(file);
-  const maxSize = 2200;
-  const scale = Math.min(1, maxSize / Math.max(bitmap.width, bitmap.height));
-
-  const canvas = document.createElement("canvas");
-  canvas.width = Math.round(bitmap.width * scale);
-  canvas.height = Math.round(bitmap.height * scale);
-
-  const context = canvas.getContext("2d");
-
-  if (!context) {
-    bitmap.close();
-    return file;
-  }
-
-  context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
-  bitmap.close();
-
-  const blob = await new Promise<Blob | null>((resolve) => {
-    canvas.toBlob(resolve, "image/webp", 0.84);
-  });
-
-  if (!blob) {
-    return file;
-  }
-
-  const name = file.name.replace(/\.[a-z0-9]+$/i, ".webp");
-
-  return new File([blob], name, {
-    type: "image/webp",
-  });
 }
 
 function isImageUrl(value: string) {
