@@ -36,7 +36,11 @@ function fileLabel(src: string, fallback: string) {
 export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
   const ocean01 = content?.images.ocean01 || aboutImages.ocean01.src;
   const ocean02 = content?.images.ocean02 || aboutImages.ocean02.src;
-  const drawing = content?.images.drawing || "/images/about/ocean_drawing_01.png";
+  const drawingValue = content?.images.drawing || "";
+  const drawing =
+    drawingValue === "/images/about/ocean_drawing_01.png"
+      ? ""
+      : drawingValue;
 
   return (
     <section className="relative overflow-hidden bg-[#10190f] px-6 py-14 text-[#f4efe4] md:px-14 md:py-16">

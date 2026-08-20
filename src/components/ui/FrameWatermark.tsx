@@ -83,6 +83,7 @@ export function FrameWatermark({
   const [settings, setSettings] = useState<WatermarkSettings>(
     FALLBACK_WATERMARK_SETTINGS,
   );
+  const [imageError, setImageError] = useState(false);
   const [size, setSize] = useState<number>(config.minSize);
   const [offset, setOffset] = useState<number>(
     Math.round(config.minSize * 0.24),
@@ -137,7 +138,11 @@ export function FrameWatermark({
 
   const src = resolveWatermarkSrc(settings, owner);
 
-  if (!enabled || !settings.enabled || !src) return null;
+  useEffect(() => {
+    setImageError(false);
+  }, [src]);
+
+  if (!enabled || !settings.enabled || !src || imageError) return null;
 
   return (
     <div
@@ -154,6 +159,7 @@ export function FrameWatermark({
       <img
         src={src}
         alt=""
+        onError={() => setImageError(true)}
         className="h-full w-full object-contain brightness-0 invert drop-shadow-[0_3px_10px_rgba(0,0,0,0.45)]"
       />
     </div>

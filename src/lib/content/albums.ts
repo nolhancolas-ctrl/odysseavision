@@ -119,12 +119,12 @@ export async function getPublicClientAlbums(): Promise<PublicClientAlbum[]> {
     });
 
     if (albums.length === 0) {
-      return getStaticAlbums();
+      return [];
     }
 
     return albums.map(mapAlbum);
   } catch {
-    return getStaticAlbums();
+    return [];
   }
 }
 
@@ -145,11 +145,11 @@ export async function getPublicClientAlbumBySlug(
     });
 
     if (!album) {
-      return getStaticAlbums().find((item) => item.slug === slug) ?? null;
+      return null;
     }
 
     return mapAlbum(album);
   } catch {
-    return getStaticAlbums().find((item) => item.slug === slug) ?? null;
+    return null;
   }
 }

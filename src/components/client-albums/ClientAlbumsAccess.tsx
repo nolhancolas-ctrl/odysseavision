@@ -40,12 +40,36 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
 
     setStatus("loading");
 
+    const submittedPassword = password.trim();
+
+    // Hidden admin shortcut:
+    // the admin password entered in "Access your gallery"
+    // opens the private admin space.
+    const adminResponse = await fetch("/api/admin/secret-access", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ password: submittedPassword }),
+    });
+
+    const adminResult = (await adminResponse.json().catch(() => ({}))) as {
+      ok?: boolean;
+      redirectTo?: string;
+    };
+
+    if (adminResponse.ok && adminResult.ok && adminResult.redirectTo) {
+      window.location.href = adminResult.redirectTo;
+      return;
+    }
+
+    // Otherwise, try the password as a client gallery password.
     const response = await fetch("/api/client-albums/access-by-password", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ password }),
+      body: JSON.stringify({ password: submittedPassword }),
     });
 
     const result = (await response.json().catch(() => ({}))) as {

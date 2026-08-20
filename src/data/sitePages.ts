@@ -427,7 +427,7 @@ Today, we roam the world together, capturing landscapes, underwater life, wildli
             key: "drawing",
             label: "Ocean drawing",
             category: "drawing",
-            defaultSrc: "/images/about/ocean_drawing_01.png",
+            defaultSrc: "",
           },
           {
             key: "icon01",
