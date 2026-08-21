@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -421,6 +422,13 @@ export function StorageUsageCard() {
                 : "Clean unused"}
             </button>
           ) : null}
+
+          <Link
+            href="/admin/storage-audit"
+            className="rounded-full border border-[#11170f]/12 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#11170f]/55 transition hover:bg-[#071321] hover:text-[#f4efe4]"
+          >
+            Audit recent uploads
+          </Link>
         </div>
       </div>
     </section>
