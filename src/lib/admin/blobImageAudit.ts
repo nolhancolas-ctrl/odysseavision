@@ -1,23 +1,24 @@
 import "server-only";
 
-import sharp from "sharp";
+import type { BlobImageOptimization, Prisma } from "@prisma/client";
+import { db } from "@/lib/db";
 import {
   getBlobStorageAudit,
   normalizeBlobUrl,
 } from "@/lib/admin/blobCleanup";
+import {
+  IMAGE_OPTIMIZATION_POLICY,
+  isBlobImageStatus,
+  type BlobImageStatus,
+} from "@/lib/admin/imageOptimizationPolicy";
+import {
+  recordBlobImageAssessment,
+  type RecordedBlobImageAssessment,
+} from "@/lib/admin/blobImageRegistry";
 
-const CURRENT_MAX_DIMENSION = 2200;
-const CURRENT_WEBP_QUALITY = 82;
-const CURRENT_TARGET_MAX_BYTES = 1.6 * 1024 * 1024;
-const MIN_WORTHWHILE_SAVING_RATIO = 0.12;
 const FETCH_TIMEOUT_MS = 15_000;
-const AUDIT_CONCURRENCY = 2;
-
-const PROCESSABLE_FORMATS = new Set([
-  "jpeg",
-  "png",
-  "webp",
-]);
+const MAX_BATCH_SIZE = 5;
+const PROCESSABLE_FORMATS = new Set(["jpeg", "png", "webp"]);
 
 type AuditableBlob = {
   url: string;
@@ -27,6 +28,8 @@ type AuditableBlob = {
 };
 
 export type BlobImageAuditRow = {
+  id: string;
+  url: string;
   pathname: string;
   uploadedAt: string | null;
   referenced: boolean;
@@ -39,26 +42,28 @@ export type BlobImageAuditRow = {
   projectedSavingBytes: number;
   projectedSavingPercent: number;
   policyIssues: string[];
-  status: "optimized" | "optimizable" | "review" | "skipped" | "failed";
+  status: BlobImageStatus;
+  policyVersion: number;
+  policyCurrent: boolean;
+  checkedAt: string | null;
   note: string;
 };
 
-function getUploadedAtMs(blob: AuditableBlob) {
-  if (!blob.uploadedAt) {
-    return 0;
-  }
+function getUploadedAtMs(value: Date | string | null | undefined) {
+  if (!value) return 0;
 
-  const value =
-    blob.uploadedAt instanceof Date
-      ? blob.uploadedAt.getTime()
-      : new Date(blob.uploadedAt).getTime();
-
-  return Number.isFinite(value) ? value : 0;
+  const timestamp = value instanceof Date ? value.getTime() : new Date(value).getTime();
+  return Number.isFinite(timestamp) ? timestamp : 0;
 }
 
-function getUploadedAtIso(blob: AuditableBlob) {
-  const timestamp = getUploadedAtMs(blob);
-  return timestamp > 0 ? new Date(timestamp).toISOString() : null;
+function toDate(value: Date | string | null | undefined) {
+  const timestamp = getUploadedAtMs(value);
+  return timestamp > 0 ? new Date(timestamp) : null;
+}
+
+function toIso(value: Date | string | null | undefined) {
+  const date = toDate(value);
+  return date ? date.toISOString() : null;
 }
 
 function getPolicyIssues({
@@ -75,30 +80,47 @@ function getPolicyIssues({
   const issues: string[] = [];
   const largestDimension = Math.max(width || 0, height || 0);
 
-  if (format !== "webp") {
-    issues.push("not-webp");
+  if (format !== "webp") issues.push("not-webp");
+  if (largestDimension > IMAGE_OPTIMIZATION_POLICY.maxDimension) {
+    issues.push(`over-${IMAGE_OPTIMIZATION_POLICY.maxDimension}px`);
   }
-
-  if (largestDimension > CURRENT_MAX_DIMENSION) {
-    issues.push("over-2200px");
-  }
-
-  if (size > CURRENT_TARGET_MAX_BYTES) {
+  if (size > IMAGE_OPTIMIZATION_POLICY.targetMaxBytes) {
     issues.push("over-1.6mb");
   }
 
   return issues;
 }
 
+function requiresOptimization({
+  width,
+  height,
+  size,
+  savingRatio,
+}: {
+  width?: number;
+  height?: number;
+  size: number;
+  savingRatio: number;
+}) {
+  return (
+    Math.max(width || 0, height || 0) > IMAGE_OPTIMIZATION_POLICY.maxDimension ||
+    size > IMAGE_OPTIMIZATION_POLICY.targetMaxBytes ||
+    savingRatio >= IMAGE_OPTIMIZATION_POLICY.minimumSavingRatio
+  );
+}
+
 async function analyzeBlob(
   blob: AuditableBlob,
-  references: Set<string>,
-): Promise<BlobImageAuditRow> {
+  referenced: boolean,
+): Promise<RecordedBlobImageAssessment> {
   const base = {
+    url: normalizeBlobUrl(blob.url),
     pathname: blob.pathname,
-    uploadedAt: getUploadedAtIso(blob),
-    referenced: references.has(normalizeBlobUrl(blob.url)),
-    size: Number(blob.size || 0),
+    uploadedAt: blob.uploadedAt,
+    storedSize: Number(blob.size || 0),
+    referenced,
+    policyVersion: IMAGE_OPTIMIZATION_POLICY.version,
+    checkedAt: new Date(),
   };
 
   try {
@@ -110,15 +132,7 @@ async function analyzeBlob(
     if (!response.ok) {
       return {
         ...base,
-        contentType: "",
-        format: "",
-        width: null,
-        height: null,
-        projectedSize: null,
-        projectedSavingBytes: 0,
-        projectedSavingPercent: 0,
-        policyIssues: [],
-        status: "failed",
+        status: "FAILED",
         note: `Download failed (${response.status}).`,
       };
     }
@@ -129,8 +143,8 @@ async function analyzeBlob(
         ?.split(";")[0]
         .trim()
         .toLowerCase() || "";
-
     const source = Buffer.from(await response.arrayBuffer());
+    const sharp = (await import("sharp")).default;
     const metadata = await sharp(source).metadata();
     const format = metadata.format || "unknown";
     const policyIssues = getPolicyIssues({
@@ -143,30 +157,27 @@ async function analyzeBlob(
     if (!PROCESSABLE_FORMATS.has(format)) {
       return {
         ...base,
-        size: source.length,
+        storedSize: source.length,
         contentType,
         format,
         width: metadata.width || null,
         height: metadata.height || null,
-        projectedSize: null,
-        projectedSavingBytes: 0,
-        projectedSavingPercent: 0,
         policyIssues,
-        status: "skipped",
-        note: "Format intentionally excluded from WebP simulation.",
+        status: "SKIPPED",
+        note: "Format intentionally excluded from WebP optimization.",
       };
     }
 
     const projected = await sharp(source)
       .rotate()
       .resize({
-        width: CURRENT_MAX_DIMENSION,
-        height: CURRENT_MAX_DIMENSION,
+        width: IMAGE_OPTIMIZATION_POLICY.maxDimension,
+        height: IMAGE_OPTIMIZATION_POLICY.maxDimension,
         fit: "inside",
         withoutEnlargement: true,
       })
       .webp({
-        quality: CURRENT_WEBP_QUALITY,
+        quality: IMAGE_OPTIMIZATION_POLICY.webpQuality,
         alphaQuality: 90,
         effort: 5,
       })
@@ -174,45 +185,16 @@ async function analyzeBlob(
 
     const savingBytes = Math.max(0, source.length - projected.length);
     const savingRatio = source.length > 0 ? savingBytes / source.length : 0;
-    const worthwhile = savingRatio >= MIN_WORTHWHILE_SAVING_RATIO;
-
-    if (worthwhile) {
-      return {
-        ...base,
-        size: source.length,
-        contentType,
-        format,
-        width: metadata.width || null,
-        height: metadata.height || null,
-        projectedSize: projected.length,
-        projectedSavingBytes: savingBytes,
-        projectedSavingPercent: savingRatio * 100,
-        policyIssues,
-        status: "optimizable",
-        note: "At least 12% smaller with the current 2200px/WebP policy.",
-      };
-    }
-
-    if (policyIssues.length > 0) {
-      return {
-        ...base,
-        size: source.length,
-        contentType,
-        format,
-        width: metadata.width || null,
-        height: metadata.height || null,
-        projectedSize: projected.length,
-        projectedSavingBytes: savingBytes,
-        projectedSavingPercent: savingRatio * 100,
-        policyIssues,
-        status: "review",
-        note: "Outside the target policy, but recompression would save less than 12%.",
-      };
-    }
+    const needsOptimization = requiresOptimization({
+      width: metadata.width,
+      height: metadata.height,
+      size: source.length,
+      savingRatio,
+    });
 
     return {
       ...base,
-      size: source.length,
+      storedSize: source.length,
       contentType,
       format,
       width: metadata.width || null,
@@ -221,66 +203,156 @@ async function analyzeBlob(
       projectedSavingBytes: savingBytes,
       projectedSavingPercent: savingRatio * 100,
       policyIssues,
-      status: "optimized",
-      note: "Within the current policy with no worthwhile recompression gain.",
+      status: needsOptimization ? "NEEDS_OPTIMIZATION" : "COMPLIANT",
+      note: needsOptimization
+        ? "Outside the current policy or at least 12% smaller after simulation."
+        : format === "webp"
+          ? "Within the current optimization policy."
+          : "Original format retained because WebP would not save at least 12%.",
     };
   } catch (error) {
     return {
       ...base,
-      contentType: "",
-      format: "",
-      width: null,
-      height: null,
-      projectedSize: null,
-      projectedSavingBytes: 0,
-      projectedSavingPercent: 0,
-      policyIssues: [],
-      status: "failed",
+      status: "FAILED",
       note: error instanceof Error ? error.message : "Image analysis failed.",
     };
   }
 }
 
-export async function getRecentBlobImageAudit(limit = 15) {
-  const storage = await getBlobStorageAudit();
-  const safeLimit = Math.min(30, Math.max(1, Math.floor(limit)));
-  const recentBlobs = [...storage.blobs]
-    .sort((left, right) => getUploadedAtMs(right) - getUploadedAtMs(left))
-    .slice(0, safeLimit);
+async function runInChunks<T>(
+  values: T[],
+  callback: (chunk: T[]) => Promise<unknown>,
+  chunkSize = 50,
+) {
+  for (let index = 0; index < values.length; index += chunkSize) {
+    await callback(values.slice(index, index + chunkSize));
+  }
+}
 
-  const rows: BlobImageAuditRow[] = [];
-
-  for (let index = 0; index < recentBlobs.length; index += AUDIT_CONCURRENCY) {
-    const batch = recentBlobs.slice(index, index + AUDIT_CONCURRENCY);
-    rows.push(
-      ...(await Promise.all(
-        batch.map((blob) => analyzeBlob(blob, storage.references)),
-      )),
-    );
+export async function syncBlobImageRegistry() {
+  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+    throw new Error("Missing BLOB_READ_WRITE_TOKEN in Vercel runtime.");
   }
 
-  const optimizable = rows.filter((row) => row.status === "optimizable");
+  const storage = await getBlobStorageAudit();
+
+  await db.blobImageOptimization.updateMany({
+    data: { presentInStorage: false, referenced: false },
+  });
+
+  await runInChunks(storage.blobs, async (chunk) => {
+    await db.$transaction(
+      chunk.map((blob) => {
+        const url = normalizeBlobUrl(blob.url);
+        const referenced = storage.references.has(url);
+
+        return db.blobImageOptimization.upsert({
+          where: { url },
+          create: {
+            url,
+            pathname: blob.pathname,
+            uploadedAt: toDate(blob.uploadedAt),
+            storedSize: Number(blob.size || 0),
+            status: "UNKNOWN",
+            policyVersion: 0,
+            referenced,
+            presentInStorage: true,
+            note: "Waiting for its first optimization assessment.",
+          },
+          update: {
+            pathname: blob.pathname,
+            uploadedAt: toDate(blob.uploadedAt),
+            storedSize: Number(blob.size || 0),
+            referenced,
+            presentInStorage: true,
+          },
+        });
+      }),
+    );
+  });
+
+  return storage;
+}
+
+function readPolicyIssues(value: Prisma.JsonValue | null): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === "string")
+    : [];
+}
+
+function toRow(record: BlobImageOptimization): BlobImageAuditRow {
+  const status = isBlobImageStatus(record.status) ? record.status : "UNKNOWN";
+
+  return {
+    id: record.id,
+    url: record.url,
+    pathname: record.pathname,
+    uploadedAt: toIso(record.uploadedAt),
+    referenced: record.referenced,
+    size: record.storedSize,
+    contentType: record.contentType || "",
+    format: record.format || "",
+    width: record.width,
+    height: record.height,
+    projectedSize: record.projectedSize,
+    projectedSavingBytes: record.projectedSavingBytes,
+    projectedSavingPercent: record.projectedSavingPercent,
+    policyIssues: readPolicyIssues(record.policyIssues),
+    status,
+    policyVersion: record.policyVersion,
+    policyCurrent:
+      record.policyVersion === IMAGE_OPTIMIZATION_POLICY.version &&
+      !["UNKNOWN", "PENDING"].includes(status),
+    checkedAt: toIso(record.checkedAt),
+    note: record.note || "No assessment recorded yet.",
+  };
+}
+
+function getRowPriority(row: BlobImageAuditRow) {
+  if (!row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status)) return 0;
+  if (row.status === "NEEDS_OPTIMIZATION") return 1;
+  if (row.status === "FAILED") return 2;
+  if (row.status === "COMPLIANT") return 3;
+  return 4;
+}
+
+export async function getBlobImageAudit() {
+  const storage = await syncBlobImageRegistry();
+  const records = await db.blobImageOptimization.findMany({
+    where: { presentInStorage: true },
+  });
+  const rows = records
+    .map(toRow)
+    .sort((left, right) => {
+      const priority = getRowPriority(left) - getRowPriority(right);
+      return priority || getUploadedAtMs(right.uploadedAt) - getUploadedAtMs(left.uploadedAt);
+    });
+  const queued = rows.filter(
+    (row) => !row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status),
+  );
+  const optimizable = rows.filter(
+    (row) => row.status === "NEEDS_OPTIMIZATION" && row.policyCurrent,
+  );
 
   return {
     generatedAt: new Date().toISOString(),
-    policy: {
-      maxDimension: CURRENT_MAX_DIMENSION,
-      webpQuality: CURRENT_WEBP_QUALITY,
-      targetMaxBytes: CURRENT_TARGET_MAX_BYTES,
-      minimumSavingPercent: MIN_WORTHWHILE_SAVING_RATIO * 100,
-    },
+    policy: IMAGE_OPTIMIZATION_POLICY,
     storage: {
       totalBytes: storage.usedBytes,
       fileCount: storage.fileCount,
       orphanedBytes: storage.orphanedBytes,
       orphanedCount: storage.orphanedCount,
     },
-    sample: {
-      count: rows.length,
-      referencedCount: rows.filter((row) => row.referenced).length,
-      unusedCount: rows.filter((row) => !row.referenced).length,
+    registry: {
+      trackedCount: rows.length,
+      queuedCount: queued.length,
+      compliantCount: rows.filter(
+        (row) => row.status === "COMPLIANT" && row.policyCurrent,
+      ).length,
       optimizableCount: optimizable.length,
-      failedCount: rows.filter((row) => row.status === "failed").length,
+      failedCount: rows.filter((row) => row.status === "FAILED").length,
+      skippedCount: rows.filter((row) => row.status === "SKIPPED").length,
+      unusedCount: rows.filter((row) => !row.referenced).length,
       projectedSavingBytes: optimizable.reduce(
         (sum, row) => sum + row.projectedSavingBytes,
         0,
@@ -288,4 +360,66 @@ export async function getRecentBlobImageAudit(limit = 15) {
     },
     rows,
   };
+}
+
+export async function analyzeNextBlobImageBatch({
+  limit = 3,
+  retryFailed = false,
+}: {
+  limit?: number;
+  retryFailed?: boolean;
+} = {}) {
+  await syncBlobImageRegistry();
+  const safeLimit = Math.min(MAX_BATCH_SIZE, Math.max(1, Math.floor(limit)));
+  const candidates = await db.blobImageOptimization.findMany({
+    where: {
+      presentInStorage: true,
+      ...(retryFailed
+        ? { status: "FAILED" }
+        : {
+            OR: [
+              { status: { in: ["UNKNOWN", "PENDING"] } },
+              { policyVersion: { lt: IMAGE_OPTIMIZATION_POLICY.version } },
+            ],
+          }),
+    },
+    orderBy: [{ uploadedAt: "asc" }, { createdAt: "asc" }],
+    take: safeLimit,
+  });
+
+  if (candidates.length === 0) return { analyzed: 0, remaining: 0 };
+
+  await db.blobImageOptimization.updateMany({
+    where: { id: { in: candidates.map((candidate) => candidate.id) } },
+    data: {
+      status: "PENDING",
+      note: "Optimization assessment in progress.",
+    },
+  });
+
+  for (const candidate of candidates) {
+    const assessment = await analyzeBlob(
+      {
+        url: candidate.url,
+        pathname: candidate.pathname,
+        size: candidate.storedSize,
+        uploadedAt: candidate.uploadedAt || undefined,
+      },
+      candidate.referenced,
+    );
+
+    await recordBlobImageAssessment(assessment);
+  }
+
+  const remaining = await db.blobImageOptimization.count({
+    where: {
+      presentInStorage: true,
+      OR: [
+        { status: { in: ["UNKNOWN", "PENDING"] } },
+        { policyVersion: { lt: IMAGE_OPTIMIZATION_POLICY.version } },
+      ],
+    },
+  });
+
+  return { analyzed: candidates.length, remaining };
 }

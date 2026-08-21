@@ -3,10 +3,13 @@ import "server-only";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { put } from "@vercel/blob";
+import { recordBlobImageAssessment } from "@/lib/admin/blobImageRegistry";
+import {
+  IMAGE_OPTIMIZATION_POLICY,
+  type BlobImageStatus,
+} from "@/lib/admin/imageOptimizationPolicy";
 
 const MAX_UPLOAD_SIZE = 25 * 1024 * 1024;
-const MAX_PHOTO_WIDTH = 2200;
-const PHOTO_WEBP_QUALITY = 82;
 
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -67,7 +70,37 @@ type PreparedUpload = {
   fileName: string;
   size: number;
   contentType: string;
+  optimization: {
+    status: BlobImageStatus;
+    format: string | null;
+    width: number | null;
+    height: number | null;
+    policyIssues: string[];
+    note: string;
+  };
 };
+
+function getStoredPolicyIssues({
+  size,
+  width,
+  height,
+}: {
+  size: number;
+  width?: number | null;
+  height?: number | null;
+}) {
+  const issues: string[] = [];
+
+  if (Math.max(width || 0, height || 0) > IMAGE_OPTIMIZATION_POLICY.maxDimension) {
+    issues.push(`over-${IMAGE_OPTIMIZATION_POLICY.maxDimension}px`);
+  }
+
+  if (size > IMAGE_OPTIMIZATION_POLICY.targetMaxBytes) {
+    issues.push("over-1.6mb");
+  }
+
+  return issues;
+}
 
 export function slugifyUploadName(value: string) {
   return value
@@ -161,39 +194,85 @@ async function preparePhotoUpload({
       fileName: getSafeFileName(file, slotKey),
       size: buffer.length,
       contentType: file.type,
+      optimization: {
+        status: "SKIPPED",
+        format: file.type.split("/")[1] || null,
+        width: null,
+        height: null,
+        policyIssues: [],
+        note: "Format intentionally excluded from WebP optimization.",
+      },
     };
   }
 
   try {
     const sharp = (await import("sharp")).default;
 
-    const processedBuffer = await sharp(buffer)
+    const metadata = await sharp(buffer).metadata();
+    const processed = await sharp(buffer)
       .rotate()
       .resize({
-        width: MAX_PHOTO_WIDTH,
+        width: IMAGE_OPTIMIZATION_POLICY.maxDimension,
+        height: IMAGE_OPTIMIZATION_POLICY.maxDimension,
+        fit: "inside",
         withoutEnlargement: true,
       })
       .webp({
-        quality: PHOTO_WEBP_QUALITY,
+        quality: IMAGE_OPTIMIZATION_POLICY.webpQuality,
+        alphaQuality: 90,
         effort: 5,
       })
-      .toBuffer();
+      .toBuffer({ resolveWithObject: true });
 
     // Never store a processed version that is larger than the source.
-    if (processedBuffer.length >= buffer.length) {
+    if (processed.data.length >= buffer.length) {
+      const policyIssues = getStoredPolicyIssues({
+        size: buffer.length,
+        width: metadata.width,
+        height: metadata.height,
+      });
+
       return {
         buffer,
         fileName: getSafeFileName(file, slotKey),
         size: buffer.length,
         contentType: file.type,
+        optimization: {
+          status: policyIssues.length > 0 ? "NEEDS_OPTIMIZATION" : "COMPLIANT",
+          format: metadata.format || null,
+          width: metadata.width || null,
+          height: metadata.height || null,
+          policyIssues,
+          note:
+            policyIssues.length > 0
+              ? "Original retained because WebP was larger, but manual review is still needed."
+              : "Original retained because WebP would have been larger.",
+        },
       };
     }
 
+    const policyIssues = getStoredPolicyIssues({
+      size: processed.data.length,
+      width: processed.info.width,
+      height: processed.info.height,
+    });
+
     return {
-      buffer: processedBuffer,
+      buffer: processed.data,
       fileName: getSafeFileName(file, slotKey, "webp"),
-      size: processedBuffer.length,
+      size: processed.data.length,
       contentType: "image/webp",
+      optimization: {
+        status: policyIssues.length > 0 ? "NEEDS_OPTIMIZATION" : "COMPLIANT",
+        format: "webp",
+        width: processed.info.width,
+        height: processed.info.height,
+        policyIssues,
+        note:
+          policyIssues.length > 0
+            ? "WebP created successfully, but the stored file still exceeds the target size."
+            : "Optimized during upload with the current WebP policy.",
+      },
     };
   } catch (error) {
     console.error("[admin upload] Sharp processing skipped:", {
@@ -206,6 +285,14 @@ async function preparePhotoUpload({
       fileName: getSafeFileName(file, slotKey),
       size: buffer.length,
       contentType: file.type,
+      optimization: {
+        status: "FAILED",
+        format: file.type.split("/")[1] || null,
+        width: null,
+        height: null,
+        policyIssues: [],
+        note: error instanceof Error ? error.message : "Sharp processing failed.",
+      },
     };
   }
 }
@@ -258,6 +345,27 @@ async function uploadToBlob({
     addRandomSuffix: true,
     ...(blobToken ? { token: blobToken } : {}),
   });
+
+  try {
+    await recordBlobImageAssessment({
+      url: blob.url,
+      pathname: blob.pathname,
+      uploadedAt: new Date(),
+      storedSize: prepared.size,
+      contentType: prepared.contentType,
+      format: prepared.optimization.format,
+      width: prepared.optimization.width,
+      height: prepared.optimization.height,
+      policyIssues: prepared.optimization.policyIssues,
+      status: prepared.optimization.status,
+      policyVersion: IMAGE_OPTIMIZATION_POLICY.version,
+      referenced: false,
+      note: prepared.optimization.note,
+    });
+  } catch (error) {
+    // The next registry sync will recover this Blob as UNKNOWN.
+    console.error("[admin upload] Blob optimization status was not recorded:", error);
+  }
 
   return {
     ok: true,

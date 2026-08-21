@@ -1,16 +1,18 @@
 import Link from "next/link";
 import {
-  getRecentBlobImageAudit,
+  getBlobImageAudit,
   type BlobImageAuditRow,
 } from "@/lib/admin/blobImageAudit";
+import {
+  analyzeNextBlobImages,
+  retryFailedBlobImages,
+} from "@/server/actions/storageAudit";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
 
 function formatBytes(bytes: number) {
-  if (!Number.isFinite(bytes) || bytes <= 0) {
-    return "0 MB";
-  }
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 MB";
 
   const megabytes = bytes / 1_000_000;
   return megabytes < 1000
@@ -19,9 +21,7 @@ function formatBytes(bytes: number) {
 }
 
 function formatDate(value: string | null) {
-  if (!value) {
-    return "Unknown date";
-  }
+  if (!value) return "Not checked yet";
 
   return new Intl.DateTimeFormat("en-GB", {
     dateStyle: "medium",
@@ -30,56 +30,79 @@ function formatDate(value: string | null) {
   }).format(new Date(value));
 }
 
-function getStatusClasses(status: BlobImageAuditRow["status"]) {
-  if (status === "optimizable") {
+function getStatusClasses(row: BlobImageAuditRow) {
+  if (!row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status)) {
+    return "bg-[#e6e1d7] text-[#5f5a4f]";
+  }
+  if (row.status === "NEEDS_OPTIMIZATION") {
     return "bg-[#eadfc8] text-[#84652d]";
   }
-
-  if (status === "optimized") {
+  if (row.status === "COMPLIANT") {
     return "bg-[#d9ead5] text-[#286235]";
   }
-
-  if (status === "failed") {
+  if (row.status === "FAILED") {
     return "bg-[#e8d6d1] text-[#8a3d2f]";
   }
-
-  return "bg-[#e6e1d7] text-[#5f5a4f]";
+  return "bg-[#e4e7e2] text-[#4f5b50]";
 }
 
-function getStatusLabel(status: BlobImageAuditRow["status"]) {
-  if (status === "optimizable") return "Optimize";
-  if (status === "optimized") return "Optimized";
-  if (status === "review") return "Review";
-  if (status === "skipped") return "Skipped";
+function getStatusLabel(row: BlobImageAuditRow) {
+  if (row.status === "PENDING") return "Checking";
+  if (!row.policyCurrent || row.status === "UNKNOWN") return "Waiting";
+  if (row.status === "NEEDS_OPTIMIZATION") return "Optimize";
+  if (row.status === "COMPLIANT") return "Optimized";
+  if (row.status === "SKIPPED") return "Excluded";
   return "Failed";
 }
 
 export default async function StorageAuditPage() {
-  const audit = await getRecentBlobImageAudit(15);
+  const audit = await getBlobImageAudit();
 
   return (
     <div className="space-y-7">
       <section className="max-w-5xl">
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
-          Read-only diagnostic
+          Persistent diagnostic · policy v{audit.policy.version}
         </p>
 
         <h1 className="mt-3 font-serif text-4xl leading-none tracking-[-0.04em] text-[#11170f] md:text-6xl">
-          Recent Blob audit
+          Blob image registry
         </h1>
 
         <p className="mt-5 max-w-3xl text-sm leading-6 text-[#11170f]/55">
-          The 15 latest files are downloaded and simulated against the current
-          2200px, WebP quality 82 policy. Nothing is uploaded, replaced, deleted
-          or written to the database.
+          Every Blob is registered, so large imports cannot fall outside the
+          audit. New uploads receive a status immediately. Existing files stay
+          in the queue until checked against the {audit.policy.maxDimension}px,
+          WebP quality {audit.policy.webpQuality} policy. Analysis only writes
+          diagnostic metadata; it never replaces or deletes a Blob.
         </p>
 
         <div className="mt-6 flex flex-wrap gap-3">
+          {audit.registry.queuedCount > 0 ? (
+            <form action={analyzeNextBlobImages}>
+              <button className="rounded-full bg-[#071321] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f4efe4]">
+                Analyze next 3 · {audit.registry.queuedCount} waiting
+              </button>
+            </form>
+          ) : (
+            <span className="rounded-full bg-[#d9ead5] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#286235]">
+              Queue complete
+            </span>
+          )}
+
+          {audit.registry.failedCount > 0 ? (
+            <form action={retryFailedBlobImages}>
+              <button className="rounded-full border border-[#8a3d2f]/25 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8a3d2f]">
+                Retry 3 failed
+              </button>
+            </form>
+          ) : null}
+
           <Link
             href="/admin/storage-audit"
-            className="rounded-full bg-[#071321] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f4efe4]"
+            className="rounded-full border border-[#11170f]/12 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55"
           >
-            Run audit again
+            Refresh registry
           </Link>
 
           <Link
@@ -95,8 +118,8 @@ export default async function StorageAuditPage() {
         {[
           ["Total storage", formatBytes(audit.storage.totalBytes)],
           ["Unused storage", formatBytes(audit.storage.orphanedBytes)],
-          ["Recent files checked", String(audit.sample.count)],
-          ["Projected saving", formatBytes(audit.sample.projectedSavingBytes)],
+          ["Waiting for audit", String(audit.registry.queuedCount)],
+          ["Projected saving", formatBytes(audit.registry.projectedSavingBytes)],
         ].map(([label, value]) => (
           <article
             key={label}
@@ -113,16 +136,17 @@ export default async function StorageAuditPage() {
       <section className="overflow-hidden rounded-3xl border border-[#11170f]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
         <div className="border-b border-[#11170f]/8 px-5 py-4">
           <p className="text-sm font-semibold text-[#11170f]">
-            {audit.sample.optimizableCount} potentially optimizable ·{" "}
-            {audit.sample.unusedCount} unused · {audit.sample.failedCount} failed
+            {audit.registry.trackedCount} tracked · {audit.registry.compliantCount}{" "}
+            optimized · {audit.registry.optimizableCount} to optimize ·{" "}
+            {audit.registry.unusedCount} unused · {audit.registry.failedCount} failed
           </p>
           <p className="mt-1 text-xs text-[#11170f]/42">
-            Generated {formatDate(audit.generatedAt)}
+            Registry synchronized {formatDate(audit.generatedAt)}
           </p>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="min-w-[980px] w-full border-collapse text-left">
+          <table className="w-full min-w-[1050px] border-collapse text-left">
             <thead>
               <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/38">
                 <th className="px-5 py-4">File</th>
@@ -136,7 +160,7 @@ export default async function StorageAuditPage() {
             <tbody>
               {audit.rows.map((row) => (
                 <tr
-                  key={`${row.pathname}-${row.uploadedAt || "unknown"}`}
+                  key={row.id}
                   className="border-t border-[#11170f]/8 align-top text-xs text-[#11170f]/62"
                 >
                   <td className="max-w-[300px] px-5 py-4">
@@ -144,14 +168,14 @@ export default async function StorageAuditPage() {
                       {row.pathname}
                     </p>
                     <p className="mt-1 text-[10px] text-[#11170f]/38">
-                      {formatDate(row.uploadedAt)}
+                      Uploaded {formatDate(row.uploadedAt)}
                     </p>
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
                     {formatBytes(row.size)}
                   </td>
                   <td className="whitespace-nowrap px-4 py-4">
-                    <p>{row.format || row.contentType || "Unknown"}</p>
+                    <p>{row.format || row.contentType || "Not checked"}</p>
                     <p className="mt-1 text-[10px] text-[#11170f]/38">
                       {row.width && row.height
                         ? `${row.width} × ${row.height}px`
@@ -173,13 +197,18 @@ export default async function StorageAuditPage() {
                   <td className="whitespace-nowrap px-4 py-4">
                     {row.referenced ? "Referenced" : "Unused"}
                   </td>
-                  <td className="max-w-[260px] px-5 py-4">
+                  <td className="max-w-[280px] px-5 py-4">
                     <span
-                      className={`inline-flex rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${getStatusClasses(row.status)}`}
+                      className={`inline-flex rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${getStatusClasses(row)}`}
                     >
-                      {getStatusLabel(row.status)}
+                      {getStatusLabel(row)}
                     </span>
                     <p className="mt-2 leading-5">{row.note}</p>
+                    <p className="mt-1 text-[10px] text-[#11170f]/38">
+                      {row.checkedAt
+                        ? `Checked ${formatDate(row.checkedAt)} · policy v${row.policyVersion}`
+                        : "Never checked"}
+                    </p>
                     {row.policyIssues.length > 0 ? (
                       <p className="mt-1 text-[10px] text-[#84652d]">
                         {row.policyIssues.join(" · ")}

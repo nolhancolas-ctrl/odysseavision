@@ -242,3 +242,31 @@ model PageView {
   @@index([path])
   @@index([createdAt])
 }
+
+model BlobImageOptimization {
+  id                     String    @id @default(cuid())
+  url                    String    @unique
+  pathname               String
+  uploadedAt             DateTime?
+  storedSize             Float     @default(0)
+  contentType            String?
+  format                 String?
+  width                  Int?
+  height                 Int?
+  projectedSize          Float?
+  projectedSavingBytes   Float     @default(0)
+  projectedSavingPercent Float     @default(0)
+  policyIssues           Json?
+  status                 String    @default("UNKNOWN")
+  policyVersion          Int       @default(0)
+  referenced             Boolean   @default(false)
+  presentInStorage       Boolean   @default(true)
+  note                   String?
+  checkedAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([presentInStorage, status, policyVersion])
+  @@index([presentInStorage, uploadedAt])
+  @@index([referenced])
+}
