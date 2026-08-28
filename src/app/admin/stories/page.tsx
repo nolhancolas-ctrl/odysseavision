@@ -35,12 +35,21 @@ export default async function AdminStoriesPage() {
           </p>
         </div>
 
-        <Link
-          href="/admin/stories/new"
-          className="rounded-full bg-[#d5ad68] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#071008] transition hover:bg-[#f4efe4]"
-        >
-          Add story
-        </Link>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/stories/settings"
+            className="inline-flex items-center justify-center rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:bg-[#071321] hover:text-white"
+          >
+            Story settings
+          </Link>
+
+          <Link
+            href="/admin/stories/new"
+            className="inline-flex items-center justify-center rounded-full bg-[#d5ad68] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#071008] transition hover:bg-[#f4efe4]"
+          >
+            Add story
+          </Link>
+        </div>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">
@@ -89,7 +98,7 @@ export default async function AdminStoriesPage() {
                   style={{ backgroundImage: `url(${story.imageSrc})` }}
                 />
 
-                <div>
+                <div className="min-w-0">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
                     <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/55">
                       {story.status}
@@ -108,7 +117,7 @@ export default async function AdminStoriesPage() {
                     ) : null}
                   </div>
 
-                  <h2 className="font-serif text-3xl uppercase leading-none text-[#242617]">
+                  <h2 className="truncate font-serif text-3xl uppercase leading-none text-[#242617]">
                     {story.title}
                   </h2>
 
@@ -117,24 +126,39 @@ export default async function AdminStoriesPage() {
                   </p>
 
                   {story.excerpt ? (
-                    <p className="mt-3 max-w-2xl text-sm leading-6 text-[#242617]/55">
+                    <p
+                      className="mt-3 max-w-2xl truncate text-sm leading-6 text-[#242617]/55"
+                      title={story.excerpt}
+                    >
                       {story.excerpt}
                     </p>
                   ) : null}
                 </div>
 
-                <div className="flex items-start gap-3 md:justify-end">
+                <div className="flex w-full flex-col gap-2 md:w-[112px] md:shrink-0">
+                  <Link
+                    href={`/preview/stories/${story.id}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
+                  >
+                    Preview
+                  </Link>
+
                   <Link
                     href={`/admin/stories/${story.id}`}
-                    className="rounded-full border border-[#242617]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
+                    className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
                   >
                     Edit
                   </Link>
 
-                  <form action={deleteStory.bind(null, story.id)}>
+                  <form
+                    action={deleteStory.bind(null, story.id)}
+                    className="w-full"
+                  >
                     <button
                       type="submit"
-                      className="rounded-full border border-red-400/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-full border border-red-400/20 px-4 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:bg-red-900/[0.05] hover:text-red-900"
                     >
                       Delete
                     </button>

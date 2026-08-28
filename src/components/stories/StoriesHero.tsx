@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { storiesImages } from "@/data/stories";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -37,13 +38,13 @@ function renderHandwritten(text: string) {
 
 export function StoriesHero({ content }: StoriesHeroProps) {
   const background =
-    content?.images.background || content?.imageSrc || storiesImages.hero.src;
+    content?.images.background ?? content?.imageSrc ?? storiesImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const heroWhale = content?.images.heroWhale || storiesImages.heroWhale.src;
-  const heroManta = content?.images.heroManta || storiesImages.heroManta.src;
+  const heroWhale = content?.images.heroWhale ?? storiesImages.heroWhale.src;
+  const heroManta = content?.images.heroManta ?? storiesImages.heroManta.src;
   const heroElephants =
-    content?.images.heroElephants || storiesImages.heroElephants.src;
-  const stamp = content?.images.stamp || "/images/stories/hero_stamp_01.png";
+    content?.images.heroElephants ?? storiesImages.heroElephants.src;
+  const stamp = content?.images.stamp ?? "/images/stories/hero_stamp_01.png";
 
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-[#11180f] text-[#f4efe4]">
@@ -108,7 +109,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
           ) : null}
 
           {stamp ? (
-            <img
+            <OptionalImage
               src={stamp}
               alt=""
               className="absolute bottom-[14%] right-[-10%] w-34 rotate-[8deg] opacity-85"
@@ -128,7 +129,7 @@ export function StoriesHero({ content }: StoriesHeroProps) {
         </div>
       </div>
 
-      <img
+      <OptionalImage
         src="/images/stories/torn-paper.svg"
         alt=""
         aria-hidden="true"

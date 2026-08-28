@@ -22,12 +22,12 @@ function shouldShowWatermark(
 }
 
 export function HomeHero({ content }: HomeHeroProps) {
-  const background = content?.images.background || content?.imageSrc || homeImages.hero.src;
+  const background = content?.images.background ?? content?.imageSrc ?? homeImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const postalCoast = content?.images.postalCoast || homeImages.postalCoast.src;
-  const postalTurtle = content?.images.postalTurtle || homeImages.postalTurtle.src;
-  const postalZebra = content?.images.postalZebra || homeImages.postalZebra.src;
-  const postalManta = content?.images.postalManta || homeImages.postalManta.src;
+  const postalCoast = content?.images.postalCoast ?? homeImages.postalCoast.src;
+  const postalTurtle = content?.images.postalTurtle ?? homeImages.postalTurtle.src;
+  const postalZebra = content?.images.postalZebra ?? homeImages.postalZebra.src;
+  const postalManta = content?.images.postalManta ?? homeImages.postalManta.src;
 
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-[#10170d] text-white">

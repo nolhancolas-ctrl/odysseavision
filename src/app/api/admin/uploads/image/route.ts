@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { isAdminAuthenticated } from "@/lib/admin/auth";
-import { uploadImageCore } from "@/lib/admin/uploadImageCore";
+import {
+  renameUploadedImageCore,
+  uploadImageCore,
+} from "@/lib/admin/uploadImageCore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +35,12 @@ export async function POST(request: Request) {
     }
 
     const formData = await request.formData();
-    const result = await uploadImageCore(formData);
+    const operation = String(formData.get("operation") || "upload");
+
+    const result =
+      operation === "rename"
+        ? await renameUploadedImageCore(formData)
+        : await uploadImageCore(formData);
 
     if (!result.ok) {
       return NextResponse.json(result, { status: 400 });

@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { ButtonLink } from "@/components/ui/ButtonLink";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { homeImages } from "@/data/home";
@@ -12,9 +13,9 @@ function fileLabel(src: string, fallback: string) {
 }
 
 export function HomeFinalCTA({ content }: HomeFinalCTAProps) {
-  const leftPhoto = content?.images.leftPhoto || homeImages.ctaSailboat.src;
-  const rightPhoto = content?.images.rightPhoto || homeImages.ctaOceanCliff.src;
-  const stamp = content?.images.stamp || "/images/home/cta_stamp_01.png";
+  const leftPhoto = content?.images.leftPhoto ?? homeImages.ctaSailboat.src;
+  const rightPhoto = content?.images.rightPhoto ?? homeImages.ctaOceanCliff.src;
+  const stamp = content?.images.stamp ?? "/images/home/cta_stamp_01.png";
 
   return (
     <section className="relative overflow-hidden bg-[#f4efe4] text-[#242617]">
@@ -32,7 +33,7 @@ export function HomeFinalCTA({ content }: HomeFinalCTAProps) {
           ) : null}
 
           {stamp ? (
-            <img
+            <OptionalImage
               src={stamp}
               alt=""
               className="absolute left-[235px] top-[108px] w-[178px] rotate-[-8deg] opacity-90"

@@ -4,7 +4,7 @@ const COMPRESSIBLE_TYPES = new Set([
   "image/webp",
 ]);
 
-const TARGET_MAX_BYTES = 1.6 * 1024 * 1024;
+const TARGET_MAX_BYTES = 1.2 * 1024 * 1024;
 
 type CompressionAttempt = {
   maxSize: number;
@@ -16,6 +16,8 @@ const ATTEMPTS: CompressionAttempt[] = [
   { maxSize: 2000, quality: 0.76 },
   { maxSize: 1800, quality: 0.72 },
   { maxSize: 1600, quality: 0.68 },
+  { maxSize: 1400, quality: 0.64 },
+  { maxSize: 1200, quality: 0.60 },
 ];
 
 function canUseCanvasCompression(file: File) {
@@ -88,8 +90,8 @@ export async function compressImageBeforeUpload(file: File): Promise<File> {
         best = compressed;
       }
 
-      if (compressed.size <= TARGET_MAX_BYTES) {
-        return compressed;
+      if (best.size <= TARGET_MAX_BYTES) {
+        return best;
       }
     } catch {
       continue;

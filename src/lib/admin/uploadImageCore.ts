@@ -1,9 +1,13 @@
 import "server-only";
+import { createHash } from "node:crypto";
 
-import { mkdir, writeFile } from "fs/promises";
+import { access, mkdir, rename, writeFile } from "fs/promises";
 import path from "path";
 import { put } from "@vercel/blob";
-import { recordBlobImageAssessment } from "@/lib/admin/blobImageRegistry";
+import {
+  findReusableBlobByContentHash,
+  recordBlobImageAssessment,
+} from "@/lib/admin/blobImageRegistry";
 import {
   IMAGE_OPTIMIZATION_POLICY,
   type BlobImageStatus,
@@ -63,6 +67,8 @@ type UploadResult = {
   size: number;
   contentType: string;
   storage: "blob" | "local";
+  reused?: boolean;
+  contentHash?: string;
 };
 
 type PreparedUpload = {
@@ -209,20 +215,51 @@ async function preparePhotoUpload({
     const sharp = (await import("sharp")).default;
 
     const metadata = await sharp(buffer).metadata();
-    const processed = await sharp(buffer)
-      .rotate()
-      .resize({
-        width: IMAGE_OPTIMIZATION_POLICY.maxDimension,
-        height: IMAGE_OPTIMIZATION_POLICY.maxDimension,
-        fit: "inside",
-        withoutEnlargement: true,
-      })
-      .webp({
-        quality: IMAGE_OPTIMIZATION_POLICY.webpQuality,
-        alphaQuality: 90,
-        effort: 5,
-      })
-      .toBuffer({ resolveWithObject: true });
+    async function createOptimizedWebp(
+      maxDimension: number,
+      quality: number,
+    ) {
+      return sharp(buffer)
+        .rotate()
+        .resize({
+          width: maxDimension,
+          height: maxDimension,
+          fit: "inside",
+          withoutEnlargement: true,
+        })
+        .webp({
+          quality,
+          alphaQuality: 90,
+          effort: 5,
+        })
+        .toBuffer({ resolveWithObject: true });
+    }
+
+    let processed = await createOptimizedWebp(
+      IMAGE_OPTIMIZATION_POLICY.maxDimension,
+      IMAGE_OPTIMIZATION_POLICY.webpQuality,
+    );
+
+    const fallbackAttempts = [
+      { maxDimension: 2000, quality: 80 },
+      { maxDimension: 1800, quality: 78 },
+      { maxDimension: 1600, quality: 76 },
+    ];
+
+    for (const attempt of fallbackAttempts) {
+      if (processed.data.length <= IMAGE_OPTIMIZATION_POLICY.targetMaxBytes) {
+        break;
+      }
+
+      const candidate = await createOptimizedWebp(
+        attempt.maxDimension,
+        attempt.quality,
+      );
+
+      if (candidate.data.length < processed.data.length) {
+        processed = candidate;
+      }
+    }
 
     // Never store a processed version that is larger than the source.
     if (processed.data.length >= buffer.length) {
@@ -280,20 +317,12 @@ async function preparePhotoUpload({
       name: error instanceof Error ? error.name : "UnknownError",
     });
 
-    return {
-      buffer,
-      fileName: getSafeFileName(file, slotKey),
-      size: buffer.length,
-      contentType: file.type,
-      optimization: {
-        status: "FAILED",
-        format: file.type.split("/")[1] || null,
-        width: null,
-        height: null,
-        policyIssues: [],
-        note: error instanceof Error ? error.message : "Sharp processing failed.",
-      },
-    };
+    const message =
+      error instanceof Error ? error.message : "Sharp processing failed.";
+
+    throw new Error(
+      `Automatic image optimization failed; the original was not uploaded: ${message}`,
+    );
   }
 }
 
@@ -332,6 +361,28 @@ async function uploadToBlob({
   prepared: PreparedUpload;
   folder: string;
 }): Promise<UploadResult> {
+  const contentHash = createHash("sha256")
+    .update(prepared.buffer)
+    .digest("hex");
+
+  const reusable = await findReusableBlobByContentHash(contentHash);
+
+  if (reusable) {
+    return {
+      ok: true,
+      src: reusable.url,
+      path: reusable.url,
+      url: reusable.url,
+      pathname: reusable.pathname,
+      fileName: prepared.fileName,
+      size: reusable.storedSize || prepared.size,
+      contentType: reusable.contentType || prepared.contentType,
+      storage: "blob",
+      reused: true,
+      contentHash,
+    };
+  }
+
   const pathname = `images/${folder}/${Date.now()}-${prepared.fileName}`.replace(
     /\/+/g,
     "/",
@@ -352,6 +403,7 @@ async function uploadToBlob({
       pathname: blob.pathname,
       uploadedAt: new Date(),
       storedSize: prepared.size,
+      contentHash,
       contentType: prepared.contentType,
       format: prepared.optimization.format,
       width: prepared.optimization.width,
@@ -377,6 +429,133 @@ async function uploadToBlob({
     size: prepared.size,
     contentType: prepared.contentType,
     storage: "blob",
+    reused: false,
+    contentHash,
+  };
+}
+
+
+function getSafeLocalImagePath(publicPath: string) {
+  if (!publicPath.startsWith("/images/")) {
+    return null;
+  }
+
+  const root = path.resolve(process.cwd(), "public", "images");
+  const relative = publicPath.replace(/^\/+/, "");
+  const absolutePath = path.resolve(process.cwd(), "public", relative);
+
+  if (!absolutePath.startsWith(root + path.sep)) {
+    return null;
+  }
+
+  return {
+    absolutePath,
+  };
+}
+
+async function getAvailableLocalRenamePath({
+  folder,
+  baseName,
+  extension,
+  currentAbsolutePath,
+}: {
+  folder: string;
+  baseName: string;
+  extension: string;
+  currentAbsolutePath: string;
+}) {
+  let index = 1;
+
+  while (true) {
+    const suffix = index === 1 ? "" : `-${index}`;
+    const filename = `${baseName}${suffix}.${extension}`;
+    const absolutePath = path.join(folder, filename);
+
+    if (absolutePath === currentAbsolutePath) {
+      return absolutePath;
+    }
+
+    try {
+      await access(absolutePath);
+      index += 1;
+    } catch {
+      return absolutePath;
+    }
+  }
+}
+
+export async function renameUploadedImageCore(formData: FormData) {
+  const currentPath = String(formData.get("currentPath") ?? "").trim();
+  const requestedName = String(formData.get("requestedName") ?? "").trim();
+
+  if (!currentPath) {
+    return {
+      ok: false,
+      error: "No image path received.",
+      path: currentPath,
+    };
+  }
+
+  if (!requestedName) {
+    return {
+      ok: false,
+      error: "Please enter a file name.",
+      path: currentPath,
+    };
+  }
+
+  const safePath = getSafeLocalImagePath(currentPath);
+
+  if (!safePath) {
+    return {
+      ok: false,
+      error: "Blob filenames cannot be changed after upload.",
+      path: currentPath,
+    };
+  }
+
+  const extension = path.extname(safePath.absolutePath).replace(".", "");
+
+  if (!extension) {
+    return {
+      ok: false,
+      error: "This file has no extension.",
+      path: currentPath,
+    };
+  }
+
+  const requestedBase = path.basename(requestedName).replace(/\.[^.]+$/, "");
+  const baseName = slugifyUploadName(requestedBase);
+
+  if (!baseName) {
+    return {
+      ok: false,
+      error: "Invalid file name.",
+      path: currentPath,
+    };
+  }
+
+  const folder = path.dirname(safePath.absolutePath);
+  const nextAbsolutePath = await getAvailableLocalRenamePath({
+    folder,
+    baseName,
+    extension,
+    currentAbsolutePath: safePath.absolutePath,
+  });
+
+  if (nextAbsolutePath !== safePath.absolutePath) {
+    await rename(safePath.absolutePath, nextAbsolutePath);
+  }
+
+  const relativePath = path
+    .relative(path.join(process.cwd(), "public"), nextAbsolutePath)
+    .split(path.sep)
+    .join("/");
+
+  return {
+    ok: true,
+    error: "",
+    path: `/${relativePath}`,
   };
 }
 

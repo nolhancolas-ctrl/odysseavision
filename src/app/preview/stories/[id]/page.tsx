@@ -6,6 +6,11 @@ import { StoryContent } from "@/components/stories/StoryContent";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { isAdminAuthenticated } from "@/lib/admin/auth";
 import { db } from "@/lib/db";
+import {
+  getStoryCustomFontFace,
+  getStoryTypographySettings,
+  getStoryTypographyVariables,
+} from "@/lib/content/storyTypography";
 
 export const dynamic = "force-dynamic";
 
@@ -36,22 +41,38 @@ export default async function StoryPreviewPage({
 
   const { id } = await params;
 
-  const story = await db.story.findUnique({
-    where: { id },
-    include: {
-      category: true,
-    },
-  });
+  const [story, typography] = await Promise.all([
+    db.story.findUnique({
+      where: { id },
+      include: {
+        category: true,
+      },
+    }),
+    getStoryTypographySettings(),
+  ]);
 
   if (!story) {
     notFound();
   }
 
-  const description =
-    story.excerpt || "";
+  const description = story.excerpt || "";
+  const typographyVariables = getStoryTypographyVariables(typography);
+  const customFont = getStoryCustomFontFace(typography);
 
   return (
-    <main className="min-h-screen bg-[#f4efe4] text-[#242617]">
+    <main
+      className="min-h-screen bg-[#f4efe4] text-[#242617]"
+      style={typographyVariables}
+    >
+      {customFont ? (
+        <style>{`
+          @font-face {
+            font-family: "${customFont.fontFamily}";
+            src: url("${customFont.url}");
+            font-display: swap;
+          }
+        `}</style>
+      ) : null}
       <SiteHeader active="Stories" />
 
       <div className="fixed left-1/2 top-5 z-[100] -translate-x-1/2 rounded-full bg-[#b88a3b] px-5 py-2 text-[10px] font-bold uppercase tracking-[0.18em] text-[#071008] shadow-lg">
@@ -82,7 +103,16 @@ export default async function StoryPreviewPage({
             {story.category?.name || "Story"}
           </p>
 
-          <h1 className="font-serif text-[clamp(3rem,7vw,7rem)] uppercase leading-[0.9] tracking-[-0.05em]">
+          <h1
+            className="uppercase"
+            style={{
+              color: "inherit",
+              fontFamily: "var(--story-title-font)",
+              fontSize: "min(var(--story-title-size, 64px), 12vw)",
+              lineHeight: "var(--story-heading-line-height, 0.9)",
+              letterSpacing: "var(--story-heading-letter-spacing, -0.05em)",
+            }}
+          >
             {story.title}
           </h1>
 
@@ -108,7 +138,15 @@ export default async function StoryPreviewPage({
         <div className="mx-auto max-w-3xl">
           {description ? (
             <>
-              <p className="font-serif text-3xl leading-[1.25] text-[#242617] md:text-4xl">
+              <p
+                style={{
+                  color: "var(--story-heading-color)",
+                  fontFamily: "var(--story-heading-font)",
+                  fontSize: "min(var(--story-h2-size, 48px), 9vw)",
+                  lineHeight: "var(--story-heading-line-height)",
+                  letterSpacing: "var(--story-heading-letter-spacing)",
+                }}
+              >
                 {description}
               </p>
 
@@ -117,10 +155,8 @@ export default async function StoryPreviewPage({
           ) : null}
 
           <StoryContent
-            content={
-              story.content ||
-              description
-            }
+            content={story.content || description}
+            typography={typography}
           />
 
           <Link

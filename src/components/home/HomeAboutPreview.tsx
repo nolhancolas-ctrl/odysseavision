@@ -19,7 +19,7 @@ function shouldShowWatermark(
 }
 
 export function HomeAboutPreview({ content }: HomeAboutPreviewProps) {
-  const image = content?.images.photo || content?.imageSrc || homeImages.aboutDuo.src;
+  const image = content?.images.photo ?? content?.imageSrc ?? homeImages.aboutDuo.src;
 
   return (
     <section className="grid bg-[#11190f] text-[#f4efe4] lg:grid-cols-2">

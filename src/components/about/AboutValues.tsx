@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { aboutImages, aboutValues } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
@@ -17,7 +18,7 @@ const valueIcons = [
 
 export function AboutValues({ content }: AboutValuesProps) {
   const background =
-    content?.images.background || content?.imageSrc || aboutImages.valuesFond.src;
+    content?.images.background ?? content?.imageSrc ?? aboutImages.valuesFond.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
 
   return (
@@ -46,13 +47,13 @@ export function AboutValues({ content }: AboutValuesProps) {
         <div className="mt-14 grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
           {aboutValues.map((item, index) => {
             const icon = valueIcons[index];
-            const iconSrc = content?.images[icon.key] || icon.fallback;
+            const iconSrc = content?.images[icon.key] ?? icon.fallback;
 
             return (
               <div key={item.title}>
                 <div className="mx-auto mb-5 flex h-14 items-center justify-center">
                   {iconSrc ? (
-                    <img
+                    <OptionalImage
                       src={iconSrc}
                       alt=""
                       aria-hidden="true"

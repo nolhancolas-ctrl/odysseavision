@@ -244,6 +244,111 @@ export async function deleteBlobsIfUnreferenced(
   };
 }
 
+
+export async function deleteUnusedBlobByRegistryId(id: string) {
+  const record = await db.blobImageOptimization.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      url: true,
+      pathname: true,
+      storedSize: true,
+      presentInStorage: true,
+    },
+  });
+
+  if (!record || !record.presentInStorage) {
+    return {
+      ok: false,
+      deleted: false,
+      code: "NOT_FOUND",
+      message: "This file is no longer present in Blob storage.",
+    } as const;
+  }
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!token) {
+    return {
+      ok: false,
+      deleted: false,
+      code: "MISSING_TOKEN",
+      message: "Blob write access is not configured.",
+    } as const;
+  }
+
+  const normalizedUrl = normalizeBlobUrl(record.url);
+
+  // Live safety check immediately before deleting the Blob.
+  const latestReferences = await getReferencedBlobUrls();
+
+  if (latestReferences.has(normalizedUrl)) {
+    await db.blobImageOptimization.update({
+      where: { id: record.id },
+      data: {
+        referenced: true,
+        note: "Manual deletion blocked: a live database reference was found.",
+        checkedAt: new Date(),
+      },
+    });
+
+    return {
+      ok: false,
+      deleted: false,
+      code: "REFERENCED",
+      message:
+        "Deletion refused because this image is currently used by the website.",
+    } as const;
+  }
+
+  try {
+    await del(normalizedUrl, { token });
+  } catch (error) {
+    console.error(
+      "[manual blob cleanup] Failed:",
+      record.pathname,
+      error,
+    );
+
+    return {
+      ok: false,
+      deleted: false,
+      code: "DELETE_FAILED",
+      message: "Vercel Blob could not delete this file.",
+    } as const;
+  }
+
+  try {
+    await db.blobImageOptimization.update({
+      where: { id: record.id },
+      data: {
+        presentInStorage: false,
+        referenced: false,
+        status: "SKIPPED",
+        projectedSize: null,
+        projectedSavingBytes: 0,
+        projectedSavingPercent: 0,
+        policyIssues: [],
+        note: "Unused Blob deleted manually from the storage audit.",
+        checkedAt: new Date(),
+      },
+    });
+  } catch (error) {
+    console.warn(
+      "[manual blob cleanup] Blob deleted, but registry update failed:",
+      record.pathname,
+      error,
+    );
+  }
+
+  return {
+    ok: true,
+    deleted: true,
+    pathname: record.pathname,
+    freedBytes: Number(record.storedSize || 0),
+  } as const;
+}
+
 export async function getBlobStorageAudit() {
   const [references, blobs] = await Promise.all([
     getReferencedBlobUrls(),

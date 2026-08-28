@@ -13,11 +13,12 @@ export type PublicClientAlbumImage = {
   imageSrc: string;
   title: string;
   alt: string;
+  watermark: string;
   selected: boolean;
   order: number;
 };
 
-export type PublicClientAlbum = {
+export type PublicClientAlbumSummary = {
   id: string;
   slug: string;
   title: string;
@@ -31,6 +32,9 @@ export type PublicClientAlbum = {
   allowShare: boolean;
   externalDownloadUrl: string;
   externalDownloadLabel: string;
+};
+
+export type PublicClientAlbum = PublicClientAlbumSummary & {
   images: PublicClientAlbumImage[];
 };
 
@@ -65,6 +69,7 @@ function getStaticAlbums(): PublicClientAlbum[] {
         imageSrc: album.cover.src,
         title: album.title,
         alt: album.title,
+        watermark: "NONE",
         selected: false,
         order: 0,
       },
@@ -78,6 +83,7 @@ function mapAlbum(album: ClientAlbumWithImages): PublicClientAlbum {
     imageSrc: image.imageSrc,
     title: image.title ?? "",
     alt: image.alt ?? image.title ?? album.title,
+    watermark: image.watermark,
     selected: image.selected,
     order: image.order,
   }));
@@ -104,6 +110,66 @@ function mapAlbum(album: ClientAlbumWithImages): PublicClientAlbum {
   };
 }
 
+export async function getPublicClientAlbumSummaries(): Promise<
+  PublicClientAlbumSummary[]
+> {
+  try {
+    const albums = await db.clientAlbum.findMany({
+      where: {
+        status: "PUBLISHED",
+      },
+      select: {
+        id: true,
+        slug: true,
+        title: true,
+        description: true,
+        coverSrc: true,
+        shootingDate: true,
+        location: true,
+        allowDownload: true,
+        allowShare: true,
+        externalDownloadUrl: true,
+        externalDownloadLabel: true,
+        images: {
+          select: {
+            imageSrc: true,
+          },
+          orderBy: [{ order: "asc" }, { createdAt: "asc" }],
+          take: 1,
+        },
+        _count: {
+          select: {
+            images: true,
+          },
+        },
+      },
+      orderBy: [{ order: "asc" }, { shootingDate: "desc" }, { createdAt: "desc" }],
+    });
+
+    return albums.map((album) => ({
+      id: album.id,
+      slug: album.slug,
+      title: album.title,
+      description: album.description ?? "",
+      coverSrc:
+        album.coverSrc ||
+        album.images[0]?.imageSrc ||
+        "/images/client-albums/album_01.png",
+      href: `/client-albums/${album.slug}`,
+      date: formatAlbumDate(album.shootingDate),
+      location: album.location ?? "",
+      photoCount: album._count.images,
+      allowDownload: album.allowDownload,
+      allowShare: album.allowShare,
+      externalDownloadUrl: album.externalDownloadUrl ?? "",
+      externalDownloadLabel:
+        album.externalDownloadLabel || "Download full gallery",
+    }));
+  } catch {
+    return [];
+  }
+}
+
 export async function getPublicClientAlbums(): Promise<PublicClientAlbum[]> {
   try {
     const albums = await db.clientAlbum.findMany({
@@ -115,7 +181,7 @@ export async function getPublicClientAlbums(): Promise<PublicClientAlbum[]> {
           orderBy: [{ order: "asc" }, { createdAt: "asc" }],
         },
       },
-      orderBy: [{ shootingDate: "desc" }, { createdAt: "desc" }],
+      orderBy: [{ order: "asc" }, { shootingDate: "desc" }, { createdAt: "desc" }],
     });
 
     if (albums.length === 0) {

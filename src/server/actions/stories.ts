@@ -108,6 +108,98 @@ function revalidateStories() {
   revalidatePath("/");
   revalidatePath("/stories");
   revalidatePath("/admin/stories");
+  revalidatePath("/admin/stories/settings");
+}
+
+export async function reorderStories(storyIds: string[]) {
+  const uniqueIds = [...new Set(storyIds)];
+
+  if (!uniqueIds.length || uniqueIds.length !== storyIds.length) {
+    throw new Error("The story order is invalid.");
+  }
+
+  const existingStories = await db.story.findMany({
+    where: {
+      id: {
+        in: uniqueIds,
+      },
+    },
+    select: {
+      id: true,
+    },
+  });
+
+  if (existingStories.length !== uniqueIds.length) {
+    throw new Error("One or more stories could not be found.");
+  }
+
+  await db.$transaction(
+    uniqueIds.map((id, order) =>
+      db.story.update({
+        where: { id },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidateStories();
+
+  return {
+    saved: true,
+    count: uniqueIds.length,
+  };
+}
+
+export async function setFeaturedStory(storyId: string | null) {
+  if (!storyId) {
+    await db.story.updateMany({
+      where: { featured: true },
+      data: { featured: false },
+    });
+
+    revalidateStories();
+
+    return {
+      featuredId: null,
+    };
+  }
+
+  const story = await db.story.findUnique({
+    where: { id: storyId },
+    select: { id: true },
+  });
+
+  if (!story) {
+    throw new Error("The selected story could not be found.");
+  }
+
+  await db.$transaction([
+    db.story.updateMany({
+      where: {
+        featured: true,
+        id: {
+          not: storyId,
+        },
+      },
+      data: {
+        featured: false,
+      },
+    }),
+    db.story.update({
+      where: {
+        id: storyId,
+      },
+      data: {
+        featured: true,
+      },
+    }),
+  ]);
+
+  revalidateStories();
+
+  return {
+    featuredId: storyId,
+  };
 }
 
 export async function createStory(formData: FormData) {

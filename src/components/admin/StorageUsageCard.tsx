@@ -27,9 +27,6 @@ type StorageUsage = {
   checkedAt: string;
 };
 
-const AUTO_CLEAN_INTERVAL =
-  12 * 60 * 60 * 1000;
-
 const AUTO_CLEAN_KEY =
   "ov-storage-cleanup-last-run";
 
@@ -207,33 +204,11 @@ export function StorageUsageCard() {
     }, [cleaning, refresh]);
 
   useEffect(() => {
+    // One inventory when the dashboard opens.
+    // Further Blob inventories require an explicit click on Refresh.
     void refresh();
-
-    const interval =
-      window.setInterval(
-        refresh,
-        60_000,
-      );
-
-    return () => {
-      window.clearInterval(interval);
-    };
   }, [refresh]);
 
-  useEffect(() => {
-    const lastRun = Number(
-      window.localStorage.getItem(
-        AUTO_CLEAN_KEY,
-      ) || 0,
-    );
-
-    if (
-      Date.now() - lastRun >=
-      AUTO_CLEAN_INTERVAL
-    ) {
-      void cleanUnused();
-    }
-  }, [cleanUnused]);
 
   if (!usage && loading) {
     return (

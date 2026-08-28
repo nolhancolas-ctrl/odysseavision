@@ -3,10 +3,10 @@ import {
   getBlobImageAudit,
   type BlobImageAuditRow,
 } from "@/lib/admin/blobImageAudit";
-import {
-  analyzeNextBlobImages,
-  retryFailedBlobImages,
-} from "@/server/actions/storageAudit";
+import { retryFailedBlobImages } from "@/server/actions/storageAudit";
+import { StorageAuditControls } from "@/components/admin/storage/StorageAuditControls";
+import { StorageAuditQuickNav } from "@/components/admin/storage/StorageAuditQuickNav";
+import { StorageAuditTable } from "@/components/admin/storage/StorageAuditTable";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -23,47 +23,179 @@ function formatBytes(bytes: number) {
 function formatDate(value: string | null) {
   if (!value) return "Not checked yet";
 
-  return new Intl.DateTimeFormat("en-GB", {
-    dateStyle: "medium",
-    timeStyle: "short",
+  return new Intl.DateTimeFormat("fr-FR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "2-digit",
     timeZone: "Europe/Paris",
   }).format(new Date(value));
 }
 
-function getStatusClasses(row: BlobImageAuditRow) {
-  if (!row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status)) {
-    return "bg-[#e6e1d7] text-[#5f5a4f]";
-  }
-  if (row.status === "NEEDS_OPTIMIZATION") {
-    return "bg-[#eadfc8] text-[#84652d]";
-  }
-  if (row.status === "COMPLIANT") {
-    return "bg-[#d9ead5] text-[#286235]";
-  }
-  if (row.status === "FAILED") {
-    return "bg-[#e8d6d1] text-[#8a3d2f]";
-  }
-  return "bg-[#e4e7e2] text-[#4f5b50]";
-}
+type StorageAuditPageProps = {
+  searchParams?: Promise<{ view?: string; status?: string }>;
+};
 
-function getStatusLabel(row: BlobImageAuditRow) {
-  if (row.status === "PENDING") return "Checking";
-  if (!row.policyCurrent || row.status === "UNKNOWN") return "Waiting";
-  if (row.status === "NEEDS_OPTIMIZATION") return "Optimize";
-  if (row.status === "COMPLIANT") return "Optimized";
-  if (row.status === "SKIPPED") return "Excluded";
-  return "Failed";
-}
-
-export default async function StorageAuditPage() {
+export default async function StorageAuditPage({
+  searchParams,
+}: StorageAuditPageProps) {
+  const params = (await searchParams) ?? {};
+  const showAll = params.view === "all";
   const audit = await getBlobImageAudit();
+
+  const rowsByNewest = [...audit.rows].sort((left, right) => {
+    const leftDate = left.uploadedAt ? new Date(left.uploadedAt).getTime() : 0;
+    const rightDate = right.uploadedAt ? new Date(right.uploadedAt).getTime() : 0;
+    return rightDate - leftDate;
+  });
+
+  const rowsByContentHash = new Map<string, BlobImageAuditRow[]>();
+
+  for (const row of audit.rows) {
+    if (!row.contentHash) continue;
+
+    const group = rowsByContentHash.get(row.contentHash) ?? [];
+    group.push(row);
+    rowsByContentHash.set(row.contentHash, group);
+  }
+
+  const duplicateGroups = [...rowsByContentHash.entries()].filter(
+    ([, rows]) => rows.length > 1,
+  );
+  const duplicateHashes = new Set(
+    duplicateGroups.map(([contentHash]) => contentHash),
+  );
+  const duplicateRows = audit.rows.filter(
+    (row) => Boolean(row.contentHash) && duplicateHashes.has(row.contentHash),
+  );
+  const duplicateGroupCount = duplicateGroups.length;
+
+  const isUnverified = (row: BlobImageAuditRow) =>
+    !row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status);
+
+  const needsAttention = (row: BlobImageAuditRow) =>
+    isUnverified(row) ||
+    row.status === "NEEDS_OPTIMIZATION" ||
+    row.status === "FAILED";
+
+  const statusFilter = params.status || "all";
+
+  const matchesStatus = (row: BlobImageAuditRow) => {
+    if (statusFilter === "waiting") return isUnverified(row);
+    if (statusFilter === "optimized") {
+      return row.policyCurrent && row.status === "COMPLIANT";
+    }
+    if (statusFilter === "optimizable") {
+      return row.policyCurrent && row.status === "NEEDS_OPTIMIZATION";
+    }
+    if (statusFilter === "failed") return row.status === "FAILED";
+    if (statusFilter === "unused") return !row.referenced;
+    if (statusFilter === "duplicates") {
+      return Boolean(row.contentHash) && duplicateHashes.has(row.contentHash);
+    }
+    if (statusFilter === "all") return true;
+    return needsAttention(row);
+  };
+
+  const filteredRows = rowsByNewest.filter(matchesStatus);
+  const visibleRows =
+    showAll || statusFilter === "duplicates"
+      ? filteredRows
+      : filteredRows.slice(0, 50);
+  const analyzableCount = audit.rows.filter(
+    (row) => row.size >= 500 * 1024 && isUnverified(row),
+  ).length;
+
+  const optimizableRows = audit.rows
+    .filter(
+      (row) =>
+        row.policyCurrent &&
+        row.status === "NEEDS_OPTIMIZATION" &&
+        row.referenced,
+    )
+    .sort(
+      (left, right) =>
+        right.projectedSavingBytes - left.projectedSavingBytes ||
+        right.size - left.size,
+    );
+
+  const optimizableCount = optimizableRows.length;
+  const nextOptimizationTarget = optimizableRows[0] || null;
+
+  const statusOptions = [
+    {
+      value: "attention",
+      label: "Needs attention",
+      count: audit.rows.filter(needsAttention).length,
+    },
+    {
+      value: "waiting",
+      label: "Unverified",
+      count: audit.rows.filter(isUnverified).length,
+    },
+    {
+      value: "optimized",
+      label: "Optimized",
+      count: audit.rows.filter(
+        (row) => row.policyCurrent && row.status === "COMPLIANT",
+      ).length,
+    },
+    {
+      value: "optimizable",
+      label: "To optimize",
+      count: audit.rows.filter(
+        (row) => row.policyCurrent && row.status === "NEEDS_OPTIMIZATION",
+      ).length,
+    },
+    {
+      value: "failed",
+      label: "Failed",
+      count: audit.rows.filter((row) => row.status === "FAILED").length,
+    },
+    {
+      value: "unused",
+      label: "Unused",
+      count: audit.rows.filter((row) => !row.referenced).length,
+    },
+    {
+      value: "duplicates",
+      label:
+        duplicateGroupCount === 1
+          ? "Duplicates · 1 group"
+          : `Duplicates · ${duplicateGroupCount} groups`,
+      count: duplicateRows.length,
+    },
+    { value: "all", label: "All", count: audit.rows.length },
+  ];
+
+  const getAuditHref = (
+    nextStatus: string,
+    nextShowAll = showAll,
+  ) => {
+    const query = new URLSearchParams();
+
+    if (nextShowAll) query.set("view", "all");
+    if (nextStatus !== "all") query.set("status", nextStatus);
+
+    const value = query.toString();
+    return value ? `/admin/storage-audit?${value}` : "/admin/storage-audit";
+  };
 
   return (
     <div className="space-y-7">
-      <section className="max-w-5xl">
-        <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
-          Persistent diagnostic · policy v{audit.policy.version}
-        </p>
+      <StorageAuditQuickNav />
+      <section>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
+            Persistent diagnostic · policy v{audit.policy.version}
+          </p>
+
+          <Link
+            href="/admin"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#11170f]/12 px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/50 transition-colors hover:bg-[#11170f]/[0.06] hover:text-[#11170f]"
+          >
+            Back to dashboard
+          </Link>
+        </div>
 
         <h1 className="mt-3 font-serif text-4xl leading-none tracking-[-0.04em] text-[#11170f] md:text-6xl">
           Blob image registry
@@ -77,18 +209,16 @@ export default async function StorageAuditPage() {
           diagnostic metadata; it never replaces or deletes a Blob.
         </p>
 
-        <div className="mt-6 flex flex-wrap gap-3">
-          {audit.registry.queuedCount > 0 ? (
-            <form action={analyzeNextBlobImages}>
-              <button className="rounded-full bg-[#071321] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f4efe4]">
-                Analyze next 3 · {audit.registry.queuedCount} waiting
-              </button>
-            </form>
-          ) : (
-            <span className="rounded-full bg-[#d9ead5] px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#286235]">
-              Queue complete
-            </span>
-          )}
+        <div className="mt-6 flex flex-wrap items-start gap-2">
+          <StorageAuditControls
+            initialRemaining={analyzableCount}
+            initialAllRemaining={audit.registry.queuedCount}
+            initialOptimizable={optimizableCount}
+            optimizationEnabled={
+              process.env.BLOB_OPTIMIZATION_WRITE_ENABLED === "true"
+            }
+            optimizationTarget={nextOptimizationTarget?.pathname ?? null}
+          />
 
           {audit.registry.failedCount > 0 ? (
             <form action={retryFailedBlobImages}>
@@ -98,19 +228,7 @@ export default async function StorageAuditPage() {
             </form>
           ) : null}
 
-          <Link
-            href="/admin/storage-audit"
-            className="rounded-full border border-[#11170f]/12 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55"
-          >
-            Refresh registry
-          </Link>
 
-          <Link
-            href="/admin"
-            className="rounded-full border border-[#11170f]/12 px-5 py-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55"
-          >
-            Back to dashboard
-          </Link>
         </div>
       </section>
 
@@ -141,84 +259,44 @@ export default async function StorageAuditPage() {
             {audit.registry.unusedCount} unused · {audit.registry.failedCount} failed
           </p>
           <p className="mt-1 text-xs text-[#11170f]/42">
-            Registry synchronized {formatDate(audit.generatedAt)}
+            {visibleRows.length} displayed · registry loaded from database{" "}
+            {formatDate(audit.generatedAt)}
           </p>
+
+          <nav className="mt-4 flex flex-wrap gap-2" aria-label="Audit status filters">
+            {statusOptions.map((option) => {
+              const active = statusFilter === option.value;
+
+              return (
+                <Link
+                  key={option.value}
+                  href={getAuditHref(option.value)}
+                  className={`rounded-full border px-3 py-2 text-[9px] font-semibold uppercase tracking-[0.12em] transition ${
+                    active
+                      ? "border-[#071321] bg-[#071321] text-[#f4efe4]"
+                      : "border-[#11170f]/10 bg-white/30 text-[#11170f]/50 hover:bg-[#11170f]/5"
+                  }`}
+                >
+                  {option.label} · {option.count}
+                </Link>
+              );
+            })}
+
+          </nav>
         </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[1050px] border-collapse text-left">
-            <thead>
-              <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/38">
-                <th className="px-5 py-4">File</th>
-                <th className="px-4 py-4">Stored</th>
-                <th className="px-4 py-4">Image</th>
-                <th className="px-4 py-4">Projected</th>
-                <th className="px-4 py-4">Usage</th>
-                <th className="px-5 py-4">Assessment</th>
-              </tr>
-            </thead>
-            <tbody>
-              {audit.rows.map((row) => (
-                <tr
-                  key={row.id}
-                  className="border-t border-[#11170f]/8 align-top text-xs text-[#11170f]/62"
-                >
-                  <td className="max-w-[300px] px-5 py-4">
-                    <p className="break-all font-medium text-[#11170f]">
-                      {row.pathname}
-                    </p>
-                    <p className="mt-1 text-[10px] text-[#11170f]/38">
-                      Uploaded {formatDate(row.uploadedAt)}
-                    </p>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    {formatBytes(row.size)}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    <p>{row.format || row.contentType || "Not checked"}</p>
-                    <p className="mt-1 text-[10px] text-[#11170f]/38">
-                      {row.width && row.height
-                        ? `${row.width} × ${row.height}px`
-                        : "Dimensions unavailable"}
-                    </p>
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    {row.projectedSize === null ? (
-                      "—"
-                    ) : (
-                      <>
-                        <p>{formatBytes(row.projectedSize)}</p>
-                        <p className="mt-1 text-[10px] text-[#11170f]/38">
-                          {row.projectedSavingPercent.toFixed(0)}% smaller
-                        </p>
-                      </>
-                    )}
-                  </td>
-                  <td className="whitespace-nowrap px-4 py-4">
-                    {row.referenced ? "Referenced" : "Unused"}
-                  </td>
-                  <td className="max-w-[280px] px-5 py-4">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-[9px] font-semibold uppercase tracking-[0.12em] ${getStatusClasses(row)}`}
-                    >
-                      {getStatusLabel(row)}
-                    </span>
-                    <p className="mt-2 leading-5">{row.note}</p>
-                    <p className="mt-1 text-[10px] text-[#11170f]/38">
-                      {row.checkedAt
-                        ? `Checked ${formatDate(row.checkedAt)} · policy v${row.policyVersion}`
-                        : "Never checked"}
-                    </p>
-                    {row.policyIssues.length > 0 ? (
-                      <p className="mt-1 text-[10px] text-[#84652d]">
-                        {row.policyIssues.join(" · ")}
-                      </p>
-                    ) : null}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <StorageAuditTable
+            rows={visibleRows}
+            groupDuplicates={statusFilter === "duplicates"}
+          />
+
+        <div className="flex justify-center border-t border-[#11170f]/8 px-5 py-5">
+          <Link
+            href={getAuditHref(statusFilter, !showAll)}
+            className="inline-flex h-11 items-center justify-center rounded-full border border-[#b88a3b]/30 bg-[#b88a3b]/[0.08] px-5 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#7b5a22] transition-colors hover:bg-[#b88a3b]/[0.16]"
+          >
+            {showAll ? "View latest 50" : "View all files"}
+          </Link>
         </div>
       </section>
     </div>

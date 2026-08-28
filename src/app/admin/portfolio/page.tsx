@@ -55,29 +55,38 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
 
   return (
     <div className="space-y-8">
-      <header className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
+      <div className="flex flex-col justify-between gap-5 md:flex-row md:items-end">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
             Create & manage
           </p>
 
-          <h1 className="mt-3 font-serif text-5xl uppercase tracking-[-0.04em] text-[#242617] md:text-6xl">
+          <h1 className="mt-3 font-serif text-5xl uppercase tracking-[-0.04em] text-[#242617]">
             Portfolio
           </h1>
 
-          <p className="mt-5 max-w-3xl text-sm leading-7 text-[#242617]/55 md:text-base md:leading-8">
+          <p className="mt-3 max-w-2xl text-sm leading-7 text-[#242617]/55">
             Manage portfolio galleries, categories, photos and publication
             status from one clean workspace.
           </p>
         </div>
 
-        <Link
-          href="/admin/portfolio/categories/new"
-          className="rounded-full bg-[#071008] px-7 py-4 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#b88a3b] hover:text-[#071008]"
-        >
-          Add category
-        </Link>
-      </header>
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/portfolio/settings"
+            className="inline-flex items-center justify-center rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:bg-[#071321] hover:text-white"
+          >
+            Portfolio settings
+          </Link>
+
+          <Link
+            href="/admin/portfolio/categories/new"
+            className="inline-flex items-center justify-center rounded-full bg-[#d5ad68] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#071008] transition hover:bg-[#f4efe4]"
+          >
+            Add category
+          </Link>
+        </div>
+      </div>
 
       {error === "category-has-photos" ? (
         <div className="rounded-2xl border border-red-500/20 bg-red-500/10 px-5 py-4 text-sm text-red-700">
@@ -86,49 +95,36 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
         </div>
       ) : null}
 
-      <div className="grid gap-5 md:grid-cols-3">
-        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-7 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <p className="text-xs uppercase tracking-[0.22em] text-[#242617]/40">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)] p-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#242617]/45">
             Total photos
           </p>
-          <p className="mt-8 font-serif text-5xl text-[#242617]">
+          <p className="mt-3 font-serif text-4xl text-[#242617]">
             {totalItems}
           </p>
         </div>
 
-        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-7 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <p className="text-xs uppercase tracking-[0.22em] text-[#242617]/40">
+        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)] p-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#242617]/45">
             Published
           </p>
-          <p className="mt-8 font-serif text-5xl text-[#242617]">
+          <p className="mt-3 font-serif text-4xl text-[#242617]">
             {publishedItems}
           </p>
         </div>
 
-        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-7 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-          <p className="text-xs uppercase tracking-[0.22em] text-[#242617]/40">
+        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)] p-5">
+          <p className="text-xs uppercase tracking-[0.18em] text-[#242617]/45">
             Categories
           </p>
-          <p className="mt-8 font-serif text-5xl text-[#242617]">
+          <p className="mt-3 font-serif text-4xl text-[#242617]">
             {categories.length}
           </p>
         </div>
       </div>
 
       <section className="overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-        <div className="flex items-center justify-between gap-5 border-b border-[#242617]/10 p-6">
-          <h2 className="font-serif text-3xl text-[#242617]">
-            Categories
-          </h2>
-
-          <Link
-            href="/admin/portfolio/categories/new"
-            className="rounded-full border border-[#242617]/15 px-5 py-2.5 text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/50 transition hover:border-[#b88a3b]/60 hover:text-[#b88a3b]"
-          >
-            Add category
-          </Link>
-        </div>
-
         {categories.length === 0 ? (
           <div className="p-8 text-sm text-[#242617]/55">
             No portfolio categories yet. Create your first gallery category.
@@ -141,7 +137,7 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
               return (
                 <article
                   key={category.id}
-                  className="grid gap-5 p-5 md:grid-cols-[150px_1fr_auto]"
+                  className="grid gap-5 p-5 md:grid-cols-[120px_1fr_auto]"
                 >
                   <div
                     className="aspect-[4/3] rounded-2xl bg-[#e8dfcf] bg-cover bg-center"
@@ -152,7 +148,7 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
                     }}
                   />
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/50">
                         Gallery
@@ -177,7 +173,7 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
                       </span>
                     </div>
 
-                    <h2 className="font-serif text-3xl uppercase leading-none text-[#242617]">
+                    <h2 className="truncate font-serif text-3xl uppercase leading-none text-[#242617]">
                       {category.name}
                     </h2>
 
@@ -185,40 +181,43 @@ export default async function AdminPortfolioPage({ searchParams }: PageProps) {
                       /portfolio/{category.slug}
                     </p>
 
-                    <p className="mt-4 text-xs uppercase tracking-[0.16em] text-[#242617]/35">
+                    <p className="mt-3 max-w-2xl truncate text-sm leading-6 text-[#242617]/55">
                       {category._count.items > 0
                         ? `${category._count.items} photos in this gallery`
                         : "No content yet"}
                     </p>
                   </div>
 
-                  <div className="flex flex-col items-stretch gap-2 md:items-end">
+                  <div className="flex w-full flex-col gap-2 md:w-[112px] md:shrink-0">
                     <Link
                       href={`/portfolio/${category.slug}`}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="w-full rounded-full border border-[#242617]/15 px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b] md:w-32"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
                     >
                       Preview
                     </Link>
 
                     <Link
                       href={`/admin/portfolio/categories/${category.id}/edit`}
-                      className="w-full rounded-full border border-[#242617]/15 px-4 py-2 text-center text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/55 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b] md:w-32"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
                     >
                       Edit
                     </Link>
 
-                    <form action={deletePortfolioCategory.bind(null, category.id)}>
-                      <input type="hidden" name="returnTo" value="/admin/portfolio" />
-                      <ConfirmSubmitButton
-                        className="w-full rounded-full border border-red-900/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900 md:w-32"
-                      >
+                    <form
+                      action={deletePortfolioCategory.bind(null, category.id)}
+                      className="w-full"
+                    >
+                      <input
+                        type="hidden"
+                        name="returnTo"
+                        value="/admin/portfolio"
+                      />
+                      <ConfirmSubmitButton className="inline-flex h-10 w-full items-center justify-center rounded-full border border-red-400/20 px-4 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:bg-red-900/[0.05] hover:text-red-900">
                         Delete
                       </ConfirmSubmitButton>
                     </form>
-
-
                   </div>
                 </article>
               );

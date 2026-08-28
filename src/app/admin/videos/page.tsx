@@ -39,15 +39,24 @@ export default async function AdminVideosPage() {
           </p>
         </div>
 
+        <div className="flex flex-wrap gap-3">
+          <Link
+            href="/admin/videos/settings"
+            className="inline-flex items-center justify-center rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:bg-[#071321] hover:text-white"
+          >
+            Video settings
+          </Link>
+
         <Link
           href="/admin/videos/new"
-          className="rounded-full bg-[#d5ad68] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#071008] transition hover:bg-[#f4efe4]"
+          className="inline-flex items-center justify-center rounded-full bg-[#d5ad68] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#071008] transition hover:bg-[#f4efe4]"
         >
           Add video
         </Link>
+        </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-5 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <p className="text-xs uppercase tracking-[0.18em] text-[#242617]/45">
             Total videos
@@ -131,7 +140,7 @@ export default async function AdminVideosPage() {
                     )}
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <div className="mb-2 flex flex-wrap items-center gap-2">
                       <span className="rounded-full border border-[#242617]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/55">
                         {video.status}
@@ -160,7 +169,7 @@ export default async function AdminVideosPage() {
                       ) : null}
                     </div>
 
-                    <h2 className="font-serif text-3xl uppercase leading-none text-[#242617]">
+                    <h2 className="truncate font-serif text-3xl uppercase leading-none text-[#242617]">
                       {video.title}
                     </h2>
 
@@ -168,24 +177,30 @@ export default async function AdminVideosPage() {
                       /videos/{video.slug}
                     </p>
 
-                    <p className="mt-3 break-all rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/60 px-4 py-3 text-xs leading-5 text-[#242617]/55">
+                    <p
+                      className="mt-3 truncate text-xs leading-5 text-[#242617]/40"
+                      title={video.vimeoUrl || "No Vimeo URL yet"}
+                    >
                       Vimeo URL: {video.vimeoUrl || "No Vimeo URL yet"}
                     </p>
 
                     {video.description ? (
-                      <p className="mt-3 max-w-2xl text-sm leading-6 text-[#242617]/55">
+                      <p
+                        className="mt-3 max-w-2xl truncate text-sm leading-6 text-[#242617]/55"
+                        title={video.description}
+                      >
                         {video.description}
                       </p>
                     ) : null}
                   </div>
 
-                  <div className="flex items-start gap-3 md:justify-end">
+                  <div className="flex w-full flex-col gap-2 md:w-[112px] md:shrink-0">
                     {watchUrl ? (
                       <a
                         href={watchUrl}
                         target="_blank"
                         rel="noreferrer"
-                        className="rounded-full border border-[#242617]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
+                        className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
                       >
                         Open
                       </a>
@@ -193,15 +208,18 @@ export default async function AdminVideosPage() {
 
                     <Link
                       href={`/admin/videos/${video.id}`}
-                      className="rounded-full border border-[#242617]/15 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:text-[#b88a3b]"
+                      className="inline-flex h-10 w-full items-center justify-center rounded-full border border-[#242617]/15 px-4 text-xs font-bold uppercase tracking-[0.16em] text-[#242617]/70 transition hover:border-[#b88a3b]/70 hover:bg-[#b88a3b]/10 hover:text-[#b88a3b]"
                     >
                       Edit
                     </Link>
 
-                    <form action={deleteVideo.bind(null, video.id)}>
+                    <form
+                      action={deleteVideo.bind(null, video.id)}
+                      className="w-full"
+                    >
                       <button
                         type="submit"
-                        className="rounded-full border border-red-400/20 px-4 py-2 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:text-red-900"
+                        className="inline-flex h-10 w-full items-center justify-center rounded-full border border-red-400/20 px-4 text-xs font-bold uppercase tracking-[0.16em] text-red-900/55 transition hover:border-red-800/40 hover:bg-red-900/[0.05] hover:text-red-900"
                       >
                         Delete
                       </button>

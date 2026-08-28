@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import type { Story, StoryCategory } from "@prisma/client";
 import { AdminImageDropzone } from "@/components/admin/uploads/AdminImageDropzone";
+import { StoryRichTextEditor } from "@/components/admin/stories/StoryRichTextEditor";
 
 type StoryWithCategory = Story & {
   category: StoryCategory | null;
@@ -344,80 +345,8 @@ export function StoryForm({
   const [categoryError, setCategoryError] = useState("");
   const [newCategory, setNewCategory] = useState("");
   const [imageSrc, setImageSrc] = useState(story?.imageSrc ?? "");
-  const [content, setContent] = useState(story?.content ?? "");
-  const contentRef = useRef<HTMLTextAreaElement>(null);
+
   const uploadSlug = story?.slug || "draft";
-
-  function updateContentSelection(
-    nextContent: string,
-    selectionStart: number,
-    selectionEnd: number,
-  ) {
-    setContent(nextContent);
-
-    requestAnimationFrame(() => {
-      contentRef.current?.focus();
-      contentRef.current?.setSelectionRange(selectionStart, selectionEnd);
-    });
-  }
-
-  function applyInlineFormat(before: string, after = before, fallback = "text") {
-    const textarea = contentRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const selectedText = content.slice(start, end) || fallback;
-    const nextContent =
-      content.slice(0, start) + before + selectedText + after + content.slice(end);
-
-    updateContentSelection(
-      nextContent,
-      start + before.length,
-      start + before.length + selectedText.length,
-    );
-  }
-
-  function applyHeadingFormat(prefix: "## " | "### ") {
-    const textarea = contentRef.current;
-    if (!textarea) return;
-
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-
-    if (start === end) {
-      const lineStart = content.lastIndexOf("\n", start - 1) + 1;
-      const nextLineBreak = content.indexOf("\n", start);
-      const lineEnd = nextLineBreak === -1 ? content.length : nextLineBreak;
-      const line = content.slice(lineStart, lineEnd);
-      const cleanedLine = line.replace(/^#{2,3}\s+/, "").trim();
-      const replacement = `${prefix}${cleanedLine || "Subtitle"}`;
-      const nextContent =
-        content.slice(0, lineStart) + replacement + content.slice(lineEnd);
-
-      updateContentSelection(
-        nextContent,
-        lineStart + prefix.length,
-        lineStart + replacement.length,
-      );
-      return;
-    }
-
-    const selectedText = content.slice(start, end);
-    const replacement = selectedText
-      .split("\n")
-      .map((line) => {
-        if (!line.trim()) return line;
-        return `${prefix}${line.replace(/^#{2,3}\s+/, "")}`;
-      })
-      .join("\n");
-
-    updateContentSelection(
-      content.slice(0, start) + replacement + content.slice(end),
-      start,
-      start + replacement.length,
-    );
-  }
 
   return (
     <form
@@ -434,96 +363,26 @@ export function StoryForm({
           setCategoryError("Please name the new category.");
         }
       }}
-      className="grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]"
+      className="min-w-0 space-y-8"
     >
       <input type="hidden" name="status" value={status} />
       <input type="hidden" name="categoryId" value={categoryId} />
       <input type="hidden" name="imageSrc" value={imageSrc} />
+      <input
+        type="hidden"
+        name="order"
+        value={story?.order ?? 0}
+      />
+      <input
+        type="hidden"
+        name="featured"
+        value={story?.featured ? "on" : ""}
+      />
 
-      <div className="min-w-0 space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
-        <Field label="Title">
-          <input
-            name="title"
-            required
-            defaultValue={story?.title ?? ""}
-            className={inputClass()}
-            placeholder="Into the quiet blue"
-          />
-        </Field>
-
-        <Field label="Slug" help="Leave empty to generate it from the title.">
-          <input
-            name="slug"
-            defaultValue={story?.slug ?? ""}
-            className={inputClass()}
-            placeholder="into-the-quiet-blue"
-          />
-        </Field>
-
-        <Field label="Excerpt">
-          <textarea
-            name="excerpt"
-            rows={3}
-            defaultValue={story?.excerpt ?? ""}
-            className={textareaClass()}
-            placeholder="A short introduction shown on story cards."
-          />
-        </Field>
-
-        <Field
-          label="Full content"
-          help="Select text, then use the toolbar. The formatting is saved as lightweight Markdown."
-        >
-          <div className="mb-3 flex flex-wrap gap-2">
-            <button
-              type="button"
-              onClick={() => applyInlineFormat("**", "**", "bold text")}
-              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
-            >
-              Bold
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyInlineFormat("*", "*", "italic text")}
-              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
-            >
-              Italic
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyHeadingFormat("## ")}
-              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
-            >
-              Title
-            </button>
-
-            <button
-              type="button"
-              onClick={() => applyHeadingFormat("### ")}
-              className="rounded-full border border-[#242617]/15 bg-[#f4efe4]/80 px-3 py-2 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/65 transition hover:border-[#071321] hover:text-[#071321]"
-            >
-              Subtitle
-            </button>
-          </div>
-
-          <textarea
-            ref={contentRef}
-            name="content"
-            rows={12}
-            value={content}
-            onChange={(event) => setContent(event.target.value)}
-            className={textareaClass()}
-            placeholder="Write the full story here. Use line breaks to separate paragraphs."
-          />
-        </Field>
-      </div>
-
-      <aside className="min-w-0 space-y-6">
-        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+      <section className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,0.86fr)_minmax(0,1.14fr)] xl:items-stretch">
+        <div className="h-full min-w-0 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <Field label="Cover image">
-            <div className="mx-auto w-full max-w-[560px]">
+            <div className="mx-auto w-full max-w-none">
               <AdminImageDropzone
                 label="Story cover image"
                 value={imageSrc}
@@ -531,13 +390,12 @@ export function StoryForm({
                 context="story"
                 entitySlug={uploadSlug}
                 slotKey="cover"
-                ratio="4 / 3"
+                ratio="16 / 6"
               />
             </div>
           </Field>
         </div>
-
-        <div className="space-y-5 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <div className="grid h-full min-w-0 content-center gap-5 rounded-[2rem] border sm:grid-cols-2 border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <Field label="Status">
             <StatusSelect value={status} onChange={setStatus} />
           </Field>
@@ -591,42 +449,67 @@ export function StoryForm({
             />
           </Field>
 
-          <Field label="Order">
-            <input
-              type="number"
-              name="order"
-              defaultValue={story?.order ?? 0}
-              className={inputClass()}
-            />
-          </Field>
 
-          <label className="flex items-center gap-3 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/65 px-4 py-3 text-xs font-bold uppercase tracking-[0.14em] text-[#242617]/55">
-            <input
-              type="checkbox"
-              name="featured"
-              defaultChecked={story?.featured ?? false}
-              className="h-4 w-4 accent-[#b88a3b]"
-            />
-            Featured story
-          </label>
         </div>
+      </section>
 
-        <div className="flex gap-3">
+      <div className="min-w-0 space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <Field label="Title">
+          <input
+            name="title"
+            required
+            defaultValue={story?.title ?? ""}
+            className={inputClass()}
+            placeholder="Into the quiet blue"
+          />
+        </Field>
+
+        <Field label="Slug" help="Leave empty to generate it from the title.">
+          <input
+            name="slug"
+            defaultValue={story?.slug ?? ""}
+            className={inputClass()}
+            placeholder="into-the-quiet-blue"
+          />
+        </Field>
+
+        <Field label="Excerpt">
+          <textarea
+            name="excerpt"
+            rows={3}
+            defaultValue={story?.excerpt ?? ""}
+            className={textareaClass()}
+            placeholder="A short introduction shown on story cards."
+          />
+        </Field>
+
+        <Field
+          label="Full content"
+          help="Select text to format it, or insert photos directly inside the story."
+        >
+          <StoryRichTextEditor
+            existingPageImageUrls={imageSrc ? [imageSrc] : []}
+            initialContent={story?.content ?? ""}
+            uploadSlug={uploadSlug}
+          />
+        </Field>
+      </div>
+
+        <div className="flex flex-wrap justify-end gap-3">
           <button
             type="submit"
-            className="flex-1 cursor-pointer rounded-full bg-[#071321] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#142844]"
+            className="cursor-pointer rounded-full bg-[#071321] px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#142844]"
           >
             {submitLabel}
           </button>
 
           <Link
             href="/admin/stories"
-            className="rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:text-[#071321]"
+            className="inline-flex items-center justify-center rounded-full border border-[#242617]/15 px-5 py-3 text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/55 transition hover:border-[#071321] hover:text-[#071321]"
           >
             Cancel
           </Link>
         </div>
-      </aside>
     </form>
   );
 }

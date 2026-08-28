@@ -46,3 +46,6 @@ Thumbs.db
 backups/
 .migration/
 .vercel
+
+# TypeScript incremental build cache
+*.tsbuildinfo

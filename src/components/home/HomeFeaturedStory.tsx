@@ -25,7 +25,7 @@ export function HomeFeaturedStory({
   content,
   storyHref = "/stories",
 }: HomeFeaturedStoryProps) {
-  const image = content?.images.photo || content?.imageSrc || homeImages.storyElephants.src;
+  const image = content?.images.photo ?? content?.imageSrc ?? homeImages.storyElephants.src;
 
   return (
     <section className="bg-[#f4efe4] px-6 py-20 md:px-14">

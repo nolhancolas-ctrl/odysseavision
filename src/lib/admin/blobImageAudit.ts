@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash } from "node:crypto";
 
 import type { BlobImageOptimization, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
@@ -35,6 +36,7 @@ export type BlobImageAuditRow = {
   referenced: boolean;
   size: number;
   contentType: string;
+  contentHash: string;
   format: string;
   width: number | null;
   height: number | null;
@@ -144,6 +146,7 @@ async function analyzeBlob(
         .trim()
         .toLowerCase() || "";
     const source = Buffer.from(await response.arrayBuffer());
+    const contentHash = createHash("sha256").update(source).digest("hex");
     const sharp = (await import("sharp")).default;
     const metadata = await sharp(source).metadata();
     const format = metadata.format || "unknown";
@@ -158,6 +161,7 @@ async function analyzeBlob(
       return {
         ...base,
         storedSize: source.length,
+        contentHash,
         contentType,
         format,
         width: metadata.width || null,
@@ -195,6 +199,7 @@ async function analyzeBlob(
     return {
       ...base,
       storedSize: source.length,
+      contentHash,
       contentType,
       format,
       width: metadata.width || null,
@@ -291,6 +296,7 @@ function toRow(record: BlobImageOptimization): BlobImageAuditRow {
     referenced: record.referenced,
     size: record.storedSize,
     contentType: record.contentType || "",
+    contentHash: record.contentHash || "",
     format: record.format || "",
     width: record.width,
     height: record.height,
@@ -317,7 +323,6 @@ function getRowPriority(row: BlobImageAuditRow) {
 }
 
 export async function getBlobImageAudit() {
-  const storage = await syncBlobImageRegistry();
   const records = await db.blobImageOptimization.findMany({
     where: { presentInStorage: true },
   });
@@ -325,7 +330,11 @@ export async function getBlobImageAudit() {
     .map(toRow)
     .sort((left, right) => {
       const priority = getRowPriority(left) - getRowPriority(right);
-      return priority || getUploadedAtMs(right.uploadedAt) - getUploadedAtMs(left.uploadedAt);
+      return (
+        priority ||
+        right.size - left.size ||
+        getUploadedAtMs(right.uploadedAt) - getUploadedAtMs(left.uploadedAt)
+      );
     });
   const queued = rows.filter(
     (row) => !row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status),
@@ -338,10 +347,10 @@ export async function getBlobImageAudit() {
     generatedAt: new Date().toISOString(),
     policy: IMAGE_OPTIMIZATION_POLICY,
     storage: {
-      totalBytes: storage.usedBytes,
-      fileCount: storage.fileCount,
-      orphanedBytes: storage.orphanedBytes,
-      orphanedCount: storage.orphanedCount,
+      totalBytes: rows.reduce((sum, row) => sum + row.size, 0),
+      fileCount: rows.length,
+      orphanedBytes: rows.filter((row) => !row.referenced).reduce((sum, row) => sum + row.size, 0),
+      orphanedCount: rows.filter((row) => !row.referenced).length,
     },
     registry: {
       trackedCount: rows.length,
@@ -365,15 +374,17 @@ export async function getBlobImageAudit() {
 export async function analyzeNextBlobImageBatch({
   limit = 3,
   retryFailed = false,
+  includeAll = false,
 }: {
   limit?: number;
   retryFailed?: boolean;
+  includeAll?: boolean;
 } = {}) {
-  await syncBlobImageRegistry();
   const safeLimit = Math.min(MAX_BATCH_SIZE, Math.max(1, Math.floor(limit)));
   const candidates = await db.blobImageOptimization.findMany({
     where: {
       presentInStorage: true,
+      ...(includeAll ? {} : { storedSize: { gte: 500 * 1024 } }),
       ...(retryFailed
         ? { status: "FAILED" }
         : {
@@ -414,6 +425,7 @@ export async function analyzeNextBlobImageBatch({
   const remaining = await db.blobImageOptimization.count({
     where: {
       presentInStorage: true,
+      ...(includeAll ? {} : { storedSize: { gte: 500 * 1024 } }),
       OR: [
         { status: { in: ["UNKNOWN", "PENDING"] } },
         { policyVersion: { lt: IMAGE_OPTIMIZATION_POLICY.version } },

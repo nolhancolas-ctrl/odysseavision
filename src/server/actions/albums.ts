@@ -11,7 +11,14 @@ type AlbumPreviewImage = {
   title?: string;
   alt?: string;
   order?: number;
+  watermark?: string;
 };
+
+function parseWatermark(value: unknown) {
+  if (value === "ANDREW") return "ANDREW";
+  if (value === "MORGANE") return "MORGANE";
+  return "NONE";
+}
 
 function slugify(value: string) {
   return value
@@ -57,6 +64,7 @@ function parseAlbumPreviewImages(formData: FormData): AlbumPreviewImage[] {
         title: String(image.title ?? "").trim(),
         alt: String(image.alt ?? "").trim(),
         order: Number.isFinite(Number(image.order)) ? Number(image.order) : index,
+        watermark: parseWatermark(image.watermark),
       }))
       .filter((image) => image.imageSrc);
   } catch {
@@ -83,6 +91,7 @@ async function saveAlbumPreviewImages(
       title: image.title || null,
       alt: image.alt || image.title || null,
       order: image.order ?? index,
+      watermark: parseWatermark(image.watermark),
       selected: false,
     })),
   });
@@ -164,11 +173,17 @@ export async function createClientAlbum(formData: FormData) {
   const previewImages = parseAlbumPreviewImages(formData);
   const password = String(formData.get("password") ?? "").trim();
 
+  const lastAlbum = await db.clientAlbum.aggregate({
+    _max: { order: true },
+  });
+  const nextOrder = (lastAlbum._max.order ?? -1) + 1;
+
   const album = await db.clientAlbum.create({
     data: {
       ...data,
       passwordHash: password ? hashPassword(password) : null,
       clientId: client?.id ?? null,
+      order: nextOrder,
     },
   });
 
@@ -181,7 +196,10 @@ export async function createClientAlbum(formData: FormData) {
 export async function updateClientAlbum(id: string, formData: FormData) {
   const client = await resolveClient(formData);
   const data = getAlbumData(formData);
-  const previewImages = parseAlbumPreviewImages(formData);
+  const shouldReplacePreviewImages = formData.has("previewImages");
+  const previewImages = shouldReplacePreviewImages
+    ? parseAlbumPreviewImages(formData)
+    : [];
 
   const previous = await db.clientAlbum.findUnique({
     where: { id },
@@ -196,6 +214,10 @@ export async function updateClientAlbum(id: string, formData: FormData) {
   });
   const password = String(formData.get("password") ?? "").trim();
   const clearPassword = formData.get("clearPassword") === "on";
+  const requestedReturnTo = String(formData.get("returnTo") ?? "");
+  const returnTo = requestedReturnTo === `/admin/albums/${id}`
+    ? requestedReturnTo
+    : "/admin/albums";
 
   const album = await db.clientAlbum.update({
     where: { id },
@@ -207,17 +229,20 @@ export async function updateClientAlbum(id: string, formData: FormData) {
     },
   });
 
-  await saveAlbumPreviewImages(album.id, previewImages);
+  if (shouldReplacePreviewImages) {
+    await saveAlbumPreviewImages(album.id, previewImages);
+  }
 
   await deleteBlobsIfUnreferenced([
     previous?.coverSrc,
-    ...(previous?.images.map(
-      (image) => image.imageSrc,
-    ) ?? []),
+    ...(shouldReplacePreviewImages
+      ? previous?.images.map((image) => image.imageSrc) ?? []
+      : []),
   ]);
 
   revalidateAlbums(album.slug);
-  redirect("/admin/albums");
+  revalidatePath(`/admin/albums/${album.id}`);
+  redirect(`${returnTo}?saved=1`);
 }
 
 export async function deleteClientAlbum(id: string) {
@@ -245,4 +270,139 @@ export async function deleteClientAlbum(id: string) {
   ]);
 
   revalidateAlbums();
+}
+
+export async function reorderClientAlbums(
+  albumIds: string[],
+) {
+  const uniqueIds = Array.from(
+    new Set(
+      albumIds.filter(
+        (albumId): albumId is string =>
+          typeof albumId === "string" && albumId.length > 0,
+      ),
+    ),
+  );
+
+  if (uniqueIds.length === 0) return;
+
+  const existing = await db.clientAlbum.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true },
+  });
+
+  if (existing.length !== uniqueIds.length) {
+    throw new Error("One or more Client Albums no longer exist.");
+  }
+
+  await db.$transaction(
+    uniqueIds.map((albumId, order) =>
+      db.clientAlbum.update({
+        where: { id: albumId },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidateAlbums();
+  revalidatePath("/admin/albums/settings");
+}
+
+export async function reorderClientAlbumPhotos(
+  albumId: string,
+  orderedIds: string[],
+) {
+  if (!albumId || !Array.isArray(orderedIds)) {
+    throw new Error("Invalid client album order.");
+  }
+
+  const album = await db.clientAlbum.findUnique({
+    where: { id: albumId },
+    select: {
+      slug: true,
+      images: {
+        select: { id: true },
+      },
+    },
+  });
+
+  if (!album) {
+    throw new Error("Client album not found.");
+  }
+
+  const currentIds = new Set(album.images.map((image) => image.id));
+
+  if (
+    orderedIds.length !== currentIds.size ||
+    orderedIds.some((id) => !currentIds.has(id))
+  ) {
+    throw new Error("Album photos changed. Reload the page and try again.");
+  }
+
+  await db.$transaction(
+    orderedIds.map((id, order) =>
+      db.clientAlbumImage.update({
+        where: { id },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidateAlbums(album.slug);
+  revalidatePath(`/admin/albums/${albumId}`);
+}
+
+export async function updateClientAlbumPhotoWatermark(
+  imageId: string,
+  watermark: string,
+) {
+  const image = await db.clientAlbumImage.findUnique({
+    where: { id: imageId },
+    select: {
+      albumId: true,
+      album: {
+        select: { slug: true },
+      },
+    },
+  });
+
+  if (!image) {
+    throw new Error("Album photo not found.");
+  }
+
+  await db.clientAlbumImage.update({
+    where: { id: imageId },
+    data: {
+      watermark: parseWatermark(watermark),
+    },
+  });
+
+  revalidateAlbums(image.album.slug);
+  revalidatePath(`/admin/albums/${image.albumId}`);
+}
+
+export async function deleteClientAlbumPhoto(imageId: string) {
+  const image = await db.clientAlbumImage.findUnique({
+    where: { id: imageId },
+    select: {
+      albumId: true,
+      imageSrc: true,
+      album: {
+        select: { slug: true },
+      },
+    },
+  });
+
+  if (!image) {
+    return;
+  }
+
+  await db.clientAlbumImage.delete({
+    where: { id: imageId },
+  });
+
+  await deleteBlobsIfUnreferenced([image.imageSrc]);
+
+  revalidateAlbums(image.album.slug);
+  revalidatePath(`/admin/albums/${image.albumId}`);
 }

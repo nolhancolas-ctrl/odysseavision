@@ -2,7 +2,6 @@
 
 import { DragEvent, useRef, useState, useTransition } from "react";
 import { compressImageBeforeUpload } from "@/lib/admin/clientImageCompression";
-import { renameUploadedImage } from "@/server/actions/uploads";
 
 export type AdminImageUploadContext =
   | "website-page"
@@ -15,10 +14,13 @@ export type AdminImageUploadContext =
   | "appearance"
   | "misc";
 
+const DUPLICATE_IMAGE_ERROR = "Fichier double déjà présent sur cette page.";
+
 type AdminImageDropzoneProps = {
   label: string;
   value: string;
   onChange: (path: string) => void;
+  existingImageUrls?: readonly string[];
   context: AdminImageUploadContext;
   pageKey?: string;
   sectionKey?: string;
@@ -116,6 +118,7 @@ export function AdminImageDropzone({
   label,
   value,
   onChange,
+  existingImageUrls = [],
   context,
   pageKey = "",
   sectionKey = "",
@@ -165,6 +168,14 @@ export function AdminImageDropzone({
         return;
       }
 
+      if (
+        result.path === value ||
+        existingImageUrls.includes(result.path)
+      ) {
+        setError(DUPLICATE_IMAGE_ERROR);
+        return;
+      }
+
       onChange(result.path);
       setRenameValue(result.path);
     });
@@ -183,7 +194,8 @@ export function AdminImageDropzone({
     formData.append("requestedName", renameValue);
 
     startTransition(async () => {
-      const result = await renameUploadedImage(formData);
+      formData.append("operation", "rename");
+      const result = await uploadImageViaApi(formData);
 
       if (!result.ok) {
         setError(result.error || "Rename failed.");

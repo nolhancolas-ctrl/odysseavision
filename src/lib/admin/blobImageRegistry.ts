@@ -11,6 +11,7 @@ export type RecordedBlobImageAssessment = {
   uploadedAt?: Date | string | null;
   storedSize: number;
   contentType?: string | null;
+  contentHash?: string | null;
   format?: string | null;
   width?: number | null;
   height?: number | null;
@@ -38,6 +39,31 @@ function toPolicyIssues(value: string[] | undefined): Prisma.InputJsonValue {
   return value || [];
 }
 
+export async function findReusableBlobByContentHash(
+  contentHash: string,
+) {
+  if (!contentHash) {
+    return null;
+  }
+
+  return db.blobImageOptimization.findFirst({
+    where: {
+      contentHash,
+      presentInStorage: true,
+    },
+    orderBy: [
+      { referenced: "desc" },
+      { updatedAt: "desc" },
+    ],
+    select: {
+      url: true,
+      pathname: true,
+      storedSize: true,
+      contentType: true,
+    },
+  });
+}
+
 export async function recordBlobImageAssessment(
   assessment: RecordedBlobImageAssessment,
 ) {
@@ -53,6 +79,7 @@ export async function recordBlobImageAssessment(
       uploadedAt: toDate(assessment.uploadedAt),
       storedSize: assessment.storedSize,
       contentType: assessment.contentType || null,
+      contentHash: assessment.contentHash || null,
       format: assessment.format || null,
       width: assessment.width || null,
       height: assessment.height || null,
@@ -72,6 +99,9 @@ export async function recordBlobImageAssessment(
       uploadedAt: toDate(assessment.uploadedAt),
       storedSize: assessment.storedSize,
       contentType: assessment.contentType || null,
+      ...(assessment.contentHash !== undefined
+        ? { contentHash: assessment.contentHash || null }
+        : {}),
       format: assessment.format || null,
       width: assessment.width || null,
       height: assessment.height || null,

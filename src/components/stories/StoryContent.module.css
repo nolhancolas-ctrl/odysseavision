@@ -1,0 +1,255 @@
+.content {
+  display: flow-root;
+  color: rgba(36, 38, 23, 0.72);
+  font-size: 0.95rem;
+  line-height: 2;
+}
+
+.content p {
+  margin: 0 0 1.65rem;
+}
+
+.content h2,
+.content h3 {
+  clear: both;
+  color: #242617;
+  font-family: var(--font-serif, Georgia, serif);
+  line-height: 1.16;
+}
+
+.content h2 {
+  margin: 3rem 0 1.25rem;
+  font-size: clamp(2rem, 4vw, 3rem);
+}
+
+.content h3 {
+  margin: 2.4rem 0 1rem;
+  font-size: clamp(1.55rem, 3vw, 2.2rem);
+}
+
+.content blockquote {
+  clear: both;
+  margin: 2.5rem 0;
+  border-left: 3px solid #b88a3b;
+  padding: 1rem 0 1rem 1.6rem;
+  color: rgba(36, 38, 23, 0.78);
+  font-family: var(--font-serif, Georgia, serif);
+  font-size: 1.4rem;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.content ul,
+.content ol {
+  margin: 0 0 1.75rem;
+  padding-left: 1.75rem;
+}
+
+.content ul {
+  list-style: disc;
+}
+
+.content ol {
+  list-style: decimal;
+}
+
+.content :global(.story-media) {
+  overflow: hidden;
+  border-radius: 1.35rem;
+  background: rgba(36, 38, 23, 0.05);
+  box-shadow: 0 18px 45px rgba(20, 20, 10, 0.09);
+}
+
+.content :global(.story-media img) {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.content :global(.story-media-caption) {
+  border-top: 1px solid rgba(36, 38, 23, 0.08);
+  padding: 0.8rem 1rem;
+  color: rgba(36, 38, 23, 0.52);
+  font-size: 0.75rem;
+  font-style: italic;
+  line-height: 1.55;
+}
+
+.content :global(.story-media-left) {
+  float: left;
+  margin: 0.45rem 2rem 1.25rem 0;
+}
+
+.content :global(.story-media-right) {
+  float: right;
+  margin: 0.45rem 0 1.25rem 2rem;
+}
+
+.content :global(.story-media-full) {
+  clear: both;
+  margin: 2.4rem auto;
+}
+
+.content :global(.story-media-left.story-media-small),
+.content :global(.story-media-right.story-media-small) {
+  width: 28%;
+}
+
+.content :global(.story-media-left.story-media-medium),
+.content :global(.story-media-right.story-media-medium) {
+  width: 42%;
+}
+
+.content :global(.story-media-left.story-media-large),
+.content :global(.story-media-right.story-media-large) {
+  width: 55%;
+}
+
+.content :global(.story-media-full.story-media-small) {
+  width: min(100%, 34rem);
+}
+
+.content :global(.story-media-full.story-media-medium) {
+  width: min(100%, 48rem);
+}
+
+.content :global(.story-media-full.story-media-large) {
+  width: min(100%, 64rem);
+}
+
+.content font[face="Anyway"] {
+  font-family: Anyway, var(--font-serif, Georgia, serif);
+}
+
+.editor {
+  min-height: 360px;
+  max-height: 720px;
+  overflow-y: auto;
+  border: 1px solid rgba(36, 38, 23, 0.1);
+  border-radius: 1rem;
+  background: rgba(244, 239, 228, 0.8);
+  padding: 1.25rem;
+  outline: none;
+}
+
+.editor:focus {
+  border-color: rgba(184, 138, 59, 0.7);
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.editor:empty::before {
+  content: "Write the full story here...";
+  color: rgba(36, 38, 23, 0.32);
+  pointer-events: none;
+}
+
+.editor :global(figure[data-story-image="true"]) {
+  cursor: pointer;
+}
+
+.editor :global(figure[data-story-image="true"]:hover) {
+  outline: 2px solid rgba(184, 138, 59, 0.72);
+  outline-offset: 4px;
+}
+
+@media (max-width: 767px) {
+  .content :global(.story-media-left),
+  .content :global(.story-media-right),
+  .content :global(.story-media-full) {
+    float: none;
+    width: 100%;
+    margin: 2rem 0;
+  }
+}
+
+.editor :global(figure[data-story-image="true"]) {
+  position: relative;
+}
+
+.editor :global(figure[data-story-image="true"])::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background: rgba(7, 19, 33, 0.28);
+  opacity: 0;
+  transition: opacity 180ms ease;
+  pointer-events: none;
+}
+
+.editor :global(figure[data-story-image="true"])::after {
+  content: "•••";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  z-index: 3;
+  display: grid;
+  width: 3.3rem;
+  height: 3.3rem;
+  place-items: center;
+  border-radius: 999px;
+  background: #f4efe4;
+  color: #071321;
+  font-size: 1rem;
+  letter-spacing: 0.12em;
+  opacity: 0;
+  transform: translate(-50%, -45%) scale(0.9);
+  transition: opacity 180ms ease, transform 180ms ease;
+  pointer-events: none;
+}
+
+.editor :global(figure[data-story-image="true"]:hover)::before,
+.editor :global(figure[data-story-image="true"]:hover)::after {
+  opacity: 1;
+}
+
+.editor :global(figure[data-story-image="true"]:hover)::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+
+/* Story typography settings */
+.content {
+  color: var(--story-text-color, #242617);
+  font-family: var(--story-body-font, Arial, sans-serif);
+  font-size: var(--story-body-size, 15px);
+  line-height: var(--story-body-line-height, 2);
+  letter-spacing: var(--story-body-letter-spacing, 0em);
+}
+
+.content p {
+  margin-bottom: var(--story-paragraph-spacing, 26px);
+}
+
+.content h2,
+.content h3 {
+  color: var(--story-heading-color, #242617);
+  font-family: var(--story-heading-font, Georgia, serif);
+  line-height: var(--story-heading-line-height, 1.08);
+  letter-spacing: var(--story-heading-letter-spacing, 0em);
+}
+
+.content h2 {
+  margin-top: var(--story-section-spacing, 48px);
+  font-size: var(--story-h2-size, 48px);
+}
+
+.content h3 {
+  margin-top: var(--story-section-spacing, 48px);
+  font-size: var(--story-h3-size, 35px);
+}
+
+.content blockquote {
+  border-color: var(--story-accent-color, #b88a3b);
+  color: var(--story-text-color, #242617);
+  font-family: var(--story-quote-font, Georgia, serif);
+  font-size: var(--story-quote-size, 22px);
+  line-height: var(--story-quote-line-height, 1.55);
+}
+
+.content figcaption {
+  color: var(--story-text-color, #242617);
+  font-family: var(--story-caption-font, Arial, sans-serif);
+  font-size: var(--story-caption-size, 12px);
+  opacity: 0.55;
+}

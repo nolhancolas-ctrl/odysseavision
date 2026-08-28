@@ -1,5 +1,7 @@
 "use client";
 
+import { OptionalImage } from "@/components/site/OptionalImage";
+
 import Link from "next/link";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -147,8 +149,15 @@ export function StoriesArchive({
     );
   }, [category, sort, safeStories]);
 
-  const primaryStory = filteredStories[0];
-  const remainingStories = filteredStories.slice(1, 9);
+  const primaryStory =
+    filteredStories.find((story) => story.featured) ??
+    filteredStories[0];
+
+  const remainingStories = primaryStory
+    ? filteredStories
+        .filter((story) => story.slug !== primaryStory.slug)
+        .slice(0, 8)
+    : [];
 
   const categoryOptions = safeCategories.map((item) => ({
     value: item,
@@ -156,7 +165,7 @@ export function StoriesArchive({
   }));
 
   const ornament =
-    content?.images.ornament || "/images/about/hero_drawing_01.png";
+    content?.images.ornament ?? "/images/about/hero_drawing_01.png";
 
   return (
     <section className="bg-[#f4efe4] px-6 py-14 md:px-14 md:py-20">
@@ -214,10 +223,10 @@ export function StoriesArchive({
 
         {primaryStory ? (
           <>
-            <article className="grid items-center gap-10 border-b border-[#242617]/15 py-12 lg:grid-cols-[1.25fr_0.8fr]">
+            <article className="grid items-stretch gap-10 border-b border-[#242617]/15 py-12 lg:grid-cols-[1.25fr_0.8fr]">
               <Link
                 href={`/stories/${primaryStory.slug}`}
-                className="relative block min-h-[310px] overflow-hidden bg-[#cfc8bb] bg-cover bg-center transition-opacity hover:opacity-90 md:min-h-[390px]"
+                className="relative block h-full min-h-[310px] overflow-hidden bg-[#cfc8bb] bg-cover bg-center transition-opacity hover:opacity-90 md:min-h-[390px]"
                 style={{
                   backgroundImage: `url(${primaryStory.imageSrc})`,
                 }}
@@ -226,7 +235,7 @@ export function StoriesArchive({
                 <FrameWatermark />
               </Link>
 
-              <div className="relative max-w-lg">
+              <div className="relative flex h-full max-w-lg flex-col justify-center py-1 lg:py-4">
                 <p className="text-right text-[9px] font-semibold uppercase tracking-[0.2em] text-[#242617]/55">
                   {primaryStory.category}
                 </p>
@@ -249,13 +258,13 @@ export function StoriesArchive({
 
                 <Link
                   href={`/stories/${primaryStory.slug}`}
-                  className="mt-7 inline-block bg-[#414832] px-6 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white transition hover:bg-[#596044]"
+                  className="mt-7 inline-block self-start bg-[#414832] px-6 py-3 text-[9px] font-semibold uppercase tracking-[0.15em] text-white transition hover:bg-[#596044]"
                 >
                   Read the story
                 </Link>
 
                 {ornament ? (
-                  <img
+                  <OptionalImage
                     src={ornament}
                     alt=""
                     className="pointer-events-none absolute -bottom-53 right-0 hidden w-68 rotate-25 opacity-30 md:block"

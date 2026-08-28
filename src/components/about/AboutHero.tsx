@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { aboutImages } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -21,12 +22,12 @@ function shouldShowWatermark(
 }
 
 export function AboutHero({ content }: AboutHeroProps) {
-  const background = content?.images.background || content?.imageSrc || aboutImages.hero.src;
+  const background = content?.images.background ?? content?.imageSrc ?? aboutImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const hero01 = content?.images.hero01 || aboutImages.hero01.src;
-  const hero02 = content?.images.hero02 || aboutImages.hero02.src;
-  const drawing01 = content?.images.drawing01 || "/images/about/hero_drawing_01.png";
-  const drawing02 = content?.images.drawing02 || "/images/about/hero_drawing_02.png";
+  const hero01 = content?.images.hero01 ?? aboutImages.hero01.src;
+  const hero02 = content?.images.hero02 ?? aboutImages.hero02.src;
+  const drawing01 = content?.images.drawing01 ?? "/images/about/hero_drawing_01.png";
+  const drawing02 = content?.images.drawing02 ?? "/images/about/hero_drawing_02.png";
 
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-[#10170d] text-[#f4efe4]">
@@ -62,7 +63,7 @@ export function AboutHero({ content }: AboutHeroProps) {
           ) : null}
 
           {drawing01 ? (
-            <img
+            <OptionalImage
               src={drawing01}
               alt=""
               className="absolute left-[45%] top-[18%] w-25 rotate-[-8deg] opacity-60 xl:w-40"
@@ -70,7 +71,7 @@ export function AboutHero({ content }: AboutHeroProps) {
           ) : null}
 
           {drawing02 ? (
-            <img
+            <OptionalImage
               src={drawing02}
               alt=""
               className="absolute bottom-[-15%] left-[38%] w-12 rotate-[8deg] opacity-60 xl:w-20"

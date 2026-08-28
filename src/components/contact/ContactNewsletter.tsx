@@ -32,19 +32,19 @@ export function ContactNewsletter({ content }: ContactNewsletterProps) {
   const images = [
     {
       key: "image01",
-      src: content?.images.image01 || contactNewsletterImages.image01,
+      src: content?.images.image01 ?? contactNewsletterImages.image01,
     },
     {
       key: "image02",
-      src: content?.images.image02 || contactNewsletterImages.image02,
+      src: content?.images.image02 ?? contactNewsletterImages.image02,
     },
     {
       key: "image03",
-      src: content?.images.image03 || contactNewsletterImages.image03,
+      src: content?.images.image03 ?? contactNewsletterImages.image03,
     },
     {
       key: "image04",
-      src: content?.images.image04 || contactNewsletterImages.image04,
+      src: content?.images.image04 ?? contactNewsletterImages.image04,
     },
   ];
 

@@ -29,10 +29,10 @@ Travel brought us together and created the perfect duo: her eye for stills, his 
 Today, we roam the world together, capturing landscapes, underwater life, wildlife and the human stories that make each place unique.`;
 
 export function AboutStory({ content }: AboutStoryProps) {
-  const story01 = content?.images.story01 || aboutImages.story01.src;
-  const story02 = content?.images.story02 || aboutImages.story02.src;
-  const story03 = content?.images.story03 || aboutImages.story03.src;
-  const story04 = content?.images.story04 || aboutImages.story04.src;
+  const story01 = content?.images.story01 ?? aboutImages.story01.src;
+  const story02 = content?.images.story02 ?? aboutImages.story02.src;
+  const story03 = content?.images.story03 ?? aboutImages.story03.src;
+  const story04 = content?.images.story04 ?? aboutImages.story04.src;
   const paragraphs = (content?.body || defaultBody).split("\n").filter(Boolean);
 
   return (

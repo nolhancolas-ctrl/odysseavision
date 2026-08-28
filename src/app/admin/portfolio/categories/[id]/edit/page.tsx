@@ -119,6 +119,7 @@ export default async function EditPortfolioCategoryPage({
         />
 
         <PortfolioGalleryBulkUploader
+          existingImageUrls={category.items.map((item) => item.imageSrc)}
           categories={[
             {
               id: category.id,

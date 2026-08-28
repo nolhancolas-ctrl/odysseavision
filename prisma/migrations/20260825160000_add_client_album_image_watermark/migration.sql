@@ -1,0 +1,2 @@
+ALTER TABLE "ClientAlbumImage"
+ADD COLUMN "watermark" TEXT NOT NULL DEFAULT 'NONE';

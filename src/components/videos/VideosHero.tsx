@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { videosImages } from "@/data/videos";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -16,10 +17,10 @@ function renderLines(text: string) {
 
 export function VideosHero({ content }: VideosHeroProps) {
   const background =
-    content?.images.background || content?.imageSrc || videosImages.hero.src;
-  const heroTurtle = content?.images.heroTurtle || videosImages.heroTurtle.src;
+    content?.images.background ?? content?.imageSrc ?? videosImages.hero.src;
+  const heroTurtle = content?.images.heroTurtle ?? videosImages.heroTurtle.src;
   const heroRoadtrip =
-    content?.images.heroRoadtrip || videosImages.heroRoadtrip.src;
+    content?.images.heroRoadtrip ?? videosImages.heroRoadtrip.src;
 
   const handwritten =
     content?.drawings.handwritten || "collect moments,\nnot things.";
@@ -83,7 +84,7 @@ export function VideosHero({ content }: VideosHeroProps) {
         </div>
       </div>
 
-      <img
+      <OptionalImage
         src="/images/stories/torn-paper.svg"
         alt=""
         aria-hidden="true"

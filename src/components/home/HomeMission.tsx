@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import type { PublicSectionContent } from "@/lib/content/site";
 
 type HomeMissionProps = {
@@ -30,12 +31,12 @@ const defaultMissionItems = [
 
 export function HomeMission({ content }: HomeMissionProps) {
   const turtle =
-    content?.images.turtle || "/images/home/mission_turtle_transparent_01.png";
+    content?.images.turtle ?? "/images/home/mission_turtle_transparent_01.png";
 
   return (
     <section className="relative overflow-hidden bg-[#11190f] px-6 py-16 text-[#f4efe4] md:px-14 md:py-20">
       {turtle ? (
-        <img
+        <OptionalImage
           src={turtle}
           alt=""
           className="pointer-events-none absolute right-[-51px] top-[-21px] hidden w-104 opacity-34 md:block"
@@ -54,13 +55,13 @@ export function HomeMission({ content }: HomeMissionProps) {
 
         <div className="mt-12 grid gap-10 md:grid-cols-3">
           {defaultMissionItems.map((item) => {
-            const icon = content?.images[item.iconKey] || item.fallbackIcon;
+            const icon = content?.images[item.iconKey] ?? item.fallbackIcon;
 
             return (
               <div key={item.title}>
                 <div className="mb-5 flex h-11 items-center justify-center">
                   {icon ? (
-                    <img
+                    <OptionalImage
                       src={icon}
                       alt=""
                       className="h-60 w-40 object-contain opacity-82"

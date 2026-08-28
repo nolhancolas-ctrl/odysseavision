@@ -22,10 +22,10 @@ function shouldShowWatermark(
 
 export function ContactHero({ content }: ContactHeroProps) {
   const background =
-    content?.images.background || content?.imageSrc || contactImages.hero.src;
+    content?.images.background ?? content?.imageSrc ?? contactImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const hero01 = content?.images.hero01 || contactImages.hero01.src;
-  const hero02 = content?.images.hero02 || contactImages.hero02.src;
+  const hero01 = content?.images.hero01 ?? contactImages.hero01.src;
+  const hero02 = content?.images.hero02 ?? contactImages.hero02.src;
   const handwritten =
     content?.drawings.handwritten || contactHero.handwritten;
 

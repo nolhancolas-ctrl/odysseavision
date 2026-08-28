@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { clientAlbumHero, clientAlbumImages } from "@/data/clients";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -22,14 +23,14 @@ function shouldShowWatermark(
 
 export function ClientAlbumsHero({ content }: ClientAlbumsHeroProps) {
   const background =
-    content?.images.background ||
-    content?.imageSrc ||
+    content?.images.background ??
+    content?.imageSrc ??
     clientAlbumImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const hero01 = content?.images.hero01 || clientAlbumImages.hero01.src;
-  const hero02 = content?.images.hero02 || clientAlbumImages.hero02.src;
+  const hero01 = content?.images.hero01 ?? clientAlbumImages.hero01.src;
+  const hero02 = content?.images.hero02 ?? clientAlbumImages.hero02.src;
   const stamp =
-    content?.images.stamp || "/images/client-albums/hero_stamp_01.png";
+    content?.images.stamp ?? "/images/client-albums/hero_stamp_01.png";
   const handwritten =
     content?.drawings.handwritten || clientAlbumHero.handwritten;
 
@@ -69,7 +70,7 @@ export function ClientAlbumsHero({ content }: ClientAlbumsHeroProps) {
           ) : null}
 
           {stamp ? (
-            <img
+            <OptionalImage
               src={stamp}
               alt=""
               aria-hidden="true"
