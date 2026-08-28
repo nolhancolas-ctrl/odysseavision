@@ -1,16 +1,27 @@
+"use client";
+
 import Link from "next/link";
-import type { PublicClientAlbum } from "@/lib/content/albums";
+import { useState } from "react";
+import type { PublicClientAlbumSummary } from "@/lib/content/albums";
 import type { PublicSectionContent } from "@/lib/content/site";
+import { ClientAlbumCard } from "./ClientAlbumCard";
 
 type ClientAlbumsRecentProps = {
   content?: PublicSectionContent;
-  albums: PublicClientAlbum[];
+  albums: PublicClientAlbumSummary[];
 };
+
+const INITIAL_ALBUM_COUNT = 4;
+const ALBUM_INCREMENT = 4;
 
 export function ClientAlbumsRecent({
   content,
   albums,
 }: ClientAlbumsRecentProps) {
+  const [visibleCount, setVisibleCount] = useState(INITIAL_ALBUM_COUNT);
+  const visibleAlbums = albums.slice(0, visibleCount);
+  const hasMore = visibleCount < albums.length;
+
   return (
     <section
       id="recent-client-albums"
@@ -25,34 +36,41 @@ export function ClientAlbumsRecent({
           <div className="mx-auto mt-5 h-px w-12 bg-[#242617]/25" />
         </div>
 
-        {albums.length > 0 ? (
-          <div className="mt-12 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-            {albums.slice(0, 4).map((album) => (
-              <article key={album.slug} className="text-center">
-                <Link href={album.href} className="group block">
-                  <div
-                    className="aspect-[1.35] bg-[#d8d1c4] bg-cover bg-center transition duration-700 group-hover:scale-[1.02]"
-                    style={{
-                      backgroundImage: `url(${album.coverSrc})`,
-                    }}
-                  />
+        {visibleAlbums.length > 0 ? (
+          <>
+            <div className="mt-12 grid gap-x-6 gap-y-14 sm:grid-cols-2 lg:grid-cols-4">
+              {visibleAlbums.map((album) => (
+                <ClientAlbumCard key={album.slug} album={album} />
+              ))}
+            </div>
 
-                  <h2 className="mt-6 text-sm font-semibold uppercase tracking-[0.08em] text-[#242617]/80">
-                    {album.title}
-                  </h2>
+            <div className="mt-14 flex flex-wrap items-center justify-center gap-4">
+              {hasMore ? (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setVisibleCount((current) =>
+                      Math.min(current + ALBUM_INCREMENT, albums.length),
+                    )
+                  }
+                  className="border border-[#242617]/30 px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#242617]/65 transition hover:bg-[#242617] hover:text-[#f4efe4]"
+                >
+                  Show more
+                </button>
+              ) : null}
 
-                  <p className="mt-3 text-[10px] text-[#242617]/50">
-                    {album.date || "Private gallery"} &nbsp; · &nbsp;{" "}
-                    {album.photoCount} photos
-                  </p>
+              <Link
+                href="/client-albums/archive"
+                className="bg-[#242617] px-8 py-4 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#f4efe4] transition hover:bg-[#b88a3b]"
+              >
+                View all
+              </Link>
+            </div>
 
-                  <span className="mt-6 inline-block border border-[#242617]/30 px-7 py-3 text-[9px] font-semibold uppercase tracking-[0.16em] text-[#242617]/70 transition group-hover:bg-[#11190f] group-hover:text-[#f4efe4]">
-                    View album
-                  </span>
-                </Link>
-              </article>
-            ))}
-          </div>
+            <p className="mt-5 text-center text-[10px] uppercase tracking-[0.14em] text-[#242617]/35">
+              Showing {visibleAlbums.length} of {albums.length} albums
+            </p>
+          </>
         ) : (
           <p className="mt-12 text-center text-sm text-[#242617]/50">
             No client albums published yet.

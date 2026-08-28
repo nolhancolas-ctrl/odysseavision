@@ -1,5 +1,7 @@
 "use client";
 
+import { OptionalImage } from "@/components/site/OptionalImage";
+
 import { useActionState } from "react";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { homeImages } from "@/data/home";
@@ -37,13 +39,13 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
   );
 
   const background =
-    content?.images.background ||
-    content?.imageSrc ||
+    content?.images.background ??
+    content?.imageSrc ??
     portfolioImages.newsletterFond.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const leftPhoto = content?.images.leftPhoto || homeImages.ctaSailboat.src;
-  const rightPhoto = content?.images.rightPhoto || homeImages.ctaOceanCliff.src;
-  const stamp = content?.images.stamp || "/images/home/cta_stamp_01.png";
+  const leftPhoto = content?.images.leftPhoto ?? homeImages.ctaSailboat.src;
+  const rightPhoto = content?.images.rightPhoto ?? homeImages.ctaOceanCliff.src;
+  const stamp = content?.images.stamp ?? "/images/home/cta_stamp_01.png";
 
   return (
     <section className="relative min-h-[340px] overflow-hidden bg-[#172016] px-6 py-16 text-[#f4efe4] md:px-14">
@@ -71,7 +73,7 @@ export function PortfolioNewsletter({ content }: PortfolioNewsletterProps) {
           ) : null}
 
           {stamp ? (
-            <img
+            <OptionalImage
               src={stamp}
               alt=""
               aria-hidden="true"

@@ -77,8 +77,6 @@ function getVideoData(formData: FormData) {
     duration: String(formData.get("duration") ?? "").trim() || null,
     date: parseDate(formData.get("date")),
     status: parseStatus(formData.get("status")),
-    featured: formData.get("featured") === "on",
-    order: Number(formData.get("order") ?? 0) || 0,
     thumbnailSrc:
       String(formData.get("thumbnailSrc") ?? "").trim() ||
       "/images/videos/film_thailand_01.png",
@@ -95,10 +93,17 @@ export async function createVideo(formData: FormData) {
   const category = await resolveCategory(formData);
   const data = getVideoData(formData);
 
+  const lastVideo = await db.video.aggregate({
+    _max: { order: true },
+  });
+  const nextOrder = (lastVideo._max.order ?? -1) + 1;
+
   await db.video.create({
     data: {
       ...data,
       categoryId: category?.id ?? null,
+      order: nextOrder,
+      featured: false,
     },
   });
 
@@ -134,6 +139,68 @@ export async function updateVideo(id: string, formData: FormData) {
 
   revalidateVideos();
   redirect("/admin/videos");
+}
+
+export async function reorderVideos(videoIds: string[]) {
+  const uniqueIds = Array.from(
+    new Set(
+      videoIds.filter(
+        (videoId): videoId is string =>
+          typeof videoId === "string" && videoId.length > 0,
+      ),
+    ),
+  );
+
+  if (uniqueIds.length === 0) return;
+
+  const existing = await db.video.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true },
+  });
+
+  if (existing.length !== uniqueIds.length) {
+    throw new Error("One or more videos no longer exist.");
+  }
+
+  await db.$transaction(
+    uniqueIds.map((videoId, order) =>
+      db.video.update({
+        where: { id: videoId },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidateVideos();
+  revalidatePath("/admin/videos/settings");
+}
+
+export async function setFeaturedVideo(videoId: string | null) {
+  await db.$transaction(async (transaction) => {
+    await transaction.video.updateMany({
+      where: { featured: true },
+      data: { featured: false },
+    });
+
+    if (videoId) {
+      const video = await transaction.video.findUnique({
+        where: { id: videoId },
+        select: { id: true },
+      });
+
+      if (!video) {
+        throw new Error("The selected video no longer exists.");
+      }
+
+      await transaction.video.update({
+        where: { id: videoId },
+        data: { featured: true },
+      });
+    }
+  });
+
+  revalidateVideos();
+  revalidatePath("/admin/videos/settings");
 }
 
 export async function deleteVideo(id: string) {

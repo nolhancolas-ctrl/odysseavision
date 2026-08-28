@@ -1,5 +1,7 @@
 "use client";
 
+import { OptionalImage } from "@/components/site/OptionalImage";
+
 import Link from "next/link";
 import { useState } from "react";
 import { clientAlbumAccessFeatures, clientAlbumImages } from "@/data/clients";
@@ -25,8 +27,8 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
   const [status, setStatus] = useState<"idle" | "loading" | "error">("idle");
 
   const background =
-    content?.images.background ||
-    content?.imageSrc ||
+    content?.images.background ??
+    content?.imageSrc ??
     clientAlbumImages.accessFond.src;
   const handwritten = (content?.drawings.handwritten || "access your\ngallery").replace(/your\s*gallery/i, "your\ngallery");
 
@@ -112,7 +114,7 @@ export function ClientAlbumsAccess({ content }: ClientAlbumsAccessProps) {
                 className="grid grid-cols-[64px_1fr] gap-5"
               >
                 <div className="flex h-28 w-28 -translate-x-10 -translate-y-5 items-center justify-center">
-                  <img
+                  <OptionalImage
                     src={feature.icon}
                     alt=""
                     aria-hidden="true"

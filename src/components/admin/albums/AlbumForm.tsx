@@ -24,6 +24,7 @@ type AlbumFormProps = {
   clients: Client[];
   action: (formData: FormData) => Promise<void>;
   submitLabel: string;
+  hidePreviewManager?: boolean;
 };
 
 type SelectOption = {
@@ -37,6 +38,7 @@ type PreviewImage = {
   title: string;
   alt: string;
   order: number;
+  watermark: string;
 };
 
 type UploadResult = {
@@ -140,6 +142,7 @@ export function AlbumForm({
   clients,
   action,
   submitLabel,
+  hidePreviewManager = false,
 }: AlbumFormProps) {
   const [coverSrc, setCoverSrc] = useState(album?.coverSrc ?? "");
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -155,6 +158,7 @@ export function AlbumForm({
       title: image.title ?? "",
       alt: image.alt ?? image.title ?? "",
       order: image.order ?? index,
+      watermark: image.watermark ?? "NONE",
     })),
   );
   const [previewError, setPreviewError] = useState("");
@@ -187,6 +191,7 @@ export function AlbumForm({
           title: image.title,
           alt: image.alt || image.title,
           order: index,
+          watermark: image.watermark,
         })),
       ),
     [previewImages],
@@ -238,6 +243,7 @@ export function AlbumForm({
           title: "",
           alt: "",
           order: previewImages.length + uploaded.length,
+          watermark: "NONE",
         });
       }
 
@@ -447,7 +453,7 @@ export function AlbumForm({
 
         <div>
           <div className="mb-3 flex items-end justify-between gap-4">
-            <div>
+            <div className={hidePreviewManager ? "hidden" : ""}>
               <label className="block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/45">
                 Preview images
               </label>

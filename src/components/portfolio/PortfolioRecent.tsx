@@ -17,19 +17,19 @@ export function PortfolioRecent({ content }: PortfolioRecentProps) {
   const images = [
     {
       key: "recent01",
-      src: content?.images.recent01 || recentImages[0].src,
+      src: content?.images.recent01 ?? recentImages[0].src,
     },
     {
       key: "recent02",
-      src: content?.images.recent02 || recentImages[1].src,
+      src: content?.images.recent02 ?? recentImages[1].src,
     },
     {
       key: "recent03",
-      src: content?.images.recent03 || recentImages[2].src,
+      src: content?.images.recent03 ?? recentImages[2].src,
     },
     {
       key: "recent04",
-      src: content?.images.recent04 || recentImages[3].src,
+      src: content?.images.recent04 ?? recentImages[3].src,
     },
   ];
 

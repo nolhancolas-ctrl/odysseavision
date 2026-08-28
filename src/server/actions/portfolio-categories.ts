@@ -47,7 +47,7 @@ async function getUniqueCategorySlug(baseSlug: string, currentId?: string) {
 export async function createPortfolioCategory(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const slugInput = String(formData.get("slug") || "").trim();
-  const order = Number(formData.get("order") || 0);
+  const orderEntry = formData.get("order");
   const returnTo = safeAdminReturn(formData.get("returnTo"));
 
   if (!name) {
@@ -55,6 +55,20 @@ export async function createPortfolioCategory(formData: FormData) {
   }
 
   const slug = await getUniqueCategorySlug(slugInput || name);
+
+const parsedOrder = Number(orderEntry);
+const lastCategory =
+  orderEntry === null
+    ? await db.portfolioCategory.aggregate({
+        _max: { order: true },
+      })
+    : null;
+const order =
+  orderEntry === null
+    ? (lastCategory?._max.order ?? -1) + 1
+    : Number.isFinite(parsedOrder)
+      ? parsedOrder
+      : 0;
 
   await db.portfolioCategory.create({
     data: {
@@ -76,7 +90,8 @@ export async function updatePortfolioCategory(
 ) {
   const name = String(formData.get("name") || "").trim();
   const slugInput = String(formData.get("slug") || "").trim();
-  const order = Number(formData.get("order") || 0);
+  const orderEntry = formData.get("order");
+const parsedOrder = Number(orderEntry);
   const returnTo = safeAdminReturn(formData.get("returnTo"));
 
   if (!name) {
@@ -90,7 +105,9 @@ export async function updatePortfolioCategory(
     data: {
       name,
       slug,
-      order: Number.isFinite(order) ? order : 0,
+      ...(orderEntry !== null && Number.isFinite(parsedOrder)
+  ? { order: parsedOrder }
+  : {}),
     },
   });
 
@@ -100,6 +117,43 @@ export async function updatePortfolioCategory(
   revalidatePath(`/portfolio/${slug}`);
 
   redirect(returnTo);
+}
+
+export async function reorderPortfolioCategories(
+  categoryIds: string[],
+) {
+  const uniqueIds = Array.from(
+    new Set(
+      categoryIds.filter(
+        (categoryId): categoryId is string =>
+          typeof categoryId === "string" && categoryId.length > 0,
+      ),
+    ),
+  );
+
+  if (uniqueIds.length === 0) return;
+
+  const existing = await db.portfolioCategory.findMany({
+    where: { id: { in: uniqueIds } },
+    select: { id: true },
+  });
+
+  if (existing.length !== uniqueIds.length) {
+    throw new Error("One or more Portfolio categories no longer exist.");
+  }
+
+  await db.$transaction(
+    uniqueIds.map((categoryId, order) =>
+      db.portfolioCategory.update({
+        where: { id: categoryId },
+        data: { order },
+      }),
+    ),
+  );
+
+  revalidatePath("/portfolio");
+  revalidatePath("/admin/portfolio");
+  revalidatePath("/admin/portfolio/settings");
 }
 
 export async function deletePortfolioCategory(

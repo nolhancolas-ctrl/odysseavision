@@ -21,6 +21,12 @@ type ClientAlbumPageProps = {
   }>;
 };
 
+function getWatermarkOwner(value: string) {
+  if (value === "ANDREW") return "andrew";
+  if (value === "MORGANE") return "morgane";
+  return "default";
+}
+
 async function hasAlbumAccess(slug: string) {
   const album = await db.clientAlbum.findFirst({
     where: {
@@ -160,20 +166,21 @@ export default async function ClientAlbumPage({ params }: ClientAlbumPageProps) 
       <section className="px-6 py-16 md:px-14 md:py-20">
         <div className="mx-auto max-w-[1450px]">
           {album.images.length > 0 ? (
-            <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="columns-1 gap-5 sm:columns-2 xl:columns-3">
               {album.images.map((image) => (
-                <article key={image.id}>
+                <figure
+                  key={image.id}
+                  className="mb-5 break-inside-avoid overflow-hidden bg-[#d8cdb8]"
+                >
                   <WatermarkedPhotoFrame
                     src={image.imageSrc}
                     alt={image.alt}
-                    className="aspect-[1.35]"
+                    preserveAspectRatio
+                    imageClassName="transition duration-500 group-hover:opacity-95"
+                    showWatermark={image.watermark !== "NONE"}
+                    watermarkOwner={getWatermarkOwner(image.watermark)}
                   />
-                  {image.title ? (
-                    <p className="mt-3 text-xs uppercase tracking-[0.12em] text-[#242617]/45">
-                      {image.title}
-                    </p>
-                  ) : null}
-                </article>
+                </figure>
               ))}
             </div>
           ) : (

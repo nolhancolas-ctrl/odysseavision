@@ -10,6 +10,16 @@ const codespaceAllowedOrigins = codespaceName
   : [];
 
 const nextConfig: NextConfig = {
+  serverExternalPackages: ["sharp"],
+  outputFileTracingIncludes: {
+    "/api/admin/uploads/image": [
+      "./node_modules/sharp/**/*",
+      "./node_modules/@img/sharp-linux-x64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-x64/**/*",
+      "./node_modules/@img/sharp-linux-arm64/**/*",
+      "./node_modules/@img/sharp-libvips-linux-arm64/**/*",
+    ],
+  },
   experimental: {
     serverActions: {
       allowedOrigins: [

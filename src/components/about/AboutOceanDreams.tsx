@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { aboutImages } from "@/data/about";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -34,9 +35,9 @@ function fileLabel(src: string, fallback: string) {
 }
 
 export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
-  const ocean01 = content?.images.ocean01 || aboutImages.ocean01.src;
-  const ocean02 = content?.images.ocean02 || aboutImages.ocean02.src;
-  const drawingValue = content?.images.drawing || "";
+  const ocean01 = content?.images.ocean01 ?? aboutImages.ocean01.src;
+  const ocean02 = content?.images.ocean02 ?? aboutImages.ocean02.src;
+  const drawingValue = content?.images.drawing ?? "";
   const drawing =
     drawingValue === "/images/about/ocean_drawing_01.png"
       ? ""
@@ -49,7 +50,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
       <div className="relative mx-auto grid max-w-[1350px] items-center gap-12 lg:grid-cols-[0.9fr_1fr] lg:gap-16">
         <div className="relative mx-auto h-[410px] w-full max-w-[560px] md:h-[460px] lg:mx-0 translate-x-6 md:translate-x-8">
           {drawing ? (
-            <img
+            <OptionalImage
               src={drawing}
               alt=""
               className="pointer-events-none absolute -left-8 bottom-2 z-0 hidden w-28 opacity-20 md:block"
@@ -101,13 +102,13 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
 
           <div className="grid gap-x-10 gap-y-7 md:grid-cols-2">
             {oceanDreamItems.map((item) => {
-              const icon = content?.images[item.iconKey] || item.fallbackIcon;
+              const icon = content?.images[item.iconKey] ?? item.fallbackIcon;
 
               return (
                 <div key={item.text} className="grid grid-cols-[54px_1fr] gap-4">
                   <div className="mt-0 flex h-12 w-12 items-center justify-center overflow-visible">
                     {icon ? (
-                      <img
+                      <OptionalImage
                         src={icon}
                         alt=""
                         aria-hidden="true"

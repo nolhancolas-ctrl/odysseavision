@@ -1,5 +1,7 @@
 "use client";
 
+import { OptionalImage } from "@/components/site/OptionalImage";
+
 import { useMemo, useState } from "react";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import type { PublicSectionContent } from "@/lib/content/site";
@@ -117,7 +119,7 @@ export function VideoCollection({
         onClose={() => setActiveVideo(null)}
       />
 
-      <img
+      <OptionalImage
         src="/images/stories/torn-paper.svg"
         alt=""
         aria-hidden="true"

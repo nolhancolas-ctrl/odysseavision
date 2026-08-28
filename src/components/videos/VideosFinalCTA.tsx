@@ -1,3 +1,4 @@
+import { OptionalImage } from "@/components/site/OptionalImage";
 import Link from "next/link";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { videosImages } from "@/data/videos";
@@ -23,11 +24,11 @@ function shouldShowWatermark(
 
 export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
   const background =
-    content?.images.background || content?.imageSrc || videosImages.ctaFond.src;
+    content?.images.background ?? content?.imageSrc ?? videosImages.ctaFond.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const stamp = content?.images.stamp || "/images/videos/cta_stamp_01.png";
-  const duo = content?.images.duo || videosImages.ctaDuo.src;
-  const leaf = content?.images.leaf || "/images/videos/cta_leaf_01.png";
+  const stamp = content?.images.stamp ?? "/images/videos/cta_stamp_01.png";
+  const duo = content?.images.duo ?? videosImages.ctaDuo.src;
+  const leaf = content?.images.leaf ?? "/images/videos/cta_leaf_01.png";
 
   return (
     <section className="relative min-h-[310px] overflow-hidden bg-[#11190f] px-6 py-16 text-[#f4efe4] md:px-14">
@@ -42,7 +43,7 @@ export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
 
       <div className="relative mx-auto flex min-h-[180px] max-w-[1400px] items-center justify-center">
         {stamp ? (
-          <img
+          <OptionalImage
             src={stamp}
             alt=""
             className="pointer-events-none absolute -bottom-25 left-0 hidden w-[29%] -rotate-20 opacity-60 lg:block"
@@ -78,7 +79,7 @@ export function VideosFinalCTA({ content }: VideosFinalCTAProps) {
           ) : null}
 
           {leaf ? (
-            <img
+            <OptionalImage
               src={leaf}
               alt=""
               className="absolute bottom-2 right-[175px] w-20 opacity-55"

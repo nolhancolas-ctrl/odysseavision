@@ -1,7 +1,7 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import {
   closestCenter,
@@ -166,7 +166,12 @@ export function PortfolioPhotoSorter({
   returnTo,
   initialItems,
 }: PortfolioPhotoSorterProps) {
+  const [mounted, setMounted] = useState(false);
   const [items, setItems] = useState(initialItems);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [saveState, setSaveState] = useState<
     "idle" | "saving" | "saved" | "error"
   >("idle");
@@ -223,6 +228,14 @@ export function PortfolioPhotoSorter({
       setItems(previous);
       setSaveState("error");
     }
+  }
+
+  if (!mounted) {
+    return (
+      <div className="p-8 text-sm text-[#242617]/45">
+        Loading photo manager...
+      </div>
+    );
   }
 
   return (

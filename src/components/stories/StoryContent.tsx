@@ -1,4 +1,27 @@
 import type { ReactNode } from "react";
+import sanitizeHtml from "sanitize-html";
+import styles from "@/components/stories/StoryContent.module.css";
+import {
+  defaultStoryTypographySettings,
+  getStoryTypographyVariables,
+  type StoryTypographySettings,
+} from "@/lib/content/storyTypography";
+
+const STORY_HTML_MARKER = "STORY_HTML_V1";
+
+function extractStoryHtml(content: string) {
+  const normalized = content.replace(/^\uFEFF/, "").trimStart();
+
+  if (!normalized.startsWith(STORY_HTML_MARKER)) {
+    return null;
+  }
+
+  return normalized
+    .slice(STORY_HTML_MARKER.length)
+    .replace(/^\\r\\n/, "")
+    .replace(/^\\n/, "")
+    .trimStart();
+}
 
 type StoryBlock =
   | {
@@ -105,11 +128,71 @@ function parseStoryContent(content: string): StoryBlock[] {
   return blocks;
 }
 
-export function StoryContent({ content }: { content: string }) {
+function sanitizeStoryHtml(content: string) {
+  return sanitizeHtml(content, {
+    allowedTags: [
+      ...sanitizeHtml.defaults.allowedTags,
+      "img",
+      "figure",
+      "figcaption",
+      "u",
+      "font",
+    ],
+    allowedAttributes: {
+      "*": ["class", "style"],
+      a: ["href", "target", "rel"],
+      img: [
+        "src",
+        "alt",
+        "title",
+        "loading",
+        "decoding",
+        "width",
+        "height",
+      ],
+      figure: [
+        "class",
+        "data-story-image",
+        "contenteditable",
+        "tabindex",
+      ],
+      figcaption: ["class"],
+      font: ["face", "size", "color"],
+    },
+    allowedStyles: {
+      "*": {
+        "text-align": [/^(?:left|center|right|justify)$/],
+      },
+    },
+    allowedSchemes: ["http", "https", "mailto"],
+    allowProtocolRelative: false,
+  });
+}
+
+export function StoryContent({
+  content,
+  typography = defaultStoryTypographySettings,
+}: {
+  content: string;
+  typography?: StoryTypographySettings;
+}) {
+  const typographyStyle = getStoryTypographyVariables(typography);
+  const richHtml = extractStoryHtml(content);
+
+  if (richHtml !== null) {
+    const html = sanitizeStoryHtml(richHtml);
+
+    return (
+      <div
+        className={styles.content} style={typographyStyle}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+    );
+  }
   const blocks = parseStoryContent(content);
 
   return (
-    <div className="space-y-7 text-sm leading-8 text-[#242617]/68">
+    <div className={styles.content} style={typographyStyle}>
       {blocks.map((block, index) => {
         if (block.type === "heading") {
           const className =

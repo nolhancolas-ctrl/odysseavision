@@ -29,13 +29,13 @@ function renderHandwritten(text: string) {
 
 export function PortfolioHero({ content }: PortfolioHeroProps) {
   const background =
-    content?.images.background || content?.imageSrc || portfolioImages.hero.src;
+    content?.images.background ?? content?.imageSrc ?? portfolioImages.hero.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
   const heroElephants =
-    content?.images.heroElephants || portfolioImages.heroElephants.src;
-  const heroOcean = content?.images.heroOcean || portfolioImages.heroOcean.src;
+    content?.images.heroElephants ?? portfolioImages.heroElephants.src;
+  const heroOcean = content?.images.heroOcean ?? portfolioImages.heroOcean.src;
   const heroLandscape =
-    content?.images.heroLandscape || portfolioImages.heroLandscape.src;
+    content?.images.heroLandscape ?? portfolioImages.heroLandscape.src;
 
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-[#10170d] text-[#f4efe4]">

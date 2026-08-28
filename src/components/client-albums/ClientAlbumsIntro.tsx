@@ -6,7 +6,7 @@ type ClientAlbumsIntroProps = {
 };
 
 export function ClientAlbumsIntro({ content }: ClientAlbumsIntroProps) {
-  const photo = content?.images.photo || clientAlbumImages.introTurtle.src;
+  const photo = content?.images.photo ?? clientAlbumImages.introTurtle.src;
 
   return (
     <section className="relative overflow-hidden bg-[#11190f] px-6 py-16 text-[#f4efe4] md:px-14 md:py-20">

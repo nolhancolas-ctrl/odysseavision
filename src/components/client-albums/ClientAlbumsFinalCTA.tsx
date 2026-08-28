@@ -27,11 +27,11 @@ function renderLines(text: string) {
 
 export function ClientAlbumsFinalCTA({ content }: ClientAlbumsFinalCTAProps) {
   const background =
-    content?.images.background ||
-    content?.imageSrc ||
+    content?.images.background ??
+    content?.imageSrc ??
     clientAlbumImages.ctaFond.src;
   const showBackgroundWatermark = Boolean(background) && shouldShowImageWatermark(content, "background", false);
-  const whale = content?.images.whale || clientAlbumImages.ctaWhale.src;
+  const whale = content?.images.whale ?? clientAlbumImages.ctaWhale.src;
   const handwritten = content?.drawings.handwritten || "we’re here\nfor you!";
 
   return (

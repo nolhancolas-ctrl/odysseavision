@@ -41,8 +41,8 @@ function Paragraphs({ text }: { text: string }) {
 }
 
 export function AboutCrew({ content }: AboutCrewProps) {
-  const andrewImage = content?.images.andrew || aboutImages.crewAndrew.src;
-  const morganeImage = content?.images.morgane || aboutImages.crewMorgane.src;
+  const andrewImage = content?.images.andrew ?? aboutImages.crewAndrew.src;
+  const morganeImage = content?.images.morgane ?? aboutImages.crewMorgane.src;
   const andrewDescription =
     content?.andrewDescription || defaultAndrewDescription;
   const morganeDescription =

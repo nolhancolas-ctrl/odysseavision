@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   useCallback,
   useEffect,
@@ -25,9 +26,6 @@ type StorageUsage = {
 
   checkedAt: string;
 };
-
-const AUTO_CLEAN_INTERVAL =
-  12 * 60 * 60 * 1000;
 
 const AUTO_CLEAN_KEY =
   "ov-storage-cleanup-last-run";
@@ -206,33 +204,11 @@ export function StorageUsageCard() {
     }, [cleaning, refresh]);
 
   useEffect(() => {
+    // One inventory when the dashboard opens.
+    // Further Blob inventories require an explicit click on Refresh.
     void refresh();
-
-    const interval =
-      window.setInterval(
-        refresh,
-        60_000,
-      );
-
-    return () => {
-      window.clearInterval(interval);
-    };
   }, [refresh]);
 
-  useEffect(() => {
-    const lastRun = Number(
-      window.localStorage.getItem(
-        AUTO_CLEAN_KEY,
-      ) || 0,
-    );
-
-    if (
-      Date.now() - lastRun >=
-      AUTO_CLEAN_INTERVAL
-    ) {
-      void cleanUnused();
-    }
-  }, [cleanUnused]);
 
   if (!usage && loading) {
     return (
@@ -421,6 +397,13 @@ export function StorageUsageCard() {
                 : "Clean unused"}
             </button>
           ) : null}
+
+          <Link
+            href="/admin/storage-audit"
+            className="rounded-full border border-[#11170f]/12 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#11170f]/55 transition hover:bg-[#071321] hover:text-[#f4efe4]"
+          >
+            Audit recent uploads
+          </Link>
         </div>
       </div>
     </section>

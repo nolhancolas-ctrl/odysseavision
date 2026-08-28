@@ -123,7 +123,6 @@ export function PortfolioCategoryForm({
   returnTo = "/admin/portfolio",
   uploadFormId = "portfolio-gallery-upload-form",
 }: PortfolioCategoryFormProps) {
-  const [order, setOrder] = useState(category?.order ?? 0);
   const [uploadStatus, setUploadStatus] = useState("PUBLISHED");
 
   return (
@@ -160,37 +159,7 @@ export function PortfolioCategoryForm({
           />
         </label>
 
-        <div>
-          <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
-            Display order
-          </span>
 
-          <div className="flex h-[58px] overflow-hidden rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80">
-            <button
-              type="button"
-              onClick={() => setOrder((current) => current - 1)}
-              className="w-14 cursor-pointer border-r border-[#242617]/10 text-xl text-[#242617]/55 transition hover:bg-[#e8dfcf] hover:text-[#242617]"
-            >
-              −
-            </button>
-
-            <input
-              name="order"
-              type="number"
-              value={order}
-              onChange={(event) => setOrder(Number(event.target.value) || 0)}
-              className="min-w-0 flex-1 bg-transparent px-4 text-center text-sm text-[#242617] outline-none"
-            />
-
-            <button
-              type="button"
-              onClick={() => setOrder((current) => current + 1)}
-              className="w-14 cursor-pointer border-l border-[#242617]/10 text-xl text-[#242617]/55 transition hover:bg-[#e8dfcf] hover:text-[#242617]"
-            >
-              +
-            </button>
-          </div>
-        </div>
 
         <div>
           <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">

@@ -7,11 +7,11 @@ type VideosInspirationProps = {
 
 export function VideosInspiration({ content }: VideosInspirationProps) {
   const images = [
-    content?.images.image01 || videosImages.inspiration01.src,
-    content?.images.image02 || videosImages.inspiration02.src,
-    content?.images.image03 || videosImages.inspiration03.src,
-    content?.images.image04 || videosImages.inspiration04.src,
-    content?.images.image05 || videosImages.inspiration05.src,
+    content?.images.image01 ?? videosImages.inspiration01.src,
+    content?.images.image02 ?? videosImages.inspiration02.src,
+    content?.images.image03 ?? videosImages.inspiration03.src,
+    content?.images.image04 ?? videosImages.inspiration04.src,
+    content?.images.image05 ?? videosImages.inspiration05.src,
   ].filter(Boolean);
 
   return (

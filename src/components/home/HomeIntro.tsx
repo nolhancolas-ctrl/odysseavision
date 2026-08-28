@@ -20,7 +20,7 @@ function shouldShowWatermark(
 }
 
 export function HomeIntro({ content }: HomeIntroProps) {
-  const image = content?.images.photo || content?.imageSrc || homeImages.introDuo.src;
+  const image = content?.images.photo ?? content?.imageSrc ?? homeImages.introDuo.src;
 
   return (
     <section className="bg-[#f4efe4] px-6 py-20 md:px-14 md:py-24">

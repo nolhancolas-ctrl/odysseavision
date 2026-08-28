@@ -1,7 +1,6 @@
 "use client";
 
 import { DragEvent, useRef, useState, useTransition } from "react";
-import { uploadImage } from "@/server/actions/uploads";
 
 export type ImageUploadContext =
   | "website-page"
@@ -56,14 +55,30 @@ export function ImageUploadField({
     formData.append("label", label);
 
     startTransition(async () => {
-      const result = await uploadImage(formData);
+      const response = await fetch("/api/admin/uploads/image", {
+        method: "POST",
+        body: formData,
+      });
 
-      if (!result.ok) {
-        setError(result.error || "Upload failed.");
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.ok) {
+        setError(
+          result?.error ||
+            `Upload failed with status ${response.status}.`,
+        );
         return;
       }
 
-      onChange(result.path);
+      const uploadedPath =
+        result.path || result.src || result.url || "";
+
+      if (!uploadedPath) {
+        setError("Upload succeeded but returned no image URL.");
+        return;
+      }
+
+      onChange(uploadedPath);
     });
   };
 

@@ -11,6 +11,8 @@ type PortfolioCategoryOption = {
 
 type PhotoWatermark = "NONE" | "ANDREW" | "MORGANE";
 
+const DUPLICATE_IMAGE_ERROR = "Fichier double déjà présent sur cette page.";
+
 type UploadedPhoto = {
   imageSrc: string;
   title: string;
@@ -19,6 +21,7 @@ type UploadedPhoto = {
 };
 
 type PortfolioGalleryBulkUploaderProps = {
+  existingImageUrls?: string[];
   categories: PortfolioCategoryOption[];
   defaultCategoryId?: string;
   lockedCategory?: boolean;
@@ -370,6 +373,7 @@ function StatusDropdown({
 
 
 export function PortfolioGalleryBulkUploader({
+  existingImageUrls = [],
   categories,
   defaultCategoryId,
   lockedCategory = false,
@@ -405,6 +409,10 @@ export function PortfolioGalleryBulkUploader({
 
     try {
       const uploadedPhotos: UploadedPhoto[] = [];
+      const knownImageUrls = new Set([
+        ...existingImageUrls,
+        ...photos.map((photo) => photo.imageSrc),
+      ]);
 
       for (const file of files) {
         const optimizedFile = await compressImageToWebp(file);
@@ -431,6 +439,12 @@ export function PortfolioGalleryBulkUploader({
         if (!imageSrc) {
           throw new Error("Upload succeeded but returned no image URL.");
         }
+
+        if (knownImageUrls.has(imageSrc)) {
+          throw new Error(DUPLICATE_IMAGE_ERROR);
+        }
+
+        knownImageUrls.add(imageSrc);
 
         uploadedPhotos.push({
           imageSrc,

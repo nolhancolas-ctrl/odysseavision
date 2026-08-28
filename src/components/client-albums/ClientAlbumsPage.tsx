@@ -1,6 +1,6 @@
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { SiteFooter } from "@/components/layout/SiteFooter";
-import { getPublicClientAlbums } from "@/lib/content/albums";
+import { getPublicClientAlbumSummaries } from "@/lib/content/albums";
 import { getPublicPageContent } from "@/lib/content/site";
 import { ClientAlbumsHero } from "./ClientAlbumsHero";
 import { ClientAlbumsIntro } from "./ClientAlbumsIntro";
@@ -11,7 +11,7 @@ import { ClientAlbumsFinalCTA } from "./ClientAlbumsFinalCTA";
 export async function ClientAlbumsPage() {
   const [pageContent, albums] = await Promise.all([
     getPublicPageContent("client-albums"),
-    getPublicClientAlbums(),
+    getPublicClientAlbumSummaries(),
   ]);
 
   const sections = pageContent?.sections ?? {};

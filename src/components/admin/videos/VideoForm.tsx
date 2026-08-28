@@ -43,8 +43,11 @@ export function VideoForm({
   );
 
   return (
-    <form action={action} className="grid gap-8 lg:grid-cols-[1.4fr_0.8fr]">
-      <div className="space-y-6 rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+    <form
+      action={action}
+      className="grid min-w-0 gap-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.8fr)]"
+    >
+      <div className="min-w-0 space-y-6 overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
         <div>
           <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/40">
             Title
@@ -159,8 +162,8 @@ export function VideoForm({
         </div>
       </div>
 
-      <aside className="space-y-6">
-        <div className="rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+      <aside className="min-w-0 space-y-6">
+        <div className="min-w-0 overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 p-6 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/40">
             Thumbnail
           </label>
@@ -251,27 +254,9 @@ export function VideoForm({
             </div>
           </div>
 
-          <div>
-            <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.18em] text-[#242617]/40">
-              Order
-            </label>
-            <input
-              type="number"
-              name="order"
-              defaultValue={video?.order ?? 0}
-              className="w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-sm text-[#242617] outline-none transition placeholder:text-[#242617]/35 focus:border-[#b88a3b]/70"
-            />
-          </div>
 
-          <label className="flex items-center gap-3 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/65 px-4 py-3 text-sm text-[#242617]/70">
-            <input
-              type="checkbox"
-              name="featured"
-              defaultChecked={video?.featured ?? false}
-              className="h-4 w-4 accent-[#d5ad68]"
-            />
-            Featured video
-          </label>
+
+
         </div>
 
         <div className="flex gap-3">

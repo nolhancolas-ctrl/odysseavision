@@ -18,7 +18,6 @@ model User {
   updatedAt DateTime @updatedAt
 }
 
-
 model AdminAuthConfig {
   id            String   @id
   passwordHash  String
@@ -140,23 +139,24 @@ model Client {
 }
 
 model ClientAlbum {
-  id            String    @id @default(cuid())
-  title         String
-  slug          String    @unique
-  description   String?
-  coverSrc      String?
-  shootingDate  DateTime?
-  location      String?
-  status        String    @default("DRAFT")
-  passwordHash  String?
-  allowDownload Boolean   @default(false)
-  allowShare    Boolean   @default(true)
+  id                    String    @id @default(cuid())
+  title                 String
+  slug                  String    @unique
+  description           String?
+  coverSrc              String?
+  shootingDate          DateTime?
+  location              String?
+  status                String    @default("DRAFT")
+order                 Int       @default(0)
+  passwordHash          String?
+  allowDownload         Boolean   @default(false)
+  allowShare            Boolean   @default(true)
   externalDownloadUrl   String?
   externalDownloadLabel String?
-  expiresAt     DateTime?
-  clientId      String?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  expiresAt             DateTime?
+  clientId              String?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
 
   client Client?            @relation(fields: [clientId], references: [id])
   images ClientAlbumImage[]
@@ -169,6 +169,7 @@ model ClientAlbumImage {
   title     String?
   alt       String?
   order     Int      @default(0)
+  watermark String   @default("NONE")
   selected  Boolean  @default(false)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -241,4 +242,34 @@ model PageView {
 
   @@index([path])
   @@index([createdAt])
+}
+
+model BlobImageOptimization {
+  id                     String    @id @default(cuid())
+  url                    String    @unique
+  pathname               String
+  uploadedAt             DateTime?
+  storedSize             Float     @default(0)
+  contentType            String?
+  contentHash            String?
+  format                 String?
+  width                  Int?
+  height                 Int?
+  projectedSize          Float?
+  projectedSavingBytes   Float     @default(0)
+  projectedSavingPercent Float     @default(0)
+  policyIssues           Json?
+  status                 String    @default("UNKNOWN")
+  policyVersion          Int       @default(0)
+  referenced             Boolean   @default(false)
+  presentInStorage       Boolean   @default(true)
+  note                   String?
+  checkedAt              DateTime?
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+
+  @@index([presentInStorage, status, policyVersion])
+  @@index([presentInStorage, uploadedAt])
+  @@index([referenced])
+  @@index([contentHash])
 }

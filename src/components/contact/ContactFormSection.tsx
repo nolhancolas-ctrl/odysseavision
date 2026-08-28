@@ -1,5 +1,7 @@
 "use client";
 
+import { OptionalImage } from "@/components/site/OptionalImage";
+
 import { useActionState, useEffect, useRef, useState } from "react";
 import { PhotoFrame } from "@/components/ui/PhotoFrame";
 import { contactImages } from "@/data/contact";
@@ -38,8 +40,8 @@ export function ContactFormSection({
   const projectTypeMenuRef = useRef<HTMLDivElement>(null);
 
   const ornament =
-    content?.images.ornament || "/images/about/hero_drawing_01.png";
-  const panelPhoto = content?.images.photo || contactImages.form01.src;
+    content?.images.ornament ?? "/images/about/hero_drawing_01.png";
+  const panelPhoto = content?.images.photo ?? contactImages.form01.src;
   const panelEyebrow = content?.drawings.panelEyebrow || "Get in touch";
   const panelText =
     content?.body ||
@@ -94,7 +96,7 @@ export function ContactFormSection({
       <div className="grid min-h-[860px] lg:grid-cols-[1.05fr_0.95fr]">
         <div className="relative bg-[#c9c4a8] px-6 py-16 md:px-14 md:py-20 lg:pr-24">
           {ornament ? (
-            <img
+            <OptionalImage
               src={ornament}
               alt=""
               aria-hidden="true"
