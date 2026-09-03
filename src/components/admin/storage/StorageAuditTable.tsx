@@ -217,6 +217,8 @@ export function StorageAuditTable({
     pathname: string;
     freedBytes: number;
   } | null>(null);
+  const [deleteFailureNotice, setDeleteFailureNotice] =
+    useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
 
   const sortedRows = useMemo(() => {
@@ -393,7 +395,16 @@ export function StorageAuditTable({
         const result = await deleteUnusedBlobImage(candidate.id);
 
         if (!result.ok) {
-          setDeleteError(result.message);
+          const message = result.message || "";
+
+          if (!message || /unexpected response/i.test(message)) {
+            setDeleteCandidate(null);
+            setDeleteError("");
+            setDeleteFailureNotice(true);
+            return;
+          }
+
+          setDeleteError(message);
           return;
         }
 
@@ -414,9 +425,9 @@ export function StorageAuditTable({
 
         router.refresh();
       } catch {
-        setDeleteError(
-          "Deletion failed unexpectedly. The file was not confirmed as deleted.",
-        );
+        setDeleteCandidate(null);
+        setDeleteError("");
+        setDeleteFailureNotice(true);
       }
     });
   }
@@ -477,6 +488,16 @@ export function StorageAuditTable({
 
     return () => window.clearTimeout(timeout);
   }, [deleteNotice]);
+
+  useEffect(() => {
+    if (!deleteFailureNotice) return;
+
+    const timeout = window.setTimeout(() => {
+      setDeleteFailureNotice(false);
+    }, 5200);
+
+    return () => window.clearTimeout(timeout);
+  }, [deleteFailureNotice]);
 
 
   const selectableRows = useMemo(
@@ -1512,6 +1533,24 @@ export function StorageAuditTable({
                   </div>
                 </div>
               </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {deleteFailureNotice
+        ? createPortal(
+            <div
+              className="fixed bottom-6 right-6 z-[130] w-[min(390px,calc(100vw-3rem))] rounded-[20px] border border-[#b14c42]/35 bg-[#fff4ef] p-5 text-[#6f332d] shadow-[0_20px_60px_rgba(77,36,30,0.24)]"
+              role="alert"
+              aria-live="assertive"
+            >
+              <p className="text-[9px] font-bold uppercase tracking-[0.14em] text-[#9b443a]">
+                File deletion failed
+              </p>
+              <p className="mt-2 text-sm font-medium leading-6">
+                The file could not be deleted. Please contact Nolhan.
+              </p>
             </div>,
             document.body,
           )

@@ -49,3 +49,4 @@ backups/
 
 # TypeScript incremental build cache
 *.tsbuildinfo
+.env*

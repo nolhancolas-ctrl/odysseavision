@@ -33,6 +33,25 @@ function shortenPath(pathname: string) {
   return `${pathname.slice(0, maximumLength - 3)}...`;
 }
 
+function ResponsiveControlLabel({
+  full,
+  compact,
+}: {
+  full: string;
+  compact: string;
+}) {
+  return (
+    <>
+      <span className="hidden max-w-full truncate align-middle leading-none xl:inline-block">
+        {full}
+      </span>
+      <span className="inline-block max-w-full truncate align-middle leading-none xl:hidden">
+        {compact}
+      </span>
+    </>
+  );
+}
+
 export function StorageAuditControls({
   autoRefreshRecent,
   initialRemaining,
@@ -59,12 +78,10 @@ export function StorageAuditControls({
   const [running, setRunning] = useState(false);
   const [remaining, setRemaining] = useState(initialRemaining);
   const [analyzed, setAnalyzed] = useState(0);
-  const [analysisError, setAnalysisError] = useState("");
 
   const [fullAuditRunning, setFullAuditRunning] = useState(false);
   const [allRemaining, setAllRemaining] = useState(initialAllRemaining);
   const [allAnalyzed, setAllAnalyzed] = useState(0);
-  const [fullAuditError, setFullAuditError] = useState("");
 
   const [optimizing, setOptimizing] = useState(false);
   const [optimizable, setOptimizable] = useState(initialOptimizable);
@@ -73,6 +90,7 @@ export function StorageAuditControls({
   const [optimizationIssueOpen, setOptimizationIssueOpen] =
     useState(false);
   const [toasts, setToasts] = useState<OptimizationToast[]>([]);
+  const [errorToast, setErrorToast] = useState("");
 
   useEffect(() => {
     if (!running) {
@@ -104,6 +122,18 @@ export function StorageAuditControls({
   }, []);
 
   useEffect(() => {
+    if (!errorToast) {
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setErrorToast("");
+    }, 5200);
+
+    return () => window.clearTimeout(timeout);
+  }, [errorToast]);
+
+  useEffect(() => {
     if (!autoRefreshRecent || recentRunStarted.current) {
       return;
     }
@@ -112,14 +142,13 @@ export function StorageAuditControls({
     let active = true;
 
     async function refreshRecentUploads() {
-      setRunning(true);
-      setAnalysisError("");
       setAnalyzed(0);
 
       try {
         await refreshRecentBlobImageAudit();
 
         let completed = 0;
+        let hasVisibleWork = false;
 
         while (active) {
           const result = await analyzeAllUnverifiedBlobImages();
@@ -127,6 +156,11 @@ export function StorageAuditControls({
           if (result.analyzed === 0) {
             setRemaining(0);
             break;
+          }
+
+          if (!hasVisibleWork) {
+            hasVisibleWork = true;
+            setRunning(true);
           }
 
           completed += result.analyzed;
@@ -144,13 +178,15 @@ export function StorageAuditControls({
           });
           router.refresh();
         }
-      } catch (caught) {
+      } catch {
         if (active) {
-          setAnalysisError(
-            caught instanceof Error
-              ? caught.message
-              : "Recent upload audit failed.",
+          setErrorToast(
+            "The recent-upload audit could not be completed. Please contact Nolhan.",
           );
+
+          router.replace("/admin/storage-audit", {
+            scroll: false,
+          });
         }
       } finally {
         if (active) {
@@ -214,10 +250,10 @@ export function StorageAuditControls({
 
   async function analyzeUnverified() {
     setRunning(true);
-    setAnalysisError("");
+    setAnalyzed(0);
 
     let nextRemaining = remaining;
-    let completed = analyzed;
+    let completed = 0;
 
     try {
       while (nextRemaining > 0) {
@@ -232,9 +268,9 @@ export function StorageAuditControls({
       }
 
       router.refresh();
-    } catch (caught) {
-      setAnalysisError(
-        caught instanceof Error ? caught.message : "Image analysis failed.",
+    } catch {
+      setErrorToast(
+        "The heavy analysis could not be completed. Please contact Nolhan.",
       );
     } finally {
       setRunning(false);
@@ -243,7 +279,6 @@ export function StorageAuditControls({
 
   async function analyzeAllWaiting() {
     setFullAuditRunning(true);
-    setFullAuditError("");
     setAllAnalyzed(0);
     setAllRemaining(1);
 
@@ -270,11 +305,9 @@ export function StorageAuditControls({
       }
 
       router.refresh();
-    } catch (caught) {
-      setFullAuditError(
-        caught instanceof Error
-          ? caught.message
-          : "Full image analysis failed.",
+    } catch {
+      setErrorToast(
+        "The full analysis could not be completed. Please contact Nolhan.",
       );
     } finally {
       setFullAuditRunning(false);
@@ -287,7 +320,9 @@ export function StorageAuditControls({
     }
 
     if (!optimizationEnabled) {
-      return "Optimization writes are protected by the server configuration. Set BLOB_OPTIMIZATION_WRITE_ENABLED=true in the deployment environment, then restart the application to authorize Blob replacements.";
+      return `${optimizable} ${
+        optimizable === 1 ? "file is" : "files are"
+      } currently waiting for optimization. Optimization writes are protected by the server configuration. Set BLOB_OPTIMIZATION_WRITE_ENABLED=true in the deployment environment, then restart the application to authorize Blob replacements.`;
     }
 
     if (running) {
@@ -382,12 +417,12 @@ Each file will be replaced individually. Its database references will be verifie
 
   return (
     <>
-      <div className="flex w-full flex-wrap items-center gap-3 rounded-[28px] border border-[#11170f]/10 bg-white/35 p-3">
-        <div className="mr-auto min-w-[190px] px-2">
-          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55">
+      <div className="grid w-full grid-cols-[repeat(2,minmax(0,220px))] items-center justify-center gap-3 rounded-[28px] border border-[#11170f]/10 bg-white/35 p-3 md:grid-cols-[minmax(190px,1fr)_repeat(2,minmax(0,220px))] xl:grid-cols-[minmax(190px,1fr)_repeat(4,minmax(0,220px))]">
+        <div className="col-span-2 w-full px-2 text-left md:col-span-1 md:row-span-2 md:self-center xl:row-span-1">
+          <p className="whitespace-nowrap text-[10px] font-semibold uppercase tracking-[0.16em] text-[#11170f]/55">
             Storage maintenance
           </p>
-          <p className="mt-1 text-xs text-[#11170f]/38">
+          <p className="mt-1 whitespace-nowrap text-xs text-[#11170f]/38">
             Audit first, then optimize.
           </p>
         </div>
@@ -396,66 +431,74 @@ Each file will be replaced individually. Its database references will be verifie
           type="button"
           onClick={toggleSelectionMode}
           aria-pressed={selectionMode}
-          className={`inline-flex h-10 items-center justify-center rounded-full border px-5 text-[10px] font-semibold uppercase tracking-[0.16em] transition-all duration-300 ease-out ${
+          className={`inline-flex h-10 w-full min-w-0 items-center justify-center whitespace-nowrap rounded-full border px-3 text-[9px] font-semibold uppercase tracking-[0.1em] transition-all duration-300 ease-out sm:px-4 xl:px-5 xl:text-[10px] xl:tracking-[0.14em] ${
             selectionMode
               ? "border-[#071321] bg-[#071321] text-[#f4efe4]"
               : "border-[#b88a3b]/35 bg-[#b88a3b]/10 text-[#7b5a22] hover:bg-[#b88a3b]/20"
           }`}
         >
-          {selectionMode
-            ? "Exit selection"
-            : "Multiple selection"}
+          <ResponsiveControlLabel
+            full={
+              selectionMode
+                ? "Exit selection"
+                : "Multiple selection"
+            }
+            compact={
+              selectionMode
+                ? "Exit selection"
+                : "Multi-select"
+            }
+          />
         </button>
 
-        <div
-          className={
-            initialRemaining === 0 && !running
-              ? "w-auto max-w-full"
-              : "w-[280px] max-w-full"
-          }
-        >
-          {initialRemaining === 0 && !running ? (
-            <span className="inline-flex h-10 items-center justify-center rounded-full bg-[#d9ead5] px-4 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#286235]">
-              Heavy analysis complete
+        <div className="w-full min-w-0">
+          {remaining === 0 && !running ? (
+            <span className="flex h-10 w-full min-w-0 items-center justify-center whitespace-nowrap rounded-full bg-[#d9ead5] px-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#286235] sm:px-4 xl:tracking-[0.12em]">
+              <ResponsiveControlLabel
+                full="Heavy analysis complete"
+                compact="Heavy complete"
+              />
             </span>
           ) : (
-            <>
-              <button
-                type="button"
-                disabled={running || fullAuditRunning || optimizing}
-                onClick={analyzeUnverified}
-                className="inline-flex h-[52px] w-full items-center justify-center rounded-full bg-[#071321] px-5 text-[10px] font-semibold uppercase tracking-[0.16em] text-[#f4efe4] transition-colors hover:bg-[#132b44] disabled:cursor-wait disabled:opacity-65 disabled:hover:bg-[#071321]"
-              >
-                {running
-                  ? `Analyzing ${analyzed} / ${analysisTotal}`
-                  : `Analyze unverified · ${remaining}`}
-              </button>
-
+            <button
+              type="button"
+              disabled={running || fullAuditRunning || optimizing}
+              onClick={analyzeUnverified}
+              className="relative isolate inline-flex h-10 w-full min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full bg-[#071321] px-3 text-[9px] font-semibold uppercase tracking-[0.1em] text-[#f4efe4] transition-colors hover:bg-[#132b44] disabled:cursor-wait disabled:opacity-65 disabled:hover:bg-[#071321] sm:px-4 xl:tracking-[0.12em]"
+            >
               {running ? (
-              <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-[#11170f]/10">
-                <div
-                  className="h-full rounded-full bg-[#b88a3b] transition-[width]"
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 z-0 bg-[#b88a3b]/75 transition-[width] duration-300 ease-out"
                   style={{ width: `${analysisProgress}%` }}
                 />
-              </div>
-            ) : null}
-          </>
-        )}
+              ) : null}
 
-        {analysisError ? (
-          <p className="mt-2 text-xs text-[#8a3d2f]">
-            {analysisError}
-          </p>
-        ) : null}
-      </div>
+              <span className="relative z-10 flex h-full w-full items-center justify-center leading-none">
+                <ResponsiveControlLabel
+                  full={
+                    running
+                      ? `Analyzing ${analyzed} / ${analysisTotal}`
+                      : `Analyze unverified · ${remaining}`
+                  }
+                  compact={
+                    running
+                      ? `Analysis ${analyzed} / ${analysisTotal}`
+                      : `Analyze · ${remaining}`
+                  }
+                />
+              </span>
+            </button>
+          )}
+        </div>
 
-      <div className="w-[220px] max-w-full">
+      <div className="w-full min-w-0">
         <button
           type="button"
           disabled={fullAuditRunning || running || optimizing}
           aria-busy={fullAuditRunning}
           onClick={analyzeAllWaiting}
-          className={`relative isolate inline-flex h-10 w-full items-center justify-center overflow-hidden rounded-full px-4 text-[9px] font-semibold uppercase tracking-[0.14em] transition-colors disabled:cursor-wait ${
+          className={`relative isolate inline-flex h-10 w-full min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full px-3 text-[9px] font-semibold uppercase tracking-[0.1em] transition-colors disabled:cursor-wait sm:px-4 xl:tracking-[0.12em] ${
             fullAuditRunning
               ? "bg-[#071321] text-[#f4efe4]"
               : "bg-[#d9ead5] text-[#286235] hover:bg-[#cce3c7]"
@@ -469,30 +512,38 @@ Each file will be replaced individually. Its database references will be verifie
             />
           ) : null}
 
-          <span className="relative z-10">
-            {fullAuditRunning
-              ? allAnalyzed === 0
-                ? "Preparing full analysis"
-                : `Analyzing all ${allAnalyzed} / ${fullAuditTotal}`
-              : initialAllRemaining === 0
-                ? "Re-run full analysis"
-                : `Run full analysis · ${initialAllRemaining}`}
+          <span className="relative z-10 flex h-full w-full items-center justify-center leading-none">
+            <ResponsiveControlLabel
+              full={
+                fullAuditRunning
+                  ? allAnalyzed === 0
+                    ? "Preparing full analysis"
+                    : `Analyzing all ${allAnalyzed} / ${fullAuditTotal}`
+                  : initialAllRemaining === 0
+                    ? "Re-run full analysis"
+                    : `Run full analysis · ${initialAllRemaining}`
+              }
+              compact={
+                fullAuditRunning
+                  ? allAnalyzed === 0
+                    ? "Preparing analysis"
+                    : `Full ${allAnalyzed} / ${fullAuditTotal}`
+                  : initialAllRemaining === 0
+                    ? "Re-run analysis"
+                    : `Full analysis · ${initialAllRemaining}`
+              }
+            />
           </span>
         </button>
 
-        {fullAuditError ? (
-          <p className="mt-2 line-clamp-2 text-xs text-[#8a3d2f]">
-            {fullAuditError}
-          </p>
-        ) : null}
       </div>
 
-          <div className="w-[220px] max-w-full">
+          <div className="w-full min-w-0">
             <button
               type="button"
               aria-busy={optimizing}
               onClick={optimizeEverything}
-              className={`relative isolate inline-flex h-10 w-full items-center justify-center overflow-hidden rounded-full border px-4 text-[9px] font-semibold uppercase tracking-[0.14em] transition-colors ${
+              className={`relative isolate inline-flex h-10 w-full min-w-0 items-center justify-center overflow-hidden whitespace-nowrap rounded-full border py-0 pl-3 pr-8 text-[9px] font-semibold uppercase tracking-[0.08em] transition-colors sm:pl-4 sm:pr-8 xl:tracking-[0.09em] ${
                 optimizing
                   ? "border-[#071321] bg-[#071321] text-[#f4efe4]"
                   : !optimizationEnabled && optimizable > 0
@@ -508,14 +559,27 @@ Each file will be replaced individually. Its database references will be verifie
                 />
               ) : null}
 
-              <span className="relative z-10">
-                {optimizing
-                  ? `Optimizing ${optimizedInRun} / ${optimizationTotal}`
-                  : !optimizationEnabled && optimizable > 0
-                    ? `Optimization unavailable · ${optimizable}`
-                    : optimizable > 0
-                      ? `Optimize everything · ${optimizable}`
-                      : "Optimization complete"}
+              <span className="relative z-10 flex h-full w-full items-center justify-center leading-none">
+                <ResponsiveControlLabel
+                  full={
+                    optimizing
+                      ? `Optimizing ${optimizedInRun} / ${optimizationTotal}`
+                      : !optimizationEnabled && optimizable > 0
+                        ? "Optimization unavailable"
+                        : optimizable > 0
+                          ? `Optimize everything · ${optimizable}`
+                          : "Optimization complete"
+                  }
+                  compact={
+                    optimizing
+                      ? `Optimize ${optimizedInRun} / ${optimizationTotal}`
+                      : !optimizationEnabled && optimizable > 0
+                        ? "Unavailable"
+                        : optimizable > 0
+                          ? `Optimize · ${optimizable}`
+                          : "Optimized"
+                  }
+                />
               </span>
 
               {!optimizing &&
@@ -592,6 +656,21 @@ Each file will be replaced individually. Its database references will be verifie
             </section>
           </div>
         ) : null}
+
+      {errorToast ? (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="fixed bottom-6 right-6 z-[130] w-[min(380px,calc(100vw-2rem))] rounded-[22px] border border-[#b14c42]/35 bg-[#fff4ef] p-5 shadow-[0_20px_60px_rgba(77,36,30,0.24)]"
+        >
+          <p className="text-[9px] font-bold uppercase tracking-[0.16em] text-[#9b443a]">
+            Action failed
+          </p>
+          <p className="mt-2 text-sm font-medium leading-6 text-[#6f332d]">
+            {errorToast}
+          </p>
+        </div>
+      ) : null}
 
       <div
         className="pointer-events-none fixed bottom-5 right-5 z-[100] h-[50vh] w-[360px] max-w-[calc(100vw-2rem)] overflow-hidden"
