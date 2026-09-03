@@ -185,14 +185,11 @@ function CardTypeSelect({
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex min-h-[58px] w-full cursor-pointer items-center justify-between gap-5 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-left transition hover:border-[#b88a3b]/55"
+        className="flex w-full cursor-pointer items-center justify-between gap-5 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 py-3 text-left transition hover:border-[#b88a3b]/55"
       >
         <span>
           <span className="block text-sm font-semibold text-[#242617]">
             {selected.label}
-          </span>
-          <span className="mt-1 block text-xs leading-5 text-[#242617]/42">
-            {selected.description}
           </span>
         </span>
 
@@ -343,6 +340,10 @@ export function SeoEditor({
   const [language, setLanguage] = useState(settings.language);
   const [faviconSrc, setFaviconSrc] = useState(settings.faviconSrc);
 
+  const [instagramUrl, setInstagramUrl] = useState(settings.instagramUrl);
+  const [youtubeUrl, setYoutubeUrl] = useState(settings.youtubeUrl);
+  const [contactEmail, setContactEmail] = useState(settings.contactEmail);
+
   const [robotsIndex, setRobotsIndex] = useState(settings.robotsIndex);
   const [robotsFollow, setRobotsFollow] = useState(settings.robotsFollow);
   const [sitemapEnabled, setSitemapEnabled] = useState(settings.sitemapEnabled);
@@ -383,6 +384,9 @@ export function SeoEditor({
         author,
         language,
         faviconSrc,
+        instagramUrl,
+        youtubeUrl,
+        contactEmail,
         robotsIndex,
         robotsFollow,
         sitemapEnabled,
@@ -410,6 +414,9 @@ export function SeoEditor({
       author,
       language,
       faviconSrc,
+      instagramUrl,
+      youtubeUrl,
+      contactEmail,
       robotsIndex,
       robotsFollow,
       sitemapEnabled,
@@ -439,8 +446,9 @@ export function SeoEditor({
     <form action={updateAction} className="space-y-8">
       <input type="hidden" name="seoSettings" value={payload} />
 
-      <div className="grid gap-8 xl:grid-cols-2">
-        <Category
+      <div className="grid gap-8 xl:grid-cols-2 xl:items-stretch">
+        <div className="grid gap-8 xl:h-full xl:grid-rows-[auto_1fr]">
+          <Category
         eyebrow="Global"
         title="Global SEO"
         description="Default metadata used across the whole website."
@@ -485,6 +493,42 @@ export function SeoEditor({
           </div>
         </div>
       </Category>
+
+          <Category
+            eyebrow="Contact"
+            title="Social links"
+            description="Public Instagram, YouTube and email links displayed in the website footer."
+          >
+            <div className="grid gap-5">
+              <Field label="Instagram URL">
+                <TextInput
+                  value={instagramUrl}
+                  onChange={setInstagramUrl}
+                  placeholder="https://www.instagram.com/..."
+                />
+              </Field>
+
+              <Field label="YouTube URL">
+                <TextInput
+                  value={youtubeUrl}
+                  onChange={setYoutubeUrl}
+                  placeholder="https://www.youtube.com/@..."
+                />
+              </Field>
+
+              <Field
+                label="Contact email"
+                help="Enter the email address only. The public link will automatically use mailto:."
+              >
+                <TextInput
+                  value={contactEmail}
+                  onChange={setContactEmail}
+                  placeholder="hello@odysseavision.com"
+                />
+              </Field>
+            </div>
+          </Category>
+        </div>
 
       <Category
         eyebrow="Technical"

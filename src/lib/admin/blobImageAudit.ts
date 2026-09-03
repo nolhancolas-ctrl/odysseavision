@@ -4,8 +4,10 @@ import { createHash } from "node:crypto";
 import type { BlobImageOptimization, Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import {
+  getBlobReferenceUsage,
   getBlobStorageAudit,
   normalizeBlobUrl,
+  type BlobUsageStatus,
 } from "@/lib/admin/blobCleanup";
 import {
   IMAGE_OPTIMIZATION_POLICY,
@@ -34,6 +36,7 @@ export type BlobImageAuditRow = {
   pathname: string;
   uploadedAt: string | null;
   referenced: boolean;
+  usageStatus: BlobUsageStatus;
   size: number;
   contentType: string;
   contentHash: string;
@@ -279,6 +282,47 @@ export async function syncBlobImageRegistry() {
   return storage;
 }
 
+export async function refreshBlobImageAuditQueue() {
+  await syncBlobImageRegistry();
+
+  const remaining = await db.blobImageOptimization.count({
+    where: {
+      presentInStorage: true,
+      OR: [
+        { status: { in: ["UNKNOWN", "PENDING"] } },
+        {
+          policyVersion: {
+            lt: IMAGE_OPTIMIZATION_POLICY.version,
+          },
+        },
+      ],
+    },
+  });
+
+  return { remaining };
+}
+
+export async function queueAllBlobImagesForAnalysis() {
+  await syncBlobImageRegistry();
+
+  const queued = await db.blobImageOptimization.updateMany({
+    where: {
+      presentInStorage: true,
+    },
+    data: {
+      status: "UNKNOWN",
+      policyVersion: 0,
+      projectedSize: null,
+      projectedSavingBytes: 0,
+      projectedSavingPercent: 0,
+      checkedAt: null,
+      note: "Queued for a complete manual re-analysis.",
+    },
+  });
+
+  return { remaining: queued.count };
+}
+
 function readPolicyIssues(value: Prisma.JsonValue | null): string[] {
   return Array.isArray(value)
     ? value.filter((item): item is string => typeof item === "string")
@@ -294,6 +338,7 @@ function toRow(record: BlobImageOptimization): BlobImageAuditRow {
     pathname: record.pathname,
     uploadedAt: toIso(record.uploadedAt),
     referenced: record.referenced,
+    usageStatus: "UNUSED",
     size: record.storedSize,
     contentType: record.contentType || "",
     contentHash: record.contentHash || "",
@@ -323,47 +368,97 @@ function getRowPriority(row: BlobImageAuditRow) {
 }
 
 export async function getBlobImageAudit() {
-  const records = await db.blobImageOptimization.findMany({
-    where: { presentInStorage: true },
-  });
-  const rows = records
+  const [records, usage] = await Promise.all([
+    db.blobImageOptimization.findMany({
+      where: {
+        presentInStorage: true,
+      },
+    }),
+    getBlobReferenceUsage(),
+  ]);
+
+  const rows: BlobImageAuditRow[] = records
     .map(toRow)
+    .map((row) => {
+      const url = normalizeBlobUrl(row.url);
+      const usageStatus: BlobUsageStatus =
+        usage.publicReferences.has(url)
+          ? "PUBLIC"
+          : usage.draftReferences.has(url)
+            ? "DRAFT"
+            : "UNUSED";
+
+      return {
+        ...row,
+        referenced: usageStatus !== "UNUSED",
+        usageStatus,
+      };
+    })
     .sort((left, right) => {
-      const priority = getRowPriority(left) - getRowPriority(right);
+      const priority =
+        getRowPriority(left) - getRowPriority(right);
+
       return (
         priority ||
         right.size - left.size ||
-        getUploadedAtMs(right.uploadedAt) - getUploadedAtMs(left.uploadedAt)
+        getUploadedAtMs(right.uploadedAt) -
+          getUploadedAtMs(left.uploadedAt)
       );
     });
+
   const queued = rows.filter(
-    (row) => !row.policyCurrent || ["UNKNOWN", "PENDING"].includes(row.status),
+    (row) =>
+      !row.policyCurrent ||
+      ["UNKNOWN", "PENDING"].includes(row.status),
   );
+
   const optimizable = rows.filter(
-    (row) => row.status === "NEEDS_OPTIMIZATION" && row.policyCurrent,
+    (row) =>
+      row.status === "NEEDS_OPTIMIZATION" &&
+      row.policyCurrent,
+  );
+
+  const unused = rows.filter(
+    (row) => row.usageStatus === "UNUSED",
   );
 
   return {
     generatedAt: new Date().toISOString(),
     policy: IMAGE_OPTIMIZATION_POLICY,
     storage: {
-      totalBytes: rows.reduce((sum, row) => sum + row.size, 0),
+      totalBytes: rows.reduce(
+        (sum, row) => sum + row.size,
+        0,
+      ),
       fileCount: rows.length,
-      orphanedBytes: rows.filter((row) => !row.referenced).reduce((sum, row) => sum + row.size, 0),
-      orphanedCount: rows.filter((row) => !row.referenced).length,
+      orphanedBytes: unused.reduce(
+        (sum, row) => sum + row.size,
+        0,
+      ),
+      orphanedCount: unused.length,
     },
     registry: {
       trackedCount: rows.length,
       queuedCount: queued.length,
       compliantCount: rows.filter(
-        (row) => row.status === "COMPLIANT" && row.policyCurrent,
+        (row) =>
+          row.status === "COMPLIANT" &&
+          row.policyCurrent,
       ).length,
       optimizableCount: optimizable.length,
-      failedCount: rows.filter((row) => row.status === "FAILED").length,
-      skippedCount: rows.filter((row) => row.status === "SKIPPED").length,
-      unusedCount: rows.filter((row) => !row.referenced).length,
+      failedCount: rows.filter(
+        (row) => row.status === "FAILED",
+      ).length,
+      skippedCount: rows.filter(
+        (row) => row.status === "SKIPPED",
+      ).length,
+      draftCount: rows.filter(
+        (row) => row.usageStatus === "DRAFT",
+      ).length,
+      unusedCount: unused.length,
       projectedSavingBytes: optimizable.reduce(
-        (sum, row) => sum + row.projectedSavingBytes,
+        (sum, row) =>
+          sum + row.projectedSavingBytes,
         0,
       ),
     },

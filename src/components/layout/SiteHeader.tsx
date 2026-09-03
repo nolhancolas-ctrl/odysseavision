@@ -42,25 +42,36 @@ export function SiteHeader({ active = "Home" }: SiteHeaderProps) {
     };
   }, [isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousBodyOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.body.style.overflow = previousBodyOverflow;
+    };
+  }, [isOpen]);
+
   const Brand = ({ onClick }: { onClick?: () => void }) => (
     <Link
       href="/"
       onClick={onClick}
-      className="group flex items-center gap-3"
+      className="group flex items-center justify-center gap-3"
       aria-label="Odyssea Vision home"
     >
-      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center overflow-visible">
+      <span className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-visible lg:h-10 lg:w-10">
         <Image
           src="/images/admin/odyssea_logo.png"
           alt=""
           width={60}
           height={60}
           priority
-          className="absolute h-15 w-15 -translate-x-5 max-w-none object-contain brightness-0 invert transition duration-300 group-hover:scale-105 group-hover:opacity-80"
+          className="absolute h-14 w-14 max-w-none object-contain brightness-0 invert transition duration-300 group-hover:scale-105 group-hover:opacity-80 lg:h-15 lg:w-15 lg:-translate-x-5"
         />
       </span>
 
-      <span className="text-[15px] font-semibold uppercase leading-[1.35] tracking-[0.42em] transition duration-300 group-hover:text-white/75">
+      <span className="text-[13px] font-semibold uppercase leading-[1.35] tracking-[0.34em] transition duration-300 group-hover:text-white/75 sm:text-[15px] sm:tracking-[0.42em]">
         Odyssea
         <br />
         Vision
@@ -108,13 +119,13 @@ export function SiteHeader({ active = "Home" }: SiteHeaderProps) {
     <>
       {/* Header classique visible sur le hero */}
       <header
-        className={`fixed left-0 top-0 z-50 w-full px-6 py-7 text-white transition-all duration-500 md:px-14 ${
+        className={`fixed left-0 top-0 z-50 w-full px-5 py-5 text-white transition-all duration-500 sm:px-6 sm:py-7 md:px-14 ${
           isCompressed || isOpen
             ? "pointer-events-none -translate-y-8 opacity-0"
             : "translate-y-0 opacity-100"
         }`}
       >
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
+        <div className="mx-auto flex max-w-7xl items-center justify-center lg:justify-between">
           <Brand />
 
           <HeaderNav />
@@ -125,7 +136,7 @@ export function SiteHeader({ active = "Home" }: SiteHeaderProps) {
       <button
         type="button"
         onClick={() => setIsOpen((open) => !open)}
-        className={`fixed right-6 top-6 z-[90] flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border text-[#f4efe4] shadow-2xl backdrop-blur transition-all duration-500 hover:scale-105 hover:border-[#d5ad68]/80 hover:bg-[#d5ad68]/10 hover:text-[#d5ad68] focus:outline-none focus:ring-2 focus:ring-[#d5ad68]/40 md:right-10 md:top-8 ${
+        className={`fixed right-4 top-4 z-[90] flex h-12 w-12 cursor-pointer items-center justify-center rounded-full border text-[#f4efe4] shadow-2xl backdrop-blur transition-all duration-500 hover:scale-105 hover:border-[#d5ad68]/80 hover:bg-[#d5ad68]/10 hover:text-[#d5ad68] focus:outline-none focus:ring-2 focus:ring-[#d5ad68]/40 sm:right-6 sm:top-6 md:right-10 md:top-8 ${
           isOpen
             ? "translate-y-0 border-[#f4efe4]/25 bg-[#071008] opacity-100"
             : isCompressed
@@ -158,12 +169,12 @@ export function SiteHeader({ active = "Home" }: SiteHeaderProps) {
 
       {/* Fine navbar déroulante depuis le haut */}
       <div
-        className={`fixed inset-x-0 top-0 z-[80] border-b border-white/10 bg-[#071008]/95 px-6 py-7 text-white shadow-2xl backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] md:px-14 ${
+        className={`fixed inset-x-0 top-0 z-[80] max-h-[100dvh] overflow-y-auto overscroll-contain border-b border-white/10 bg-[#071008]/95 px-5 py-5 text-white shadow-2xl backdrop-blur-md transition-transform duration-500 ease-[cubic-bezier(0.76,0,0.24,1)] sm:px-6 sm:py-7 md:px-14 ${
           isOpen ? "translate-y-0" : "-translate-y-full"
         }`}
       >
-        <div className="mx-auto max-w-7xl pr-20">
-          <div className="flex items-center justify-between">
+        <div className="mx-auto max-w-7xl lg:pr-20">
+          <div className="flex items-center justify-center lg:justify-between">
             <Brand onClick={() => setIsOpen(false)} />
 
             <HeaderNav onClick={() => setIsOpen(false)} />

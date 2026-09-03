@@ -35,6 +35,10 @@ export type SeoSettings = {
   language: string;
   faviconSrc: string;
 
+  instagramUrl: string;
+  youtubeUrl: string;
+  contactEmail: string;
+
   robotsIndex: boolean;
   robotsFollow: boolean;
   sitemapEnabled: boolean;
@@ -88,7 +92,11 @@ export const defaultSeoSettings: SeoSettings = {
     "photography, film, wildlife, ocean, travel, documentary, Odyssea Vision",
   author: "Andrew & Morgane",
   language: "en",
-  faviconSrc: "/favicon.ico",
+  faviconSrc: "",
+
+  instagramUrl: "",
+  youtubeUrl: "",
+  contactEmail: "",
 
   robotsIndex: true,
   robotsFollow: true,
@@ -126,6 +134,15 @@ function boolValue(value: unknown, fallback: boolean) {
 
 function normalizeTwitterCard(value: unknown): "summary" | "summary_large_image" {
   return value === "summary" ? "summary" : "summary_large_image";
+}
+
+function normalizeFaviconSrc(value: unknown) {
+  const faviconSrc = textValue(
+    value,
+    defaultSeoSettings.faviconSrc,
+  ).trim();
+
+  return faviconSrc === "/favicon.ico" ? "" : faviconSrc;
 }
 
 function normalizeWatermarkOwner(value: unknown): WatermarkOwner {
@@ -197,7 +214,20 @@ export function normalizeSeoSettings(value: unknown): SeoSettings {
     ),
     author: textValue(value.author, defaultSeoSettings.author),
     language: textValue(value.language, defaultSeoSettings.language),
-    faviconSrc: textValue(value.faviconSrc, defaultSeoSettings.faviconSrc),
+    faviconSrc: normalizeFaviconSrc(value.faviconSrc),
+
+    instagramUrl: textValue(
+      value.instagramUrl,
+      defaultSeoSettings.instagramUrl,
+    ),
+    youtubeUrl: textValue(
+      value.youtubeUrl,
+      defaultSeoSettings.youtubeUrl,
+    ),
+    contactEmail: textValue(
+      value.contactEmail,
+      defaultSeoSettings.contactEmail,
+    ),
 
     robotsIndex: boolValue(value.robotsIndex, defaultSeoSettings.robotsIndex),
     robotsFollow: boolValue(value.robotsFollow, defaultSeoSettings.robotsFollow),

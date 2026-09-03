@@ -1,5 +1,7 @@
 "use client";
 
+import * as React from "react";
+
 import Link from "next/link";
 import { createPortal } from "react-dom";
 import { useEffect, useState, type ReactNode } from "react";
@@ -80,6 +82,196 @@ function SettingsModal({
       </div>
     </div>,
     document.body,
+  );
+}
+
+
+type CoverUploadResult = {
+  ok?: boolean;
+  error?: string;
+  message?: string;
+  src?: string;
+  url?: string;
+  path?: string;
+};
+
+function ClientAlbumCoverField({
+  initialSrc,
+  entitySlug,
+}: {
+  initialSrc: string;
+  entitySlug: string;
+}) {
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
+  const [src, setSrc] = React.useState(initialSrc);
+  const [uploading, setUploading] = React.useState(false);
+  const [dragging, setDragging] = React.useState(false);
+  const [error, setError] = React.useState("");
+
+  async function uploadCover(file: File) {
+    if (!file.type.startsWith("image/")) {
+      setError("Please select an image file.");
+      return;
+    }
+
+    setUploading(true);
+    setError("");
+
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("context", "client-album");
+      formData.append("entitySlug", entitySlug || "draft");
+      formData.append("slotKey", "cover");
+
+      const response = await fetch("/api/admin/uploads/image", {
+        method: "POST",
+        body: formData,
+      });
+
+      const result = (await response
+        .json()
+        .catch(() => null)) as CoverUploadResult | null;
+
+      if (!response.ok || !result?.ok) {
+        throw new Error(
+          result?.error ||
+            result?.message ||
+            "The cover image could not be uploaded.",
+        );
+      }
+
+      const nextSrc = result.src || result.url || result.path || "";
+
+      if (!nextSrc) {
+        throw new Error("The uploaded image URL is missing.");
+      }
+
+      setSrc(nextSrc);
+    } catch (uploadError) {
+      setError(
+        uploadError instanceof Error
+          ? uploadError.message
+          : "The cover image could not be uploaded.",
+      );
+    } finally {
+      setUploading(false);
+
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
+    }
+  }
+
+  return (
+    <div className="sm:col-span-2">
+      <label className={labelClass}>Cover image</label>
+      <input type="hidden" name="coverSrc" value={src} />
+
+      <div className="space-y-3">
+        <button
+          type="button"
+          disabled={uploading}
+          onClick={() => inputRef.current?.click()}
+          onDragOver={(event) => {
+            event.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node)) {
+              setDragging(false);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            setDragging(false);
+
+            const file = event.dataTransfer.files?.[0];
+
+            if (file) {
+              void uploadCover(file);
+            }
+          }}
+          className={`group relative flex min-h-[190px] w-full cursor-pointer overflow-hidden rounded-[1.5rem] border border-dashed text-left transition ${
+            dragging
+              ? "border-[#b88a3b] bg-white/75"
+              : "border-[#242617]/15 bg-[#f4efe4]/75 hover:border-[#b88a3b]/70 hover:bg-white/60"
+          } ${uploading ? "cursor-wait opacity-70" : ""}`}
+        >
+          {src ? (
+            <>
+              <img
+                src={src}
+                alt="Current album cover"
+                className="absolute inset-0 h-full w-full object-cover"
+              />
+              <span className="absolute inset-0 bg-[#071321]/15 transition group-hover:bg-[#071321]/38" />
+              <span className="absolute inset-x-4 bottom-4 rounded-2xl bg-[#071321]/78 px-4 py-3 text-center text-[10px] font-bold uppercase tracking-[0.16em] text-[#f4efe4] backdrop-blur-sm">
+                {uploading ? "Uploading..." : "Click or drop to replace"}
+              </span>
+            </>
+          ) : (
+            <span className="flex min-h-[190px] w-full flex-col items-center justify-center gap-3 p-6 text-center">
+              <span className="flex h-12 w-12 items-center justify-center rounded-full border border-[#242617]/12 text-2xl text-[#242617]/45">
+                +
+              </span>
+              <span className="text-[10px] font-bold uppercase tracking-[0.17em] text-[#242617]/48">
+                {uploading ? "Uploading..." : "Select a cover image"}
+              </span>
+              <span className="text-xs text-[#242617]/38">
+                Click here or drag an image into this area
+              </span>
+            </span>
+          )}
+        </button>
+
+        <input
+          ref={inputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/gif"
+          className="hidden"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+
+            if (file) {
+              void uploadCover(file);
+            }
+          }}
+        />
+
+        {src ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <input
+              value={src}
+              onChange={(event) => setSrc(event.target.value)}
+              className={`${fieldClass} min-w-0 flex-1 text-xs`}
+              aria-label="Album cover URL"
+            />
+
+            <button
+              type="button"
+              disabled={uploading}
+              onClick={() => {
+                setSrc("");
+                setError("");
+              }}
+              className="h-[58px] cursor-pointer rounded-2xl border border-red-900/15 px-5 text-[10px] font-bold uppercase tracking-[0.15em] text-red-900/55 transition hover:bg-red-900 hover:text-white"
+            >
+              Remove
+            </button>
+          </div>
+        ) : null}
+
+        {error ? (
+          <p
+            role="alert"
+            className="rounded-2xl border border-red-500/20 bg-red-500/8 px-4 py-3 text-sm text-red-800"
+          >
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </div>
   );
 }
 
@@ -336,24 +528,10 @@ export function ClientAlbumSettingsForm({
                 />
               </div>
 
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Cover image</label>
-                <div className="flex items-center gap-3">
-                  {album.coverSrc ? (
-                    <img
-                      src={album.coverSrc}
-                      alt=""
-                      className="h-20 w-24 shrink-0 rounded-xl object-cover"
-                    />
-                  ) : null}
-                  <input
-                    name="coverSrc"
-                    defaultValue={album.coverSrc ?? ""}
-                    className={`${fieldClass} min-w-0`}
-                    placeholder="Image URL"
-                  />
-                </div>
-              </div>
+              <ClientAlbumCoverField
+                initialSrc={album.coverSrc ?? ""}
+                entitySlug={album.slug || album.id}
+              />
             </div>
 
             <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#242617]/10 pt-6">

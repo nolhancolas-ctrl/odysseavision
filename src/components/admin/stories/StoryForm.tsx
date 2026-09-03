@@ -485,7 +485,6 @@ export function StoryForm({
 
         <Field
           label="Full content"
-          help="Select text to format it, or insert photos directly inside the story."
         >
           <StoryRichTextEditor
             existingPageImageUrls={imageSrc ? [imageSrc] : []}

@@ -47,7 +47,7 @@
     "db:reset": "prisma migrate reset",
     "db:seed:portfolio": "tsx scripts/seed-portfolio.ts",
     "postinstall": "prisma generate",
-    "dev:clean": "pkill -f 'next dev' || true; fuser -k 3333/tcp || true; rm -rf .next; next dev -H 0.0.0.0 -p 3333",
+    "dev:clean": "fuser -k 3000/tcp || true; rm -rf .next; next dev -H 0.0.0.0 -p 3000",
     "db:seed:stories": "tsx scripts/seed-stories.ts",
     "db:seed:pages": "tsx scripts/seed-page-content.ts",
     "vercel-build": "prisma generate && next build"

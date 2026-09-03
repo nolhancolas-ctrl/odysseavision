@@ -125,7 +125,7 @@ export function AdminImageDropzone({
   slotKey = "",
   entitySlug = "",
   ratio = "4 / 3",
-  emptyText = "DRAG AND DROP",
+  emptyText = "NO PHOTO SELECTED. NOTHING WILL APPEAR ON THE WEBSITE.",
 }: AdminImageDropzoneProps) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -362,12 +362,12 @@ export function AdminImageDropzone({
               </svg>
             </div>
 
-            <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#242617]/42">
+            <div className="w-full text-center">
+              <p className="w-full text-center text-[10px] font-bold uppercase tracking-[0.22em] text-[#242617]/42">
                 {emptyText}
               </p>
 
-              <p className="mt-2 max-w-[260px] text-xs leading-5 text-[#242617]/38">
+              <p className="mx-auto mt-2 w-full max-w-[260px] text-center text-xs leading-5 text-[#242617]/38">
                 Drop an image here or click to choose a file.
               </p>
             </div>

@@ -19,6 +19,10 @@ type SectionContent = {
   body?: string;
   andrewDescription?: string;
   morganeDescription?: string;
+  oceanDream01?: string;
+  oceanDream02?: string;
+  oceanDream03?: string;
+  oceanDream04?: string;
   featuredVideoMode?: string;
   featuredVideoId?: string;
   imageSrc?: string;
@@ -43,6 +47,10 @@ const fieldLabels: Record<EditableFieldKey, string> = {
   body: "Body",
   andrewDescription: "Andrew description",
   morganeDescription: "Morgane description",
+  oceanDream01: "Icon text 1",
+  oceanDream02: "Icon text 2",
+  oceanDream03: "Icon text 3",
+  oceanDream04: "Icon text 4",
   featuredVideoMode: "Featured video mode",
   featuredVideoId: "Featured video ID",
 };
@@ -113,16 +121,24 @@ function fieldValue(
   return content[field] ?? section.defaults[field] ?? "";
 }
 
+function normalizeInitialImageValue(value: string) {
+  if (value === "/images/about/ocean_drawing_01.png") {
+    return "";
+  }
+
+  return value;
+}
+
 function getInitialImageValue(slot: EditableImageSlot, content: SectionContent) {
   if (content.images && typeof content.images[slot.key] === "string") {
-    return content.images[slot.key];
+    return normalizeInitialImageValue(content.images[slot.key]);
   }
 
   if (slot.key === "background" && content.imageSrc) {
-    return content.imageSrc;
+    return normalizeInitialImageValue(content.imageSrc);
   }
 
-  return slot.defaultSrc ?? "";
+  return normalizeInitialImageValue(slot.defaultSrc ?? "");
 }
 
 function getCurrentWebsitePageKey() {

@@ -399,7 +399,7 @@ export function StorageUsageCard() {
           ) : null}
 
           <Link
-            href="/admin/storage-audit"
+            href="/admin/storage-audit?run=recent"
             className="rounded-full border border-[#11170f]/12 px-4 py-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-[#11170f]/55 transition hover:bg-[#071321] hover:text-[#f4efe4]"
           >
             Audit recent uploads

@@ -7,9 +7,14 @@ import {
   useState,
   useTransition,
 } from "react";
+import type { PointerEvent as ReactPointerEvent } from "react";
 import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
-import { deleteUnusedBlobImage } from "@/server/actions/storageAudit";
+import {
+  deleteUnusedBlobImage,
+  deleteUnusedBlobImages,
+} from "@/server/actions/storageAudit";
+import { useStorageAuditSelection } from "@/components/admin/storage/StorageAuditSelectionContext";
 
 type AuditRow = {
   id: string;
@@ -17,6 +22,7 @@ type AuditRow = {
   pathname: string;
   uploadedAt: string | null;
   referenced: boolean;
+  usageStatus: "PUBLIC" | "DRAFT" | "UNUSED";
   size: number;
   contentType: string;
   contentHash: string;
@@ -33,6 +39,56 @@ type AuditRow = {
   checkedAt: string | null;
   note: string;
 };
+
+
+function SelectionBox({
+  checked,
+  disabled = false,
+  label,
+  onChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  onChange: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      disabled={disabled}
+      onPointerDown={(event) => event.stopPropagation()}
+      onClick={(event) => {
+        event.stopPropagation();
+        onChange();
+      }}
+      className={`flex h-6 w-6 items-center justify-center rounded-[7px] border transition-all ${
+        checked
+          ? "border-[#071321] bg-[#071321] text-white"
+          : disabled
+            ? "cursor-not-allowed border-[#11170f]/10 bg-[#11170f]/[0.025] text-transparent"
+            : "border-[#11170f]/25 bg-white/70 text-transparent hover:border-[#071321]/55"
+      }`}
+    >
+      <svg
+        viewBox="0 0 20 13"
+        className="h-[11px] w-4"
+        fill="none"
+        aria-hidden="true"
+      >
+        <path
+          d="M1.5 6.2 7.2 11 18.5 1.8"
+          stroke="currentColor"
+          strokeWidth="2.3"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </button>
+  );
+}
 
 type StorageAuditTableProps = {
   rows: AuditRow[];
@@ -86,6 +142,12 @@ function compactPath(pathname: string) {
   return `${directory}${filename.slice(0, 18)}[…]${filename.slice(-15)}`;
 }
 
+function usageLabel(row: AuditRow) {
+  if (row.usageStatus === "DRAFT") return "Draft";
+  if (row.usageStatus === "PUBLIC") return "Referenced";
+  return "Unused";
+}
+
 function statusLabel(row: AuditRow) {
   if (row.status === "PENDING") return "Checking";
   if (!row.policyCurrent || row.status === "UNKNOWN") return "Waiting";
@@ -115,6 +177,30 @@ export function StorageAuditTable({
   rows,
   groupDuplicates = false,
 }: StorageAuditTableProps) {
+  const {
+    selectionMode,
+    setSelectionMode,
+  } = useStorageAuditSelection();
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [bulkDeleteMessage, setBulkDeleteMessage] = useState("");
+  const [bulkProgress, setBulkProgress] = useState(0);
+  const [selectionSurfaceMounted, setSelectionSurfaceMounted] =
+    useState(false);
+  const [selectionSurfaceVisible, setSelectionSurfaceVisible] =
+    useState(false);
+  const [bulkDeleteNotice, setBulkDeleteNotice] = useState<{
+    count: number;
+  } | null>(null);
+  const [bulkNoticeVisible, setBulkNoticeVisible] =
+    useState(false);
+  const pressTimerRef = useRef<number | null>(null);
+  const pressOriginRef = useRef({ x: 0, y: 0 });
+  const dragValueRef = useRef<boolean | null>(null);
+  const suppressNextClickRef = useRef(false);
+
   const [selected, setSelected] = useState<AuditRow | null>(null);
   const [sortKey, setSortKey] = useState<SortKey>("date");
   const [sortDirection, setSortDirection] =
@@ -392,9 +478,275 @@ export function StorageAuditTable({
     return () => window.clearTimeout(timeout);
   }, [deleteNotice]);
 
+
+  const selectableRows = useMemo(
+    () =>
+      sortedRows.filter(
+        (row) => row.usageStatus === "UNUSED",
+      ),
+    [sortedRows],
+  );
+
+  const selectedRows = useMemo(
+    () => sortedRows.filter((row) => selectedIds.has(row.id)),
+    [selectedIds, sortedRows],
+  );
+
+  const selectedBytes = selectedRows.reduce(
+    (total, row) => total + row.size,
+    0,
+  );
+
+  const allSelectableSelected =
+    selectableRows.length > 0 &&
+    selectableRows.every((row) => selectedIds.has(row.id));
+
+  function setRowSelection(id: string, value: boolean) {
+    setSelectedIds((current) => {
+      const next = new Set(current);
+
+      if (value) {
+        next.add(id);
+      } else {
+        next.delete(id);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleRowSelection(row: AuditRow) {
+    if (row.usageStatus !== "UNUSED") return;
+    setRowSelection(row.id, !selectedIds.has(row.id));
+  }
+
+  function clearPressTimer() {
+    if (pressTimerRef.current !== null) {
+      window.clearTimeout(pressTimerRef.current);
+      pressTimerRef.current = null;
+    }
+  }
+
+  function beginRowPointer(
+    event: ReactPointerEvent<HTMLTableRowElement>,
+    row: AuditRow,
+  ) {
+    if (event.button !== 0 || row.usageStatus !== "UNUSED") {
+      return;
+    }
+
+    pressOriginRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+    };
+
+    if (selectionMode) {
+      const nextValue = !selectedIds.has(row.id);
+      dragValueRef.current = nextValue;
+      suppressNextClickRef.current = true;
+      setRowSelection(row.id, nextValue);
+      return;
+    }
+
+    clearPressTimer();
+
+    pressTimerRef.current = window.setTimeout(() => {
+      suppressNextClickRef.current = true;
+      setSelected(null);
+      setSelectionMode(true);
+      setRowSelection(row.id, true);
+      pressTimerRef.current = null;
+    }, 480);
+  }
+
+  function moveRowPointer(
+    event: ReactPointerEvent<HTMLTableRowElement>,
+  ) {
+    if (pressTimerRef.current === null) return;
+
+    const distance =
+      Math.abs(event.clientX - pressOriginRef.current.x) +
+      Math.abs(event.clientY - pressOriginRef.current.y);
+
+    if (distance > 8) clearPressTimer();
+  }
+
+  function enterRowWhileDragging(
+    event: ReactPointerEvent<HTMLTableRowElement>,
+    row: AuditRow,
+  ) {
+    if (
+      !selectionMode ||
+      row.usageStatus !== "UNUSED" ||
+      dragValueRef.current === null ||
+      event.buttons !== 1
+    ) {
+      return;
+    }
+
+    suppressNextClickRef.current = true;
+    setRowSelection(row.id, dragValueRef.current);
+  }
+
+  function confirmBulkDeletion() {
+    const ids = selectedRows.map((row) => row.id);
+    if (ids.length === 0) return;
+
+    setBulkDeleteMessage("");
+    setBulkProgress(6);
+
+    startDeleteTransition(async () => {
+      try {
+        const rawResult = await deleteUnusedBlobImages(ids);
+        const result = rawResult as {
+          ok?: boolean;
+          deletedIds?: string[];
+          freedBytes?: number;
+          message?: string;
+        };
+
+        const removedIds = Array.isArray(result.deletedIds)
+          ? result.deletedIds
+          : [];
+
+        if (removedIds.length === 0) {
+          setBulkProgress(0);
+          setBulkDeleteMessage(
+            result.message ||
+              "No file was deleted. Their references may have changed.",
+          );
+          return;
+        }
+
+        setDeletedIds((current) => {
+          const next = new Set(current);
+          removedIds.forEach((id) => next.add(id));
+          return next;
+        });
+
+        setBulkProgress(100);
+
+        await new Promise<void>((resolve) => {
+          window.setTimeout(resolve, 280);
+        });
+
+        setSelectedIds(new Set());
+        setBulkDeleteOpen(false);
+        setBulkDeleteNotice({ count: removedIds.length });
+        setBulkNoticeVisible(true);
+        setSelectionMode(false);
+        router.refresh();
+      } catch {
+        setBulkProgress(0);
+        setBulkDeleteMessage(
+          "Bulk deletion failed. Protected files were not deleted.",
+        );
+      }
+    });
+  }
+
+  useEffect(() => {
+    const finishSelection = () => {
+      clearPressTimer();
+      dragValueRef.current = null;
+    };
+
+    window.addEventListener("pointerup", finishSelection);
+    window.addEventListener("pointercancel", finishSelection);
+
+    return () => {
+      clearPressTimer();
+      window.removeEventListener("pointerup", finishSelection);
+      window.removeEventListener("pointercancel", finishSelection);
+    };
+  }, []);
+
+  useEffect(() => {
+    let removalTimer: number | null = null;
+    let animationFrame: number | null = null;
+
+    if (selectionMode) {
+      setSelected(null);
+      setSelectionSurfaceMounted(true);
+      setSelectionSurfaceVisible(false);
+
+      animationFrame = window.requestAnimationFrame(() => {
+        setSelectionSurfaceVisible(true);
+      });
+    } else {
+      setSelectionSurfaceVisible(false);
+      setSelectedIds(new Set());
+      setBulkDeleteOpen(false);
+      setBulkDeleteMessage("");
+      setBulkProgress(0);
+      dragValueRef.current = null;
+
+      removalTimer = window.setTimeout(() => {
+        setSelectionSurfaceMounted(false);
+      }, 340);
+    }
+
+    return () => {
+      if (animationFrame !== null) {
+        window.cancelAnimationFrame(animationFrame);
+      }
+
+      if (removalTimer !== null) {
+        window.clearTimeout(removalTimer);
+      }
+    };
+  }, [selectionMode]);
+
+  useEffect(() => {
+    if (!isDeleting) return;
+
+    const interval = window.setInterval(() => {
+      setBulkProgress((current) => {
+        if (current >= 92) return current;
+
+        const remaining = 92 - current;
+        return Math.min(
+          92,
+          current + Math.max(1, Math.ceil(remaining * 0.12)),
+        );
+      });
+    }, 180);
+
+    return () => window.clearInterval(interval);
+  }, [isDeleting]);
+
+  useEffect(() => {
+    if (!bulkDeleteNotice) return;
+
+    const hideTimer = window.setTimeout(() => {
+      setBulkNoticeVisible(false);
+    }, 4200);
+
+    const removeTimer = window.setTimeout(() => {
+      setBulkDeleteNotice(null);
+    }, 4550);
+
+    return () => {
+      window.clearTimeout(hideTimer);
+      window.clearTimeout(removeTimer);
+    };
+  }, [bulkDeleteNotice]);
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-end gap-2 border-b border-[#11170f]/8 bg-white/20 px-5 py-3">
+        <div
+          aria-hidden={!selectionMode}
+          className={`mr-auto grid transition-[grid-template-columns,opacity,transform] duration-300 ease-out ${
+            selectionMode
+              ? "grid-cols-[1fr] translate-x-0 opacity-100"
+              : "pointer-events-none grid-cols-[0fr] -translate-x-2 opacity-0"
+          }`}
+        >
+          <span className="min-w-0 overflow-hidden whitespace-nowrap text-[9px] font-semibold uppercase tracking-[0.14em] text-[#7b5a22]">
+            Click or drag across unused files
+          </span>
+        </div>
         <span className="mr-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/38">
           Sort by
         </span>
@@ -462,10 +814,58 @@ export function StorageAuditTable({
       </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[1120px] table-fixed border-collapse text-left">
+        <table
+          className={`w-full table-fixed border-collapse text-left transition-[min-width] duration-300 ease-out ${
+            selectionMode ? "min-w-[1180px]" : "min-w-[1120px]"
+          }`}
+        >
           <thead>
             <tr className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/38">
-              <th className="w-[31%] px-5 py-4">File</th>
+              <th
+                aria-hidden={!selectionMode}
+                className={`overflow-hidden transition-[width,padding,opacity] duration-300 ease-out ${
+                  selectionMode
+                    ? "w-[5%] px-4 py-4 opacity-100"
+                    : "pointer-events-none w-0 px-0 py-4 opacity-0"
+                }`}
+              >
+                <div
+                  className={`overflow-hidden transition-[width,opacity,transform] duration-300 ease-out ${
+                    selectionMode
+                      ? "w-7 translate-x-0 opacity-100"
+                      : "w-0 -translate-x-3 opacity-0"
+                  }`}
+                >
+                  <SelectionBox
+                    checked={allSelectableSelected}
+                    disabled={
+                      !selectionMode ||
+                      selectableRows.length === 0
+                    }
+                    label={
+                      allSelectableSelected
+                        ? "Deselect all unused files"
+                        : "Select all unused files"
+                    }
+                    onChange={() => {
+                      setSelectedIds(
+                        allSelectableSelected
+                          ? new Set()
+                          : new Set(
+                              selectableRows.map((row) => row.id),
+                            ),
+                      );
+                    }}
+                  />
+                </div>
+              </th>
+              <th
+                className={`px-5 py-4 transition-[width,padding] duration-300 ease-out ${
+                  selectionMode ? "w-[26%]" : "w-[31%]"
+                }`}
+              >
+                File
+              </th>
               <th className="w-[9%] px-3 py-4">Date</th>
               <th className="w-[9%] px-3 py-4">Stored</th>
               <th className="w-[11%] px-3 py-4">Image</th>
@@ -482,16 +882,102 @@ export function StorageAuditTable({
                 key={row.id}
                 role="button"
                 tabIndex={0}
-                aria-label={`Preview ${row.pathname}`}
-                onClick={() => setSelected(row)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") {
+                aria-label={
+                  selectionMode
+                    ? `${
+                        selectedIds.has(row.id)
+                          ? "Deselect"
+                          : "Select"
+                      } ${row.pathname}`
+                    : `Preview ${row.pathname}`
+                }
+                onPointerDown={(event) =>
+                  beginRowPointer(event, row)
+                }
+                onPointerMove={moveRowPointer}
+                onPointerEnter={(event) =>
+                  enterRowWhileDragging(event, row)
+                }
+                onPointerUp={clearPressTimer}
+                onPointerCancel={clearPressTimer}
+                onContextMenu={(event) => {
+                  if (
+                    selectionMode ||
+                    row.usageStatus === "UNUSED"
+                  ) {
                     event.preventDefault();
+                  }
+                }}
+                onClick={() => {
+                  if (suppressNextClickRef.current) {
+                    suppressNextClickRef.current = false;
+                    return;
+                  }
+
+                  if (selectionMode) {
+                    toggleRowSelection(row);
+                    return;
+                  }
+
+                  setSelected(row);
+                }}
+                onKeyDown={(event) => {
+                  if (
+                    event.key !== "Enter" &&
+                    event.key !== " "
+                  ) {
+                    return;
+                  }
+
+                  event.preventDefault();
+
+                  if (selectionMode) {
+                    toggleRowSelection(row);
+                  } else {
                     setSelected(row);
                   }
                 }}
-                className="h-14 cursor-zoom-in border-t border-[#11170f]/8 text-xs text-[#11170f]/62 transition-colors hover:bg-[#071321]/[0.055] focus-visible:bg-[#071321]/[0.055] focus-visible:outline-none"
+                className={`h-14 border-t border-[#11170f]/8 text-xs text-[#11170f]/62 transition-colors focus-visible:outline-none ${
+                  selectionMode
+                    ? selectedIds.has(row.id)
+                      ? "cursor-pointer select-none bg-[#071321]/[0.10] hover:bg-[#071321]/[0.13]"
+                      : row.usageStatus === "UNUSED"
+                        ? "cursor-pointer select-none hover:bg-[#071321]/[0.055]"
+                        : "cursor-not-allowed select-none opacity-55"
+                    : "cursor-zoom-in hover:bg-[#071321]/[0.055] focus-visible:bg-[#071321]/[0.055]"
+                }`}
               >
+                <td
+                  aria-hidden={!selectionMode}
+                  className={`h-14 overflow-hidden transition-[width,padding,opacity] duration-300 ease-out ${
+                    selectionMode
+                      ? "w-[5%] px-4 py-0 opacity-100"
+                      : "pointer-events-none w-0 px-0 py-0 opacity-0"
+                  }`}
+                >
+                  <div
+                    className={`flex h-14 items-center overflow-hidden transition-[width,opacity,transform] duration-300 ease-out ${
+                      selectionMode
+                        ? "w-7 translate-x-0 opacity-100"
+                        : "w-0 -translate-x-3 opacity-0"
+                    }`}
+                  >
+                    <SelectionBox
+                      checked={selectedIds.has(row.id)}
+                      disabled={
+                        !selectionMode ||
+                        row.usageStatus !== "UNUSED"
+                      }
+                      label={`${
+                        selectedIds.has(row.id)
+                          ? "Deselect"
+                          : "Select"
+                      } ${row.pathname}`}
+                      onChange={() => toggleRowSelection(row)}
+                    />
+                  </div>
+                </td>
+
                 <td className="px-5 py-3">
                   <div className="flex min-w-0 items-center gap-2">
                     {groupDuplicates && row.contentHash ? (
@@ -552,7 +1038,7 @@ export function StorageAuditTable({
                 </td>
 
                 <td className="whitespace-nowrap px-3 py-3">
-                  {row.referenced ? "Referenced" : "Unused"}
+                  {usageLabel(row)}
                 </td>
 
                 <td className="whitespace-nowrap px-3 py-3">
@@ -564,7 +1050,7 @@ export function StorageAuditTable({
                 </td>
 
                 <td className="whitespace-nowrap px-5 py-3 text-right">
-                  {!row.referenced ? (
+                  {!selectionMode && row.usageStatus === "UNUSED" ? (
                     <button
                       type="button"
                       onClick={(event) => {
@@ -585,6 +1071,192 @@ export function StorageAuditTable({
           </tbody>
         </table>
       </div>
+
+      {selectionSurfaceMounted
+        ? createPortal(
+            <div
+              aria-hidden={!selectionSurfaceVisible}
+              className={`fixed bottom-6 right-6 z-[105] flex max-w-[calc(100vw-3rem)] origin-bottom-right flex-col items-end gap-2 transition-[opacity,transform] duration-300 ease-out ${
+                selectionSurfaceVisible
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "pointer-events-none translate-y-4 scale-[0.98] opacity-0"
+              }`}
+            >
+              {bulkDeleteMessage ? (
+                <div className="max-w-sm rounded-[18px] border border-[#11170f]/12 bg-[#f7f2e9] px-4 py-3 text-xs leading-5 text-[#11170f]/65 shadow-[0_18px_55px_rgba(7,19,33,0.18)]">
+                  {bulkDeleteMessage}
+                </div>
+              ) : null}
+
+              <div className="flex flex-wrap items-center justify-end gap-2 rounded-[22px] border border-white/25 bg-[#071321]/95 p-2.5 text-white shadow-[0_22px_65px_rgba(7,19,33,0.28)] backdrop-blur-md">
+                <span className="px-3 text-[9px] font-semibold uppercase tracking-[0.14em] text-white/60">
+                  {selectedRows.length} selected
+                  {selectedRows.length > 0
+                    ? ` · ${formatBytes(selectedBytes)}`
+                    : ""}
+                </span>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectedIds(new Set())}
+                  disabled={selectedRows.length === 0 || isDeleting}
+                  className={`h-10 rounded-full border border-white/20 px-4 text-[9px] font-semibold uppercase tracking-[0.12em] transition-[opacity,transform,background-color] duration-300 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-35 ${
+                    selectionSurfaceVisible
+                      ? "translate-y-0 opacity-100 delay-75"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  Deselect all
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setSelectionMode(false)}
+                  disabled={isDeleting}
+                  className={`h-10 rounded-full border border-white/20 px-4 text-[9px] font-semibold uppercase tracking-[0.12em] transition-[opacity,transform,background-color] duration-300 hover:bg-white/10 disabled:opacity-35 ${
+                    selectionSurfaceVisible
+                      ? "translate-y-0 opacity-100 delay-100"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  Exit selection
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setBulkDeleteMessage("");
+                    setBulkDeleteOpen(true);
+                  }}
+                  disabled={selectedRows.length === 0 || isDeleting}
+                  className={`h-10 rounded-full bg-[#a84a40] px-5 text-[9px] font-bold uppercase tracking-[0.12em] transition-[opacity,transform,background-color] duration-300 hover:bg-[#913c34] disabled:cursor-not-allowed disabled:opacity-35 ${
+                    selectionSurfaceVisible
+                      ? "translate-y-0 opacity-100 delay-150"
+                      : "translate-y-2 opacity-0"
+                  }`}
+                >
+                  Delete selected
+                </button>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {bulkDeleteOpen
+        ? createPortal(
+            <div
+              className="fixed inset-0 z-[115] flex items-center justify-center bg-[#071321]/35 p-4 backdrop-blur-[3px]"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Delete selected unused files"
+              onClick={() => {
+                if (!isDeleting) setBulkDeleteOpen(false);
+              }}
+            >
+              <div
+                className="relative w-full max-w-xl overflow-hidden rounded-[28px] border border-white/25 bg-[#f5f0e6] shadow-[0_30px_90px_rgba(7,19,33,0.28)]"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {isDeleting ? (
+                  <div className="absolute inset-0 z-20 flex flex-col justify-center bg-[#f5f0e6] px-8 py-10">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b88a3b]">
+                      Deleting unused files
+                    </p>
+
+                    <p className="mt-3 font-serif text-4xl leading-none text-[#11170f]">
+                      {selectedRows.length} files
+                    </p>
+
+                    <p className="mt-4 text-sm leading-6 text-[#11170f]/55">
+                      Every file is being checked one last time before
+                      permanent deletion.
+                    </p>
+
+                    <div className="mt-7 h-2 overflow-hidden rounded-full bg-[#11170f]/10">
+                      <div
+                        className="h-full rounded-full bg-[#b88a3b] transition-[width] duration-300 ease-out"
+                        style={{ width: `${bulkProgress}%` }}
+                      />
+                    </div>
+
+                    <p className="mt-3 text-right text-[10px] font-semibold tabular-nums text-[#11170f]/45">
+                      {Math.round(bulkProgress)}%
+                    </p>
+                  </div>
+                ) : null}
+                <div className="border-b border-[#11170f]/10 px-7 py-6">
+                  <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-[#b88a3b]">
+                    Unused blobs
+                  </p>
+                  <h2 className="mt-2 font-serif text-4xl leading-none text-[#11170f]">
+                    Delete selected files?
+                  </h2>
+                </div>
+
+                <div className="space-y-4 px-7 py-6">
+                  <p className="text-sm leading-6 text-[#11170f]/65">
+                    {selectedRows.length} files ·{" "}
+                    {formatBytes(selectedBytes)} will be checked
+                    against every public and draft reference before
+                    deletion.
+                  </p>
+
+                  {bulkDeleteMessage ? (
+                    <p className="rounded-[18px] bg-[#a84a40]/10 px-4 py-3 text-sm text-[#8f3f36]">
+                      {bulkDeleteMessage}
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-[#11170f]/10 px-7 py-5">
+                  <button
+                    type="button"
+                    onClick={() => setBulkDeleteOpen(false)}
+                    disabled={isDeleting}
+                    className="h-12 rounded-full border border-[#11170f]/15 px-6 text-[9px] font-semibold uppercase tracking-[0.14em] text-[#11170f]/55 disabled:opacity-40"
+                  >
+                    Cancel
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={confirmBulkDeletion}
+                    disabled={
+                      selectedRows.length === 0 || isDeleting
+                    }
+                    className="h-12 rounded-full bg-[#a84a40] px-7 text-[9px] font-bold uppercase tracking-[0.14em] text-white hover:bg-[#913c34] disabled:opacity-40"
+                  >
+                    {isDeleting
+                      ? "Deleting..."
+                      : "Delete permanently"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
+
+      {bulkDeleteNotice
+        ? createPortal(
+            <div
+              role="status"
+              aria-live="polite"
+              className={`fixed bottom-6 right-6 z-[120] rounded-[20px] border border-white/25 bg-[#071321] px-6 py-4 text-[10px] font-bold uppercase tracking-[0.14em] text-white shadow-[0_20px_60px_rgba(7,19,33,0.28)] transition-[opacity,transform] duration-300 ease-out ${
+                bulkNoticeVisible
+                  ? "translate-y-0 opacity-100"
+                  : "translate-y-3 opacity-0"
+              }`}
+            >
+              {bulkDeleteNotice.count}{" "}
+              {bulkDeleteNotice.count === 1
+                ? "file deleted"
+                : "files deleted"}
+            </div>,
+            document.body,
+          )
+        : null}
 
       {selected
         ? createPortal(
@@ -712,7 +1384,7 @@ export function StorageAuditTable({
                     Usage
                   </p>
                   <p className="mt-1 font-semibold text-[#11170f]">
-                    {selected.referenced ? "Referenced" : "Unused"}
+                    {usageLabel(selected)}
                   </p>
                 </div>
 
@@ -757,6 +1429,7 @@ export function StorageAuditTable({
               }}
             >
               <div
+                data-single-delete-dialog="true"
                 className="w-full max-w-xl overflow-hidden rounded-[28px] border border-white/25 bg-[#f5f0e6] shadow-[0_30px_90px_rgba(7,19,33,0.28)]"
                 onClick={(event) => event.stopPropagation()}
               >

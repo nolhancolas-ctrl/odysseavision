@@ -28,13 +28,13 @@ export function HomeFeaturedStory({
   const image = content?.images.photo ?? content?.imageSrc ?? homeImages.storyElephants.src;
 
   return (
-    <section className="bg-[#f4efe4] px-6 py-20 md:px-14">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.25fr_1fr]">
+    <section className="bg-[#f4efe4] px-5 py-16 sm:px-6 md:px-14 md:py-20">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 md:gap-12 lg:grid-cols-[1.25fr_1fr]">
         {image ? (
           <PhotoFrame
             src={image}
             label={fileLabel(image, homeImages.storyElephants.label)}
-            className="h-[320px] w-full md:h-[420px]"
+            className="h-[280px] w-full sm:h-[340px] md:h-[420px]"
             showWatermark={shouldShowWatermark(content, "photo")}
           />
         ) : null}
@@ -42,7 +42,7 @@ export function HomeFeaturedStory({
         <div>
           <SectionLabel>{content?.eyebrow || "Featured story"}</SectionLabel>
 
-          <h2 className="font-serif text-5xl uppercase leading-[0.95] tracking-[-0.04em] md:text-6xl">
+          <h2 className="font-serif text-[clamp(2.7rem,12vw,3.75rem)] uppercase leading-[0.94] tracking-[-0.04em]">
             {content?.title || "The Reality Behind Elephant Tours"}
           </h2>
 
@@ -57,7 +57,7 @@ export function HomeFeaturedStory({
             <ButtonLink
               href={storyHref}
               variant="light"
-              className="min-w-48"
+              className="w-full min-w-0 sm:w-auto sm:min-w-48"
             >
               {content?.ctaLabel || "Read the story"}
             </ButtonLink>

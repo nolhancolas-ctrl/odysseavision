@@ -5,7 +5,7 @@ type HomeMissionProps = {
   content?: PublicSectionContent;
 };
 
-const missionCreamFilter =
+const missionIconCreamFilter =
   "invert(1) grayscale(0.05) sepia(0.4) saturate(0.0) hue-rotate(340deg) brightness(1.02) contrast(0.9)";
 
 const defaultMissionItems = [
@@ -34,13 +34,12 @@ export function HomeMission({ content }: HomeMissionProps) {
     content?.images.turtle ?? "/images/home/mission_turtle_transparent_01.png";
 
   return (
-    <section className="relative overflow-hidden bg-[#11190f] px-6 py-16 text-[#f4efe4] md:px-14 md:py-20">
+    <section className="relative overflow-hidden bg-[#11190f] px-5 py-16 text-[#f4efe4] sm:px-6 md:px-14 md:py-20">
       {turtle ? (
         <OptionalImage
           src={turtle}
           alt=""
-          className="pointer-events-none absolute right-[-51px] top-[-21px] hidden w-104 opacity-34 md:block"
-          style={{ filter: missionCreamFilter }}
+          className="pointer-events-none absolute right-[-8px] top-[14px] hidden w-[210px] opacity-100 md:block lg:w-[245px] xl:w-[275px] 2xl:w-[290px]"
         />
       ) : null}
 
@@ -49,11 +48,11 @@ export function HomeMission({ content }: HomeMissionProps) {
           {content?.eyebrow || "Our mission"}
         </p>
 
-        <h2 className="font-serif text-5xl uppercase tracking-[-0.04em] md:text-6xl">
+        <h2 className="font-serif text-[clamp(2.7rem,12vw,3.75rem)] uppercase leading-[0.95] tracking-[-0.04em]">
           {content?.title || "Protect what we love"}
         </h2>
 
-        <div className="mt-12 grid gap-10 md:grid-cols-3">
+        <div className="mt-10 grid gap-10 md:mt-12 md:grid-cols-3 md:gap-7 lg:gap-10">
           {defaultMissionItems.map((item) => {
             const icon = content?.images[item.iconKey] ?? item.fallbackIcon;
 
@@ -65,7 +64,7 @@ export function HomeMission({ content }: HomeMissionProps) {
                       src={icon}
                       alt=""
                       className="h-60 w-40 object-contain opacity-82"
-                      style={{ filter: missionCreamFilter }}
+                      style={{ filter: missionIconCreamFilter }}
                     />
                   ) : null}
                 </div>

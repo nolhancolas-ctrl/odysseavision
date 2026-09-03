@@ -7,6 +7,7 @@ import { retryFailedBlobImages } from "@/server/actions/storageAudit";
 import { StorageAuditControls } from "@/components/admin/storage/StorageAuditControls";
 import { StorageAuditQuickNav } from "@/components/admin/storage/StorageAuditQuickNav";
 import { StorageAuditTable } from "@/components/admin/storage/StorageAuditTable";
+import { StorageAuditSelectionProvider } from "@/components/admin/storage/StorageAuditSelectionContext";
 
 export const dynamic = "force-dynamic";
 export const maxDuration = 60;
@@ -32,7 +33,11 @@ function formatDate(value: string | null) {
 }
 
 type StorageAuditPageProps = {
-  searchParams?: Promise<{ view?: string; status?: string }>;
+  searchParams?: Promise<{
+    view?: string;
+    status?: string;
+    run?: string;
+  }>;
 };
 
 export default async function StorageAuditPage({
@@ -88,7 +93,12 @@ export default async function StorageAuditPage({
       return row.policyCurrent && row.status === "NEEDS_OPTIMIZATION";
     }
     if (statusFilter === "failed") return row.status === "FAILED";
-    if (statusFilter === "unused") return !row.referenced;
+    if (statusFilter === "draft") {
+      return row.usageStatus === "DRAFT";
+    }
+    if (statusFilter === "unused") {
+      return row.usageStatus === "UNUSED";
+    }
     if (statusFilter === "duplicates") {
       return Boolean(row.contentHash) && duplicateHashes.has(row.contentHash);
     }
@@ -152,9 +162,18 @@ export default async function StorageAuditPage({
       count: audit.rows.filter((row) => row.status === "FAILED").length,
     },
     {
+      value: "draft",
+      label: "Draft",
+      count: audit.rows.filter(
+        (row) => row.usageStatus === "DRAFT",
+      ).length,
+    },
+    {
       value: "unused",
       label: "Unused",
-      count: audit.rows.filter((row) => !row.referenced).length,
+      count: audit.rows.filter(
+        (row) => row.usageStatus === "UNUSED",
+      ).length,
     },
     {
       value: "duplicates",
@@ -181,7 +200,8 @@ export default async function StorageAuditPage({
   };
 
   return (
-    <div className="space-y-7">
+    <StorageAuditSelectionProvider>
+      <div className="space-y-7">
       <StorageAuditQuickNav />
       <section>
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -211,6 +231,7 @@ export default async function StorageAuditPage({
 
         <div className="mt-6 flex flex-wrap items-start gap-2">
           <StorageAuditControls
+              autoRefreshRecent={params.run === "recent"}
             initialRemaining={analyzableCount}
             initialAllRemaining={audit.registry.queuedCount}
             initialOptimizable={optimizableCount}
@@ -256,7 +277,9 @@ export default async function StorageAuditPage({
           <p className="text-sm font-semibold text-[#11170f]">
             {audit.registry.trackedCount} tracked · {audit.registry.compliantCount}{" "}
             optimized · {audit.registry.optimizableCount} to optimize ·{" "}
-            {audit.registry.unusedCount} unused · {audit.registry.failedCount} failed
+            {audit.registry.draftCount} draft ·{" "}
+            {audit.registry.unusedCount} unused ·{" "}
+            {audit.registry.failedCount} failed
           </p>
           <p className="mt-1 text-xs text-[#11170f]/42">
             {visibleRows.length} displayed · registry loaded from database{" "}
@@ -299,6 +322,7 @@ export default async function StorageAuditPage({
           </Link>
         </div>
       </section>
-    </div>
+      </div>
+    </StorageAuditSelectionProvider>
   );
 }

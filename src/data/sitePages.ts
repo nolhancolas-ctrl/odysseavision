@@ -7,7 +7,11 @@ export type EditableFieldKey =
   | "andrewDescription"
   | "morganeDescription"
   | "featuredVideoMode"
-  | "featuredVideoId";
+  | "featuredVideoId"
+  | "oceanDream01"
+  | "oceanDream02"
+  | "oceanDream03"
+  | "oceanDream04";
 
 export type EditableImageCategory =
   | "background"
@@ -55,6 +59,10 @@ export type EditablePageSection = {
     body?: string;
     andrewDescription?: string;
     morganeDescription?: string;
+    oceanDream01?: string;
+    oceanDream02?: string;
+    oceanDream03?: string;
+    oceanDream04?: string;
     featuredVideoMode?: string;
     featuredVideoId?: string;
   };
@@ -403,8 +411,20 @@ Today, we roam the world together, capturing landscapes, underwater life, wildli
         key: "ocean-dreams",
         label: "Ocean dreams",
         description: "Dark ocean life section with visual collage, icons and handwritten text.",
-        fields: ["eyebrow", "title", "description"],
+        fields: [
+          "eyebrow",
+          "title",
+          "description",
+          "oceanDream01",
+          "oceanDream02",
+          "oceanDream03",
+          "oceanDream04",
+        ],
         defaults: {
+          oceanDream01: "Andrew works as a deckhand and is training to become a licensed skipper.",
+          oceanDream02: "One day, we’ll sail the world on our own boat, our floating home.",
+          oceanDream03: "Morgane is a certified diver and dreaming of becoming a scuba instructor.",
+          oceanDream04: "Morgane is passionate about marine biology and the wonder of underwater life.",
           eyebrow: "Ocean life & future dreams",
           title: "Living for the ocean, dreaming of tomorrow",
           description:

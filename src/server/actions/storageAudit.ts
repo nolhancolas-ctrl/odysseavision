@@ -2,8 +2,15 @@
 
 import { revalidatePath } from "next/cache";
 import { isAdminAuthenticated } from "@/lib/admin/auth";
-import { analyzeNextBlobImageBatch } from "@/lib/admin/blobImageAudit";
-import { deleteUnusedBlobByRegistryId } from "@/lib/admin/blobCleanup";
+import {
+  analyzeNextBlobImageBatch,
+  queueAllBlobImagesForAnalysis,
+  refreshBlobImageAuditQueue,
+} from "@/lib/admin/blobImageAudit";
+import {
+  deleteUnusedBlobByRegistryId,
+  deleteUnusedBlobsByRegistryIds,
+} from "@/lib/admin/blobCleanup";
 import { optimizeNextDetectedBlobImage } from "@/lib/admin/blobImageOptimizer";
 
 async function requireAdmin() {
@@ -16,6 +23,43 @@ export async function deleteUnusedBlobImage(id: string) {
   await requireAdmin();
 
   const result = await deleteUnusedBlobByRegistryId(id);
+
+  revalidatePath("/admin/storage-audit");
+  revalidatePath("/admin");
+
+  return result;
+}
+
+export async function deleteUnusedBlobImages(
+  ids: string[],
+) {
+  await requireAdmin();
+
+  const result =
+    await deleteUnusedBlobsByRegistryIds(ids);
+
+  revalidatePath("/admin/storage-audit");
+  revalidatePath("/admin");
+
+  return result;
+}
+
+
+export async function refreshRecentBlobImageAudit() {
+  await requireAdmin();
+
+  const result = await refreshBlobImageAuditQueue();
+
+  revalidatePath("/admin/storage-audit");
+  revalidatePath("/admin");
+
+  return result;
+}
+
+export async function restartFullBlobImageAnalysis() {
+  await requireAdmin();
+
+  const result = await queueAllBlobImagesForAnalysis();
 
   revalidatePath("/admin/storage-audit");
   revalidatePath("/admin");

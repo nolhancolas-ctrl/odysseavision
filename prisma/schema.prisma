@@ -147,7 +147,7 @@ model ClientAlbum {
   shootingDate          DateTime?
   location              String?
   status                String    @default("DRAFT")
-order                 Int       @default(0)
+  order                 Int       @default(0)
   passwordHash          String?
   allowDownload         Boolean   @default(false)
   allowShare            Boolean   @default(true)

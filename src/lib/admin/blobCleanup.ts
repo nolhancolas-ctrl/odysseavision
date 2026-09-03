@@ -60,8 +60,11 @@ function collectBlobUrls(value: unknown, output: Set<string>) {
   }
 }
 
-export async function getReferencedBlobUrls() {
-  const references = new Set<string>();
+export type BlobUsageStatus = "PUBLIC" | "DRAFT" | "UNUSED";
+
+export async function getBlobReferenceUsage() {
+  const publicReferences = new Set<string>();
+  const draftReferences = new Set<string>();
 
   const [
     portfolio,
@@ -76,48 +79,51 @@ export async function getReferencedBlobUrls() {
     db.portfolioItem.findMany({
       select: {
         imageSrc: true,
+        status: true,
       },
     }),
-
     db.story.findMany({
       select: {
         imageSrc: true,
         content: true,
+        status: true,
       },
     }),
-
     db.video.findMany({
       select: {
         thumbnailSrc: true,
+        status: true,
       },
     }),
-
     db.clientAlbum.findMany({
       select: {
         coverSrc: true,
         externalDownloadUrl: true,
+        status: true,
       },
     }),
-
     db.clientAlbumImage.findMany({
       select: {
         imageSrc: true,
+        album: {
+          select: {
+            status: true,
+          },
+        },
       },
     }),
-
     db.newsletterCampaign.findMany({
       select: {
         heroImage: true,
         body: true,
+        status: true,
       },
     }),
-
     db.pageContent.findMany({
       select: {
         content: true,
       },
     }),
-
     db.siteSetting.findMany({
       select: {
         value: true,
@@ -125,18 +131,62 @@ export async function getReferencedBlobUrls() {
     }),
   ]);
 
-  [
-    portfolio,
-    stories,
-    videos,
-    albums,
-    albumImages,
-    newsletters,
-    pageContent,
-    siteSettings,
-  ].forEach((value) => collectBlobUrls(value, references));
+  const collectByStatus = (
+    value: unknown,
+    status: unknown,
+  ) => {
+    const destination =
+      String(status || "").toUpperCase() === "DRAFT"
+        ? draftReferences
+        : publicReferences;
 
-  return references;
+    collectBlobUrls(value, destination);
+  };
+
+  for (const item of portfolio) {
+    collectByStatus(item, item.status);
+  }
+
+  for (const item of stories) {
+    collectByStatus(item, item.status);
+  }
+
+  for (const item of videos) {
+    collectByStatus(item, item.status);
+  }
+
+  for (const item of albums) {
+    collectByStatus(item, item.status);
+  }
+
+  for (const item of albumImages) {
+    collectByStatus(item, item.album.status);
+  }
+
+  for (const item of newsletters) {
+    collectByStatus(item, item.status);
+  }
+
+  collectBlobUrls(pageContent, publicReferences);
+  collectBlobUrls(siteSettings, publicReferences);
+
+  // A public reference takes priority over a draft reference.
+  for (const url of publicReferences) {
+    draftReferences.delete(url);
+  }
+
+  return {
+    publicReferences,
+    draftReferences,
+    allReferences: new Set([
+      ...publicReferences,
+      ...draftReferences,
+    ]),
+  };
+}
+
+export async function getReferencedBlobUrls() {
+  return (await getBlobReferenceUsage()).allReferences;
 }
 
 async function getAllBlobs() {
@@ -347,6 +397,152 @@ export async function deleteUnusedBlobByRegistryId(id: string) {
     pathname: record.pathname,
     freedBytes: Number(record.storedSize || 0),
   } as const;
+}
+
+export async function deleteUnusedBlobsByRegistryIds(
+  ids: string[],
+) {
+  const uniqueIds = [
+    ...new Set(
+      ids
+        .map((id) => String(id || "").trim())
+        .filter(Boolean),
+    ),
+  ].slice(0, 250);
+
+  if (uniqueIds.length === 0) {
+    return {
+      ok: false,
+      deletedIds: [] as string[],
+      deletedCount: 0,
+      freedBytes: 0,
+      protectedCount: 0,
+      failedCount: 0,
+      message: "No files were selected.",
+    };
+  }
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+
+  if (!token) {
+    return {
+      ok: false,
+      deletedIds: [] as string[],
+      deletedCount: 0,
+      freedBytes: 0,
+      protectedCount: 0,
+      failedCount: 0,
+      message: "Blob write access is not configured.",
+    };
+  }
+
+  const records =
+    await db.blobImageOptimization.findMany({
+      where: {
+        id: {
+          in: uniqueIds,
+        },
+        presentInStorage: true,
+      },
+      select: {
+        id: true,
+        url: true,
+        pathname: true,
+        storedSize: true,
+      },
+    });
+
+  // One live scan protects the entire selected batch.
+  const latestUsage = await getBlobReferenceUsage();
+
+  const deletedIds: string[] = [];
+  let freedBytes = 0;
+  let protectedCount = 0;
+  let failedCount = Math.max(
+    0,
+    uniqueIds.length - records.length,
+  );
+
+  for (const record of records) {
+    const url = normalizeBlobUrl(record.url);
+
+    const isProtected =
+      latestUsage.publicReferences.has(url) ||
+      latestUsage.draftReferences.has(url);
+
+    if (isProtected) {
+      protectedCount += 1;
+
+      await db.blobImageOptimization.update({
+        where: {
+          id: record.id,
+        },
+        data: {
+          referenced: true,
+          note:
+            "Grouped deletion blocked by a live public or draft reference.",
+          checkedAt: new Date(),
+        },
+      });
+
+      continue;
+    }
+
+    try {
+      await del(url, { token });
+
+      await db.blobImageOptimization.update({
+        where: {
+          id: record.id,
+        },
+        data: {
+          presentInStorage: false,
+          referenced: false,
+          status: "SKIPPED",
+          projectedSize: null,
+          projectedSavingBytes: 0,
+          projectedSavingPercent: 0,
+          policyIssues: [],
+          note:
+            "Unused Blob deleted through grouped storage cleanup.",
+          checkedAt: new Date(),
+        },
+      });
+
+      deletedIds.push(record.id);
+      freedBytes += Number(record.storedSize || 0);
+    } catch (error) {
+      failedCount += 1;
+
+      console.error(
+        "[grouped blob cleanup] Failed:",
+        record.pathname,
+        error,
+      );
+    }
+  }
+
+  const details = [
+    `${deletedIds.length} file${
+      deletedIds.length === 1 ? "" : "s"
+    } deleted`,
+    protectedCount > 0
+      ? `${protectedCount} protected`
+      : "",
+    failedCount > 0
+      ? `${failedCount} failed`
+      : "",
+  ].filter(Boolean);
+
+  return {
+    ok: true,
+    deletedIds,
+    deletedCount: deletedIds.length,
+    freedBytes,
+    protectedCount,
+    failedCount,
+    message: details.join(" · "),
+  };
 }
 
 export async function getBlobStorageAudit() {

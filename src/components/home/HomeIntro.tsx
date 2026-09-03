@@ -23,12 +23,12 @@ export function HomeIntro({ content }: HomeIntroProps) {
   const image = content?.images.photo ?? content?.imageSrc ?? homeImages.introDuo.src;
 
   return (
-    <section className="bg-[#f4efe4] px-6 py-20 md:px-14 md:py-24">
-      <div className="mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[0.9fr_1.4fr]">
+    <section className="bg-[#f4efe4] px-5 py-16 sm:px-6 md:px-14 md:py-24">
+      <div className="mx-auto grid max-w-7xl items-center gap-10 md:gap-12 lg:grid-cols-[0.9fr_1.4fr]">
         <div>
           <SectionLabel>{content?.eyebrow || "Welcome"}</SectionLabel>
 
-          <h2 className="font-serif text-5xl uppercase leading-[0.95] tracking-[-0.04em] md:text-6xl lg:text-7xl">
+          <h2 className="font-serif text-[clamp(2.7rem,12vw,4.5rem)] uppercase leading-[0.94] tracking-[-0.04em]">
             {content?.title || "Visual Storytellers & Ocean Lovers"}
           </h2>
 
@@ -52,7 +52,7 @@ export function HomeIntro({ content }: HomeIntroProps) {
             src={image}
             label={fileLabel(image, homeImages.introDuo.label)}
             imagePosition="right center"
-            className="h-[360px] w-full md:h-[460px] lg:h-[560px]"
+            className="h-[300px] w-full sm:h-[360px] md:h-[460px] lg:h-[560px]"
             showWatermark={shouldShowWatermark(content, "photo")}
           />
         ) : null}

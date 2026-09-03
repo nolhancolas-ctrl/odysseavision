@@ -21,7 +21,7 @@ export function HomeFinalCTA({ content }: HomeFinalCTAProps) {
     <section className="relative overflow-hidden bg-[#f4efe4] text-[#242617]">
       <div className="absolute inset-0 bg-gradient-to-r from-black/[0.03] via-transparent to-black/[0.03]" />
 
-      <div className="relative mx-auto flex min-h-[250px] max-w-[1500px] items-center justify-center px-6 py-12 md:min-h-[280px] md:px-14 lg:py-10">
+      <div className="relative mx-auto flex min-h-[250px] max-w-[1500px] items-center justify-center px-5 py-14 sm:px-6 md:min-h-[280px] md:px-14 lg:py-10">
         <div className="pointer-events-none absolute left-0 top-1/2 hidden h-[230px] w-[350px] -translate-y-1/2 lg:block xl:left-6">
           {leftPhoto ? (
             <PhotoFrame
@@ -44,7 +44,7 @@ export function HomeFinalCTA({ content }: HomeFinalCTAProps) {
         </div>
 
         <div className="relative z-10 mx-auto max-w-2xl text-center">
-          <h2 className="font-serif text-4xl uppercase leading-none tracking-[-0.04em] md:text-5xl lg:text-6xl text-[#242617]">
+          <h2 className="font-serif text-[clamp(2.35rem,11vw,3.75rem)] uppercase leading-[0.95] tracking-[-0.04em] text-[#242617]">
             {content?.title || "Let’s tell your story"}
           </h2>
 
@@ -58,7 +58,7 @@ export function HomeFinalCTA({ content }: HomeFinalCTAProps) {
             <ButtonLink
               href={content?.ctaHref || "/contact"}
               variant="light"
-              className="min-w-72 px-10 py-3 text-[10px]"
+              className="w-full max-w-72 min-w-0 px-8 py-3 text-[10px]"
             >
               {content?.ctaLabel || "Contact us"}
             </ButtonLink>

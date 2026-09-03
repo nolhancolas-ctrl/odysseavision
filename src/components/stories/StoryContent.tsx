@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import sanitizeHtml from "sanitize-html";
 import styles from "@/components/stories/StoryContent.module.css";
+import { StoryRichHtml } from "@/components/stories/StoryRichHtml";
 import {
   defaultStoryTypographySettings,
   getStoryTypographyVariables,
@@ -134,12 +135,15 @@ function sanitizeStoryHtml(content: string) {
       ...sanitizeHtml.defaults.allowedTags,
       "img",
       "figure",
+"section",
+      "iframe",
+      "video",
       "figcaption",
       "u",
       "font",
     ],
     allowedAttributes: {
-      "*": ["class", "style"],
+      "*": ["class", "style", "data-spatial-layout", "data-canvas-height", "data-x", "data-y", "data-height", "data-crop-x", "data-crop-y", "data-crop-zoom"],
       a: ["href", "target", "rel"],
       img: [
         "src",
@@ -150,18 +154,63 @@ function sanitizeStoryHtml(content: string) {
         "width",
         "height",
       ],
+      iframe: [
+        "src",
+        "title",
+        "loading",
+        "allow",
+        "allowfullscreen",
+        "frameborder",
+        "referrerpolicy",
+      ],
+      video: [
+        "src",
+        "controls",
+        "preload",
+        "playsinline",
+        "poster",
+      ],
       figure: [
         "class",
         "data-story-image",
+        "data-story-video",
+        "data-video-kind",
+        "data-video-source",
+"data-story-image-index",
+"data-watermark",
+      "data-width",
+      "draggable",
         "contenteditable",
         "tabindex",
-      ],
-      figcaption: ["class"],
+
+      "data-composition-width",
+      "data-photo-gap",
+      "data-corner-radius",      ],
+      section: [
+"class",
+"data-story-gallery",
+"data-layout",
+"data-size",
+"data-count",
+"contenteditable",
+"tabindex",
+
+      "style",
+      "data-composition-width",
+      "data-photo-gap",
+      "data-corner-radius",
+      "draggable",],
+figcaption: ["class"],
       font: ["face", "size", "color"],
     },
     allowedStyles: {
       "*": {
         "text-align": [/^(?:left|center|right|justify)$/],
+      "width": [/^\d+(?:\.\d+)?%$/],
+      "max-width": [/^\d+(?:\.\d+)?%$/],
+      "gap": [/^\d+(?:\.\d+)?px$/],
+      "margin-inline": [/^auto$/],
+      "border-radius": [/^\d+(?:\.\d+)?px$/],
       },
     },
     allowedSchemes: ["http", "https", "mailto"],
@@ -183,9 +232,10 @@ export function StoryContent({
     const html = sanitizeStoryHtml(richHtml);
 
     return (
-      <div
-        className={styles.content} style={typographyStyle}
-        dangerouslySetInnerHTML={{ __html: html }}
+      <StoryRichHtml
+        html={html}
+        className={styles.content}
+        style={typographyStyle}
       />
     );
   }

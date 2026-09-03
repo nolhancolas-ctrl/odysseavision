@@ -33,7 +33,7 @@ function PortfolioPreviewCard({
   return (
     <Link
       href={item.href}
-      className="group flex min-h-[470px] w-full flex-col bg-[#30331f] p-5 transition hover:-translate-y-1 hover:bg-[#3b3e27]"
+      className="group flex min-h-[420px] w-full flex-col bg-[#30331f] p-5 transition active:scale-[0.99] sm:min-h-[470px] sm:hover:-translate-y-1 sm:hover:bg-[#3b3e27]"
     >
       <p className="mb-2 font-serif text-3xl text-[#b7a879]/75">
         {item.number}
@@ -72,11 +72,11 @@ export async function HomePortfolioPreview({
   }));
 
   return (
-    <section className="overflow-hidden bg-[#11190f] px-6 py-20 text-[#f4efe4] md:px-14 md:py-24">
+    <section className="overflow-hidden bg-[#11190f] px-5 py-16 text-[#f4efe4] sm:px-6 md:px-14 md:py-24">
       <div className="mx-auto max-w-7xl">
         <div className="mb-12 text-center">
           <SectionLabel dark>{content?.eyebrow || "Portfolio"}</SectionLabel>
-          <h2 className="font-serif text-5xl uppercase tracking-[-0.04em] md:text-6xl">
+          <h2 className="font-serif text-[clamp(2.7rem,12vw,3.75rem)] uppercase leading-[0.95] tracking-[-0.04em]">
             {content?.title || "Explore our world"}
           </h2>
         </div>

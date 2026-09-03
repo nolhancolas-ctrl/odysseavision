@@ -41,7 +41,7 @@ export function HomeHero({ content }: HomeHeroProps) {
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/60" />
 
-      <div className="relative z-20 mx-auto grid min-h-[100svh] w-full max-w-[1500px] grid-cols-1 items-center px-6 pb-14 pt-28 md:px-10 lg:grid-cols-[minmax(220px,1fr)_minmax(410px,620px)_minmax(220px,1fr)] lg:gap-8 xl:gap-14">
+      <div className="relative z-20 mx-auto grid min-h-[100svh] w-full max-w-[1500px] grid-cols-1 items-center px-5 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28 md:px-10 lg:grid-cols-[minmax(220px,1fr)_minmax(410px,620px)_minmax(220px,1fr)] lg:gap-8 xl:gap-14">
         <div className="pointer-events-none relative hidden h-[430px] lg:block xl:h-[500px]">
           {postalCoast ? (
             <PhotoFrame
@@ -63,11 +63,11 @@ export function HomeHero({ content }: HomeHeroProps) {
         </div>
 
         <div className="mx-auto max-w-[620px] text-center">
-          <h1 className="font-serif text-[clamp(3.4rem,6.2vw,6.7rem)] uppercase leading-[0.94] tracking-[-0.045em]">
+          <h1 className="font-serif text-[clamp(2.75rem,14vw,6.7rem)] uppercase leading-[0.92] tracking-[-0.045em]">
             {content?.title || "Wild Stories"}
           </h1>
 
-          <p className="mt-2 font-serif text-[clamp(2.1rem,3.8vw,4.1rem)] italic leading-none text-[#f4efe4]/90">
+          <p className="mt-2 font-serif text-[clamp(1.8rem,9vw,4.1rem)] italic leading-none text-[#f4efe4]/90">
             {content?.drawings.subtitle || "from land and sea."}
           </p>
 
@@ -78,18 +78,18 @@ export function HomeHero({ content }: HomeHeroProps) {
               "We are Andrew & Morgane, photographers and filmmakers capturing the beauty of our planet and the stories that deserve to be told."}
           </p>
 
-          <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
+          <div className="mt-6 flex flex-col items-stretch justify-center gap-3 sm:flex-row sm:items-center">
             <ButtonLink
               href={content?.ctaHref || "/portfolio"}
               variant="filled"
-              className="min-w-52 px-6 py-2.5 text-[10px]"
+              className="w-full min-w-0 px-6 py-3 text-[10px] sm:w-auto sm:min-w-52"
             >
               {content?.ctaLabel || "Explore the portfolio"}
             </ButtonLink>
 
             <ButtonLink
               href="/about"
-              className="min-w-44 px-6 py-2.5 text-[10px]"
+              className="w-full min-w-0 px-6 py-3 text-[10px] sm:w-auto sm:min-w-44"
             >
               Meet the crew
             </ButtonLink>

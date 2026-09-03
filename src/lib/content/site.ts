@@ -14,6 +14,10 @@ export type PublicSectionContent = {
   body?: string;
   andrewDescription?: string;
   morganeDescription?: string;
+  oceanDream01?: string;
+  oceanDream02?: string;
+  oceanDream03?: string;
+  oceanDream04?: string;
   imageSrc?: string;
   images: Record<string, string>;
   imageWatermarks: Record<string, boolean>;
@@ -35,6 +39,10 @@ const editableFields: EditableFieldKey[] = [
   "body",
   "andrewDescription",
   "morganeDescription",
+  "oceanDream01",
+  "oceanDream02",
+  "oceanDream03",
+  "oceanDream04",
   "featuredVideoMode",
   "featuredVideoId",
 ];
