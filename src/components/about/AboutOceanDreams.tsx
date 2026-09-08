@@ -9,26 +9,34 @@ type AboutOceanDreamsProps = {
 
 const oceanDreamItems = [
   {
+    textKey: "oceanDream01",
     iconKey: "icon01",
     fallbackIcon: "/images/about/ocean_icon_01.png",
-    text: "Andrew works as a deckhand and is training to become a licensed skipper.",
+    fallbackText:
+      "Andrew works as a deckhand and is training to become a licensed skipper.",
   },
   {
+    textKey: "oceanDream02",
     iconKey: "icon02",
     fallbackIcon: "/images/about/ocean_icon_02.png",
-    text: "One day, we’ll sail the world on our own boat, our floating home.",
+    fallbackText:
+      "One day, we’ll sail the world on our own boat, our floating home.",
   },
   {
+    textKey: "oceanDream03",
     iconKey: "icon03",
     fallbackIcon: "/images/about/ocean_icon_03.png",
-    text: "Morgane is a certified diver and dreaming of becoming a scuba instructor.",
+    fallbackText:
+      "Morgane is a certified diver and dreaming of becoming a scuba instructor.",
   },
   {
+    textKey: "oceanDream04",
     iconKey: "icon04",
     fallbackIcon: "/images/about/ocean_icon_04.png",
-    text: "Morgane is passionate about marine biology and the wonder of underwater life.",
+    fallbackText:
+      "Morgane is passionate about marine biology and the wonder of underwater life.",
   },
-];
+] as const;
 
 function fileLabel(src: string, fallback: string) {
   return src.split("/").pop() || fallback;
@@ -78,7 +86,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
           <div className="absolute left-[-125px] top-[50px] z-30 h-7 w-24 -rotate-12 bg-[#d8c7a8]/90 shadow-md" />
 
           <p className="absolute bottom-[-20px] left-[-2%] z-30 max-w-[230px] -rotate-6 font-hand text-xl leading-8 text-[#f4efe4]/72">
-            {(content?.drawings.handwritten || "home is where the ocean is")
+            {(content?.drawings.handwritten ?? "home is where the ocean is")
               .split(",")
               .map((line) => (
                 <span key={line.trim()}>
@@ -91,21 +99,26 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
 
         <div className="mx-auto w-full max-w-[640px] lg:mx-0">
           <p className="mb-4 text-[10px] font-semibold uppercase tracking-[0.26em] text-[#f4efe4]/50">
-            {content?.eyebrow || "Ocean life & future dreams"}
+            {content?.eyebrow ?? "Ocean life & future dreams"}
           </p>
 
           <h2 className="max-w-xl font-serif text-[clamp(2.2rem,3.1vw,3.55rem)] uppercase leading-[0.98] tracking-[-0.04em]">
-            {content?.title || "Living for the ocean, dreaming of tomorrow"}
+            {content?.title ?? "Living for the ocean, dreaming of tomorrow"}
           </h2>
 
           <div className="my-6 h-px w-14 bg-[#f4efe4]/35" />
 
           <div className="grid gap-x-10 gap-y-7 md:grid-cols-2">
             {oceanDreamItems.map((item) => {
-              const icon = content?.images[item.iconKey] ?? item.fallbackIcon;
+              const icon =
+                content?.images[item.iconKey] ??
+                item.fallbackIcon;
+              const itemText =
+                content?.[item.textKey] ??
+                item.fallbackText;
 
               return (
-                <div key={item.text} className="grid grid-cols-[54px_1fr] gap-4">
+                <div key={item.textKey} className="grid grid-cols-[54px_1fr] gap-4">
                   <div className="mt-0 flex h-12 w-12 items-center justify-center overflow-visible">
                     {icon ? (
                       <OptionalImage
@@ -118,7 +131,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
                   </div>
 
                   <p className="max-w-[230px] text-[13px] font-medium leading-6 text-[#f4efe4]/66">
-                    {item.text}
+                    {itemText}
                   </p>
                 </div>
               );
@@ -126,7 +139,7 @@ export function AboutOceanDreams({ content }: AboutOceanDreamsProps) {
           </div>
 
           <p className="mt-9 max-w-xl text-[13px] font-medium leading-7 text-[#f4efe4]/72">
-            {content?.description ||
+            {content?.description ??
               "The ocean is our playground, our teacher and our biggest inspiration."}
           </p>
         </div>

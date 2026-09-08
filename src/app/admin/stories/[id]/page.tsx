@@ -3,6 +3,10 @@ import Link from "next/link";
 import { StoryForm } from "@/components/admin/stories/StoryForm";
 import { updateStory } from "@/server/actions/stories";
 import { db } from "@/lib/db";
+import {
+  getStoryTypographySettings,
+  getStoryTypographyVariables,
+} from "@/lib/content/storyTypography";
 
 export const dynamic = "force-dynamic";
 
@@ -15,15 +19,17 @@ type EditStoryPageProps = {
 export default async function EditStoryPage({ params }: EditStoryPageProps) {
   const { id } = await params;
 
-  const [story, categories] = await Promise.all([
-    db.story.findUnique({
-      where: { id },
-      include: { category: true },
-    }),
-    db.storyCategory.findMany({
-      orderBy: [{ order: "asc" }, { name: "asc" }],
-    }),
-  ]);
+  const [story, categories, typography] =
+    await Promise.all([
+      db.story.findUnique({
+        where: { id },
+        include: { category: true },
+      }),
+      db.storyCategory.findMany({
+        orderBy: [{ order: "asc" }, { name: "asc" }],
+      }),
+      getStoryTypographySettings(),
+    ]);
 
   if (!story) {
     notFound();
@@ -72,10 +78,14 @@ export default async function EditStoryPage({ params }: EditStoryPageProps) {
       </section>
 
       <StoryForm
+        key={story.updatedAt.toISOString()}
         story={story}
         categories={categories}
         action={updateStory.bind(null, story.id)}
         submitLabel="Save changes"
+        typographyStyle={getStoryTypographyVariables(
+          typography,
+        )}
       />
     </div>
   );

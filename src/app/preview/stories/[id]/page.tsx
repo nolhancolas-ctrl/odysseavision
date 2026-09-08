@@ -56,6 +56,7 @@ export default async function StoryPreviewPage({
   }
 
   const description = story.excerpt || "";
+  const articleIntro = story.articleIntro || "";
   const typographyVariables = getStoryTypographyVariables(typography);
   const customFont = getStoryCustomFontFace(typography);
 
@@ -136,26 +137,31 @@ export default async function StoryPreviewPage({
 
       <article className="bg-[#f4efe4] px-6 py-16 md:px-14 md:py-24">
         <div className="mx-auto max-w-3xl">
-          {description ? (
+          {articleIntro ? (
             <>
               <p
                 style={{
                   color: "var(--story-heading-color)",
                   fontFamily: "var(--story-heading-font)",
-                  fontSize: "min(var(--story-h2-size, 48px), 9vw)",
-                  lineHeight: "var(--story-heading-line-height)",
-                  letterSpacing: "var(--story-heading-letter-spacing)",
+                  fontSize: "clamp(22px, 3vw, 30px)",
+                  lineHeight: "1.35",
+                  letterSpacing:
+                    "var(--story-heading-letter-spacing)",
                 }}
               >
-                {description}
+                {articleIntro}
               </p>
 
-              <div className="my-10 h-px w-full bg-[#242617]/15" />
+              <div className="my-8 h-px w-full bg-[#242617]/15" />
             </>
           ) : null}
 
           <StoryContent
-            content={story.content || description}
+            content={
+              story.content ||
+              articleIntro ||
+              description
+            }
             typography={typography}
           />
 

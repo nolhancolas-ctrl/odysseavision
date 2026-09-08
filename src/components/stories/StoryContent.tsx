@@ -197,6 +197,8 @@ function sanitizeStoryHtml(content: string) {
 
       "style",
       "data-composition-width",
+      "data-composition-height",
+      "data-story-composition",
       "data-photo-gap",
       "data-corner-radius",
       "draggable",],
@@ -206,6 +208,10 @@ figcaption: ["class"],
     allowedStyles: {
       "*": {
         "text-align": [/^(?:left|center|right|justify)$/],
+        "font-family": [/^[A-Za-z0-9 "'_, -]{1,120}$/],
+        "font-size": [
+          /^(?:\d+(?:\.\d+)?(?:px|em|rem|%)|xx-small|x-small|small|medium|large|x-large|xx-large)$/,
+        ],
       "width": [/^\d+(?:\.\d+)?%$/],
       "max-width": [/^\d+(?:\.\d+)?%$/],
       "gap": [/^\d+(?:\.\d+)?px$/],

@@ -1,6 +1,16 @@
 "use client";
 
-import { useEffect, useRef, useState, type DragEvent as ReactDragEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from "react";
+import { useRouter } from "next/navigation";
+import { Editor } from "@tiptap/core";
+import StarterKit from "@tiptap/starter-kit";
+import TextAlign from "@tiptap/extension-text-align";
+import { TextStyleKit } from "@tiptap/extension-text-style";
 import {
   StoryMediaDialog,
   createEmptyStoryMediaDraft,
@@ -17,6 +27,15 @@ import {
   resolveStoryVideoUrl,
   type StoryVideoDraft,
 } from "@/components/admin/stories/StoryVideoDialog";
+import {
+  STORY_MEDIA_EDIT_EVENT,
+  StoryListEnter,
+  StoryListItem,
+  StoryMediaNode,
+  normalizeLegacyStoryHtml,
+  serializeStoryHtml,
+  type StoryMediaEditDetail,
+} from "@/components/admin/stories/storyTiptap";
 import styles from "@/components/stories/StoryContent.module.css";
 
 const STORY_HTML_MARKER = "STORY_HTML_V1";
@@ -98,7 +117,48 @@ function getInitialHtml(content: string) {
 }
 
 const toolbarButton =
-  "grid h-9 min-w-9 cursor-pointer place-items-center rounded-lg border border-[#242617]/10 bg-white/30 px-2.5 text-sm text-[#242617]/62 transition hover:border-[#b88a3b]/55 hover:bg-[#e8dfcf] hover:text-[#071321]";
+  "grid h-8 min-w-8 cursor-pointer place-items-center rounded-lg border border-[#242617]/10 bg-white/30 px-2 text-xs text-[#242617]/62 transition hover:border-[#b88a3b]/55 hover:bg-[#e8dfcf] hover:text-[#071321] sm:h-9 sm:min-w-9 sm:px-2.5 sm:text-sm";
+
+type TextAlignment =
+  | "left"
+  | "center"
+  | "right"
+  | "justify";
+
+function TextAlignmentIcon({
+  alignment,
+}: {
+  alignment: TextAlignment;
+}) {
+  const widths =
+    alignment === "justify"
+      ? ["100%", "100%", "100%", "100%"]
+      : ["100%", "68%", "86%", "58%"];
+
+  const lineAlignment =
+    alignment === "left"
+      ? "mr-auto"
+      : alignment === "right"
+        ? "ml-auto"
+        : alignment === "center"
+          ? "mx-auto"
+          : "";
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-4 w-[18px] flex-col justify-center gap-[2px]"
+    >
+      {widths.map((width, index) => (
+        <span
+          key={`${width}-${index}`}
+          className={`block h-[1.5px] rounded-full bg-current ${lineAlignment}`}
+          style={{ width }}
+        />
+      ))}
+    </span>
+  );
+}
 
 function ToolbarDropdown({
   label,
@@ -138,13 +198,16 @@ function ToolbarDropdown({
   }, []);
 
   return (
-    <div ref={containerRef} className="relative">
+    <div
+      ref={containerRef}
+      className="relative min-w-0 flex-1 lg:flex-none"
+    >
       <button
         type="button"
         aria-expanded={open}
         onMouseDown={onBeforeOpen}
         onClick={() => setOpen((current) => !current)}
-        className={`flex h-9 min-w-[108px] cursor-pointer items-center justify-between gap-4 rounded-lg border bg-white/30 px-3 text-xs text-[#242617]/62 transition ${
+        className={`flex h-9 w-full min-w-0 cursor-pointer lg:min-w-[108px] items-center justify-between gap-4 rounded-lg border bg-white/30 px-3 text-xs text-[#242617]/62 transition ${
           open
             ? "border-[#b88a3b]/65 bg-[#f4efe4]"
             : "border-[#242617]/10 hover:border-[#b88a3b]/55"
@@ -183,20 +246,47 @@ function ToolbarDropdown({
   );
 }
 
+
 export function StoryRichTextEditor({
   initialContent,
   uploadSlug,
+  typographyStyle,
   existingPageImageUrls = [],
+  onContentChange,
+  onNavigateBack,
 }: {
   initialContent: string;
   uploadSlug: string;
+  typographyStyle?: CSSProperties;
   existingPageImageUrls?: readonly string[];
+  onContentChange?: (content: string) => void;
+  onNavigateBack?: () => void;
 }) {
+  const router = useRouter();
   const editorRef = useRef<HTMLDivElement>(null);
-  const savedRange = useRef<Range | null>(null);
+  const editorContainerRef = useRef<HTMLDivElement>(null);
+  const toolbarAnchorRef = useRef<HTMLDivElement>(null);
+  const toolbarRef = useRef<HTMLDivElement>(null);
+  const tiptapEditorRef = useRef<Editor | null>(null);
+  const onContentChangeRef = useRef(onContentChange);
+  const selectedMediaPosition = useRef<number | null>(null);
+
+  onContentChangeRef.current = onContentChange;
+
+  const [toolbarPosition, setToolbarPosition] =
+    useState<{
+      left: number;
+      width: number;
+      height: number;
+    } | null>(null);
+  const [showScrollTop, setShowScrollTop] =
+    useState(false);
+  const [compactToolbar, setCompactToolbar] =
+    useState(false);
+  const [toolbarOpen, setToolbarOpen] =
+    useState(false);
   const selectedFigure = useRef<HTMLElement | null>(null);
   const selectedVideo = useRef<HTMLElement | null>(null);
-  const draggedStoryMedia = useRef<HTMLElement | null>(null);
   const initialHtml = useRef(getInitialHtml(initialContent));
 
   const [contentValue, setContentValue] = useState(() => {
@@ -224,64 +314,415 @@ export function StoryRichTextEditor({
   );
 
   useEffect(() => {
-    const editor = editorRef.current;
+    const element = editorRef.current;
 
-    if (
-      !editor ||
-      editor.dataset.storyEditorInitialized === "true"
-    ) {
+    if (!element || tiptapEditorRef.current) {
       return;
     }
 
-    editor.innerHTML = initialHtml.current;
-    editor.dataset.storyEditorInitialized = "true";
+    const tiptap = new Editor({
+      element,
+      content: normalizeLegacyStoryHtml(
+        initialHtml.current,
+      ),
+      extensions: [
+        StarterKit.configure({
+          heading: {
+            levels: [2, 3],
+          },
+          listItem: false,
+          link: {
+            openOnClick: false,
+            autolink: false,
+          },
+        }),
+        StoryListItem,
+        StoryListEnter,
+        StoryMediaNode,
+        TextAlign.configure({
+          types: [
+            "paragraph",
+            "heading",
+            "blockquote",
+          ],
+        }),
+        TextStyleKit,
+      ],
+      editorProps: {
+        attributes: {
+          class: "story-tiptap-document",
+          spellcheck: "true",
+        },
+      },
+      onUpdate: () => {
+        synchronize();
+      },
+    });
+
+    tiptapEditorRef.current = tiptap;
+
+    const handleMediaEdit = (event: Event) => {
+      const detail = (
+        event as CustomEvent<StoryMediaEditDetail>
+      ).detail;
+
+      if (!detail) return;
+
+      selectedMediaPosition.current =
+        detail.position;
+
+      if (
+        detail.element.matches(
+          "figure[data-story-video='true']",
+        )
+      ) {
+        openVideoEditor(detail.element);
+      } else {
+        openMediaEditor(detail.element);
+      }
+    };
+
+    tiptap.view.dom.addEventListener(
+      STORY_MEDIA_EDIT_EVENT,
+      handleMediaEdit,
+    );
+
+    window.requestAnimationFrame(() => {
+      synchronize(false);
+    });
+
+    return () => {
+      tiptap.view.dom.removeEventListener(
+        STORY_MEDIA_EDIT_EVENT,
+        handleMediaEdit,
+      );
+      tiptap.destroy();
+      tiptapEditorRef.current = null;
+    };
   }, []);
 
-  function synchronize() {
-    const editor = editorRef.current;
-    if (!editor) return;
-
-    const html = editor.innerHTML.trim();
-    const hasContent =
-      Boolean(editor.textContent?.trim()) ||
-      Boolean(editor.querySelector("img"));
-
-    setContentValue(
-      hasContent ? `${STORY_HTML_PREFIX}${html}` : "",
+  useEffect(() => {
+    const query = window.matchMedia(
+      "(max-width: 1023px)",
     );
+
+    const update = () => {
+      const compact = query.matches;
+      setCompactToolbar(compact);
+      setToolbarOpen(!compact);
+    };
+
+    update();
+    query.addEventListener("change", update);
+
+    return () => {
+      query.removeEventListener("change", update);
+    };
+  }, []);
+
+  useEffect(() => {
+    function updateToolbarPosition() {
+      const container = editorContainerRef.current;
+      const anchor = toolbarAnchorRef.current;
+      const toolbar = toolbarRef.current;
+
+      if (!container || !anchor || !toolbar) {
+        return;
+      }
+
+      const top = 12;
+      const anchorRect = anchor.getBoundingClientRect();
+      const containerRect =
+        container.getBoundingClientRect();
+      const height = toolbar.offsetHeight;
+
+      const shouldPin =
+        anchorRect.top <= top &&
+        containerRect.bottom > top + height;
+
+      if (!shouldPin) {
+        setToolbarPosition(null);
+        return;
+      }
+
+      setToolbarPosition((current) => {
+        const next = {
+          left: anchorRect.left,
+          width: anchorRect.width,
+          height,
+        };
+
+        if (
+          current &&
+          Math.abs(current.left - next.left) < 1 &&
+          Math.abs(current.width - next.width) < 1 &&
+          Math.abs(current.height - next.height) < 1
+        ) {
+          return current;
+        }
+
+        return next;
+      });
+    }
+
+    updateToolbarPosition();
+
+    window.addEventListener(
+      "scroll",
+      updateToolbarPosition,
+      true,
+    );
+    window.addEventListener(
+      "resize",
+      updateToolbarPosition,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        updateToolbarPosition,
+        true,
+      );
+      window.removeEventListener(
+        "resize",
+        updateToolbarPosition,
+      );
+    };
+  }, [toolbarOpen]);
+
+  useEffect(() => {
+    const updateScrollTop = () => {
+      setShowScrollTop(window.scrollY > 420);
+    };
+
+    updateScrollTop();
+
+    window.addEventListener(
+      "scroll",
+      updateScrollTop,
+      { passive: true },
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        updateScrollTop,
+      );
+    };
+  }, []);
+
+  function synchronize(notify = true) {
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    const html = serializeStoryHtml(tiptap).trim();
+    const container = document.createElement("div");
+    container.innerHTML = html;
+
+    const hasContent =
+      Boolean(container.textContent?.trim()) ||
+      Boolean(
+        container.querySelector(
+          "img, iframe, video, figure, section",
+        ),
+      );
+
+    const nextContent = hasContent
+      ? `${STORY_HTML_PREFIX}${html}`
+      : "";
+
+    setContentValue(nextContent);
+
+    if (notify) {
+      onContentChangeRef.current?.(nextContent);
+    }
   }
 
   function rememberSelection() {
-    const editor = editorRef.current;
-    const selection = window.getSelection();
-
-    if (
-      !editor ||
-      !selection ||
-      !selection.rangeCount ||
-      !editor.contains(selection.anchorNode)
-    ) {
-      return;
-    }
-
-    savedRange.current = selection.getRangeAt(0).cloneRange();
+    // ProseMirror stores its own selection.
   }
 
   function restoreSelection() {
-    const selection = window.getSelection();
+    const tiptap = tiptapEditorRef.current;
 
-    if (!selection || !savedRange.current) return;
+    if (!tiptap) {
+      return false;
+    }
 
-    selection.removeAllRanges();
-    selection.addRange(savedRange.current);
+    tiptap.commands.focus();
+    return true;
   }
 
   function command(name: string, value?: string) {
-    editorRef.current?.focus();
-    restoreSelection();
-    document.execCommand(name, false, value);
-    rememberSelection();
-    synchronize();
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    if (name === "bold") {
+      tiptap.chain().focus().toggleBold().run();
+    } else if (name === "italic") {
+      tiptap.chain().focus().toggleItalic().run();
+    } else if (name === "underline") {
+      tiptap.chain().focus().toggleUnderline().run();
+    } else if (name === "justifyLeft") {
+      tiptap.chain().focus().setTextAlign("left").run();
+    } else if (name === "justifyCenter") {
+      tiptap.chain().focus().setTextAlign("center").run();
+    } else if (name === "justifyRight") {
+      tiptap.chain().focus().setTextAlign("right").run();
+    } else if (name === "justifyFull") {
+      tiptap.chain().focus().setTextAlign("justify").run();
+    } else if (name === "fontName" && value) {
+      tiptap.chain().focus().setFontFamily(value).run();
+    } else if (name === "fontSize" && value) {
+      const sizes: Record<string, string> = {
+        "2": "13px",
+        "3": "15px",
+        "5": "22px",
+      };
+
+      tiptap
+        .chain()
+        .focus()
+        .setFontSize(sizes[value] ?? value)
+        .run();
+    }
+  }
+
+  function formatTextBlock(
+    blockName: "p" | "h2" | "h3" | "blockquote",
+  ) {
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    if (blockName === "p") {
+      tiptap
+        .chain()
+        .focus()
+        .setParagraph()
+        .unsetFontFamily()
+        .unsetFontSize()
+        .run();
+    } else if (blockName === "h2") {
+      tiptap
+        .chain()
+        .focus()
+        .unsetFontFamily()
+        .unsetFontSize()
+        .setHeading({ level: 2 })
+        .run();
+    } else if (blockName === "h3") {
+      tiptap
+        .chain()
+        .focus()
+        .unsetFontFamily()
+        .unsetFontSize()
+        .setHeading({ level: 3 })
+        .run();
+    } else {
+      tiptap
+        .chain()
+        .focus()
+        .unsetFontFamily()
+        .unsetFontSize()
+        .toggleBlockquote()
+        .run();
+    }
+  }
+
+  function toggleList(listName: "ul" | "ol") {
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    if (listName === "ul") {
+      tiptap
+        .chain()
+        .focus()
+        .toggleBulletList()
+        .run();
+    } else {
+      tiptap
+        .chain()
+        .focus()
+        .toggleOrderedList()
+        .run();
+    }
+  }
+
+  function normalizeLinkHref(value: string) {
+    const href = value.trim();
+
+    if (!href) return "";
+
+    if (
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("/") ||
+      href.startsWith("#")
+    ) {
+      return href;
+    }
+
+    return `https://${href}`;
+  }
+
+  function editLink() {
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    const existingHref =
+      tiptap.getAttributes("link").href ?? "";
+
+    if (
+      tiptap.state.selection.empty &&
+      !tiptap.isActive("link")
+    ) {
+      window.alert(
+        "Select the text you want to link first.",
+      );
+      return;
+    }
+
+    const enteredHref = window.prompt(
+      "Enter the destination URL:",
+      existingHref,
+    );
+
+    if (enteredHref === null) return;
+
+    const href = normalizeLinkHref(enteredHref);
+    const chain = tiptap
+      .chain()
+      .focus()
+      .extendMarkRange("link");
+
+    if (!href) {
+      chain.unsetLink().run();
+      return;
+    }
+
+    const external =
+      href.startsWith("http://") ||
+      href.startsWith("https://");
+
+    chain
+      .setLink({
+        href,
+        target: external ? "_blank" : null,
+        rel: external
+          ? "noopener noreferrer"
+          : null,
+      })
+      .run();
+  }
+
+  function removeLink() {
+    tiptapEditorRef.current
+      ?.chain()
+      .focus()
+      .extendMarkRange("link")
+      .unsetLink()
+      .run();
   }
 
   function collectExistingPhotoUrls(
@@ -315,6 +756,7 @@ export function StoryRichTextEditor({
 
   function openPhoto() {
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     setExistingPhotoUrls(collectExistingPhotoUrls());
     setEditingPhoto(false);
     setPhotoSrc("");
@@ -358,6 +800,7 @@ export function StoryRichTextEditor({
     setPhotoOpen(false);
     setEditingPhoto(false);
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     editorRef.current?.focus();
     restoreSelection();
   }
@@ -442,13 +885,15 @@ export function StoryRichTextEditor({
 
     const className = container.className;
 
-    const alignment: StoryImageAlignment = className.includes(
-      "story-media-left",
-    )
-      ? "left"
-      : className.includes("story-media-right")
-        ? "right"
-        : "full";
+    const alignment: StoryImageAlignment =
+      className.includes("story-media-left")
+        ? "left"
+        : className.includes("story-media-right")
+          ? "right"
+          : className.includes("story-media-full") &&
+              (items[0]?.width ?? 100) >= 99
+            ? "full"
+            : "center";
 
     const size: StoryImageSize =
       container.getAttribute("data-size") === "small" ||
@@ -480,6 +925,31 @@ export function StoryRichTextEditor({
           100,
           Number(
             container.getAttribute("data-composition-width") ?? "100",
+          ),
+        ),
+      ),
+      compositionHeight: Math.max(
+        120,
+        Math.min(
+          1200,
+          Number(
+            container.getAttribute(
+              "data-composition-height",
+            ) ??
+              container.getAttribute(
+                "data-canvas-height",
+              ) ??
+              Math.ceil(
+                items.reduce(
+                  (maximum, item) =>
+                    Math.max(
+                      maximum,
+                      (item.y ?? 0) +
+                        (item.height ?? 320),
+                    ),
+                  120,
+                ),
+              ),
           ),
         ),
       ),
@@ -526,6 +996,7 @@ export function StoryRichTextEditor({
 
   function openMedia() {
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     setEditingPhoto(false);
     setMediaDraft(createEmptyStoryMediaDraft());
     setExistingPhotoUrls(collectMediaUrlsExcluding(null));
@@ -546,7 +1017,7 @@ export function StoryRichTextEditor({
     index?: number,
     frame?: Pick<
       StoryMediaDraft,
-      "compositionWidth" | "photoGap" | "cornerRadius"
+      "compositionWidth" | "compositionHeight" | "photoGap" | "cornerRadius"
     >,
     standalone = false,
   ) {
@@ -564,6 +1035,13 @@ export function StoryRichTextEditor({
     const safeCompositionWidth = Math.max(
       40,
       Math.min(100, frame?.compositionWidth ?? 100),
+    );
+    const safeCompositionHeight = Math.max(
+      120,
+      Math.min(
+        1200,
+        frame?.compositionHeight ?? 560,
+      ),
     );
     const safePhotoGap = Math.max(
       0,
@@ -626,9 +1104,9 @@ export function StoryRichTextEditor({
             : (
                 `position:absolute;` +
                 `left:${safeX}%;` +
-                `top:${safeY / 10}cqw;` +
-                `width:${safeWidth}%;` +
-                `height:${safeHeight / 10}cqw;` +
+                `top:${(safeY / safeCompositionHeight) * 100}%;` +
+                `width:${safeWidth}% !important;` +
+                `height:${(safeHeight / safeCompositionHeight) * 100}% !important;` +
                 `padding:${safePhotoGap / 2}px;` +
                 `box-sizing:border-box;` +
                 `background:transparent;`
@@ -639,6 +1117,10 @@ export function StoryRichTextEditor({
       : "";
 
     const imageStyle =
+      `display:block;` +
+      `width:100%;` +
+      `height:100%;` +
+      `object-fit:cover;` +
       `object-position:${safeCropX}% ${safeCropY}%;` +
       `transform:scale(${safeCropZoom});` +
       `transform-origin:${safeCropX}% ${safeCropY}%;` +
@@ -663,98 +1145,138 @@ export function StoryRichTextEditor({
     );
   }
 
-  function saveMediaDraft(draft: StoryMediaDraft) {
-    const editor = editorRef.current;
+  function replaceSelectedStoryMedia(
+    html: string,
+  ) {
+    const tiptap = tiptapEditorRef.current;
+    const position = selectedMediaPosition.current;
+
+    if (!tiptap || position === null) {
+      return false;
+    }
+
+    const node = tiptap.state.doc.nodeAt(position);
+
+    if (!node || node.type.name !== "storyMedia") {
+      return false;
+    }
+
+    tiptap.view.dispatch(
+      tiptap.state.tr.setNodeMarkup(
+        position,
+        undefined,
+        {
+          ...node.attrs,
+          html,
+        },
+      ),
+    );
+
+    return true;
+  }
+
+  function insertStoryMedia(html: string) {
+    const tiptap = tiptapEditorRef.current;
+    if (!tiptap) return;
+
+    tiptap
+      .chain()
+      .focus()
+      .insertContent([
+        {
+          type: "storyMedia",
+          attrs: { html },
+        },
+        {
+          type: "paragraph",
+        },
+      ])
+      .run();
+  }
+
+  function removeSelectedStoryMedia() {
+    const tiptap = tiptapEditorRef.current;
+    const position = selectedMediaPosition.current;
+
+    if (!tiptap || position === null) {
+      return;
+    }
+
+    const node = tiptap.state.doc.nodeAt(position);
+
+    if (!node || node.type.name !== "storyMedia") {
+      return;
+    }
+
+    tiptap.view.dispatch(
+      tiptap.state.tr.delete(
+        position,
+        position + node.nodeSize,
+      ),
+    );
+
+    selectedMediaPosition.current = null;
+  }
+
+
+function saveMediaDraft(draft: StoryMediaDraft) {
+    const editor = tiptapEditorRef.current;
 
     if (!editor || draft.items.length === 0) return;
 
     const canvasHeight = Math.max(
       120,
-      Math.ceil(
-        draft.items.reduce(
-          (maximum, item) =>
-            Math.max(
-              maximum,
-              (item.y ?? 0) + (item.height ?? 320),
-            ),
-          0,
-        ),
+      Math.min(
+        1200,
+        Math.round(draft.compositionHeight),
+      ),
+    );
+
+    const compositionWidth = Math.max(
+      40,
+      Math.min(
+        100,
+        Math.round(draft.compositionWidth),
       ),
     );
 
     const mediaHtml =
-      draft.items.length === 1
-        ? buildFigureHtml(
-            draft.items[0],
-            `story-media story-media-${draft.alignment} story-media-${draft.size}`,
-            undefined,
+      `<section contenteditable="false" tabindex="0" draggable="true" ` +
+      `data-story-gallery="true" ` +
+      `data-story-composition="true" ` +
+      `data-layout="${draft.layout}" ` +
+      `data-size="${draft.size}" ` +
+      `data-count="${draft.items.length}" ` +
+      `data-composition-width="${compositionWidth}" ` +
+      `data-composition-height="${canvasHeight}" ` +
+      `data-photo-gap="${draft.photoGap}" ` +
+      `data-corner-radius="${draft.cornerRadius}" ` +
+      `data-spatial-layout="true" ` +
+      `data-canvas-height="${canvasHeight}" ` +
+      `style="position:relative;display:block;width:${compositionWidth}%;aspect-ratio:${compositionWidth * 10} / ${canvasHeight};container-type:inline-size;overflow:hidden;gap:0;margin-inline:auto;" ` +
+      `class="story-gallery story-gallery-${draft.layout} story-gallery-${draft.size}">` +
+      draft.items
+        .map((item, index) =>
+          buildFigureHtml(
+            item,
+            "story-gallery-item",
+            index,
             draft,
-            true,
-          )
-        : (
-            `<section contenteditable="false" tabindex="0" draggable="true" ` +
-            `data-story-gallery="true" ` +
-            `data-layout="${draft.layout}" ` +
-            `data-size="${draft.size}" ` +
-            `data-count="${draft.items.length}" ` +
-            `data-composition-width="${draft.compositionWidth}" ` +
-            `data-photo-gap="${draft.photoGap}" ` +
-            `data-corner-radius="${draft.cornerRadius}" ` +
-            `data-spatial-layout="true" ` +
-            `data-canvas-height="${canvasHeight}" ` +
-            `style="position:relative;display:block;width:${Math.max(40, Math.min(100, draft.compositionWidth))}%;aspect-ratio:1000 / ${canvasHeight};container-type:inline-size;gap:0;margin-inline:auto;" ` +
-            `class="story-gallery story-gallery-${draft.layout} story-gallery-${draft.size}">` +
-            draft.items
-              .map((item, index) =>
-                buildFigureHtml(
-                  item,
-                  "story-gallery-item",
-                  index,
-                  draft,
-                ),
-              )
-              .join("") +
-            `</section>`
-          );
+          ),
+        )
+        .join("") +
+      `</section>`;
 
-    if (editingPhoto && selectedFigure.current) {
-      selectedFigure.current.outerHTML = mediaHtml;
-    } else {
-      const template = document.createElement("template");
-      template.innerHTML = `${mediaHtml}<p><br></p>`;
+    const replaced =
+      editingPhoto &&
+      replaceSelectedStoryMedia(mediaHtml);
 
-      const fragment = template.content;
-      const trailingParagraph = fragment.lastElementChild;
-      const insertionRange = savedRange.current;
-
-      if (
-        insertionRange &&
-        editor.contains(insertionRange.commonAncestorContainer)
-      ) {
-        insertionRange.deleteContents();
-        insertionRange.insertNode(fragment);
-      } else {
-        editor.append(fragment);
-      }
-
-      editor.focus();
-
-      if (trailingParagraph) {
-        const nextRange = document.createRange();
-        nextRange.selectNodeContents(trailingParagraph);
-        nextRange.collapse(false);
-
-        const selection = window.getSelection();
-
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(nextRange);
-          savedRange.current = nextRange.cloneRange();
-        }
-      }
+    if (!replaced) {
+      insertStoryMedia(mediaHtml);
     }
 
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     setEditingPhoto(false);
     setPhotoOpen(false);
     synchronize();
@@ -763,7 +1285,7 @@ export function StoryRichTextEditor({
   function insertPhoto() {
     if (!photoSrc) return;
 
-    const editor = editorRef.current;
+    const editor = tiptapEditorRef.current;
     if (!editor) return;
 
     const caption = photoCaption.trim()
@@ -777,61 +1299,33 @@ export function StoryRichTextEditor({
       caption +
       `</figure>`;
 
-    if (editingPhoto && selectedFigure.current) {
-      selectedFigure.current.outerHTML = figureHtml;
-    } else {
-      const template = document.createElement("template");
-      template.innerHTML = `${figureHtml}<p><br></p>`;
+    const replaced =
+      editingPhoto &&
+      replaceSelectedStoryMedia(figureHtml);
 
-      const fragment = template.content;
-      const trailingParagraph = fragment.lastElementChild;
-      const insertionRange = savedRange.current;
-
-      if (
-        insertionRange &&
-        editor.contains(insertionRange.commonAncestorContainer)
-      ) {
-        insertionRange.deleteContents();
-        insertionRange.insertNode(fragment);
-      } else {
-        editor.append(fragment);
-      }
-
-      editor.focus();
-
-      if (trailingParagraph) {
-        const nextRange = document.createRange();
-        nextRange.selectNodeContents(trailingParagraph);
-        nextRange.collapse(false);
-
-        const selection = window.getSelection();
-
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(nextRange);
-          savedRange.current = nextRange.cloneRange();
-        }
-      }
+    if (!replaced) {
+      insertStoryMedia(figureHtml);
     }
 
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     setEditingPhoto(false);
     setPhotoOpen(false);
     synchronize();
   }
 
   function removeSelectedPhoto() {
-    selectedFigure.current?.remove();
+    removeSelectedStoryMedia();
     selectedFigure.current = null;
+    selectedMediaPosition.current = null;
     setEditingPhoto(false);
     setPhotoOpen(false);
     synchronize();
   }
 
-
-
   function openVideo() {
     selectedVideo.current = null;
+    selectedMediaPosition.current = null;
     setEditingVideo(false);
     setVideoDraft(createEmptyStoryVideoDraft());
     setVideoOpen(true);
@@ -869,6 +1363,7 @@ export function StoryRichTextEditor({
 
   function closeVideo() {
     selectedVideo.current = null;
+    selectedMediaPosition.current = null;
     setEditingVideo(false);
     setVideoOpen(false);
     editorRef.current?.focus();
@@ -922,150 +1417,34 @@ export function StoryRichTextEditor({
   }
 
   function saveVideoDraft(draft: StoryVideoDraft) {
-    const editor = editorRef.current;
+    const editor = tiptapEditorRef.current;
     if (!editor) return;
 
     const videoHtml = buildVideoHtml(draft);
     if (!videoHtml) return;
 
-    if (editingVideo && selectedVideo.current) {
-      selectedVideo.current.outerHTML = videoHtml;
-    } else {
-      const template = document.createElement("template");
-      template.innerHTML = `${videoHtml}<p><br></p>`;
+    const replaced =
+      editingVideo &&
+      replaceSelectedStoryMedia(videoHtml);
 
-      const fragment = template.content;
-      const trailingParagraph = fragment.lastElementChild;
-      const insertionRange = savedRange.current;
-
-      if (
-        insertionRange &&
-        editor.contains(insertionRange.commonAncestorContainer)
-      ) {
-        insertionRange.deleteContents();
-        insertionRange.insertNode(fragment);
-      } else {
-        editor.append(fragment);
-      }
-
-      editor.focus();
-
-      if (trailingParagraph) {
-        const nextRange = document.createRange();
-        nextRange.selectNodeContents(trailingParagraph);
-        nextRange.collapse(false);
-
-        const selection = window.getSelection();
-
-        if (selection) {
-          selection.removeAllRanges();
-          selection.addRange(nextRange);
-          savedRange.current = nextRange.cloneRange();
-        }
-      }
+    if (!replaced) {
+      insertStoryMedia(videoHtml);
     }
 
     selectedVideo.current = null;
+    selectedMediaPosition.current = null;
     setEditingVideo(false);
     setVideoOpen(false);
     synchronize();
   }
 
   function removeSelectedVideo() {
-    selectedVideo.current?.remove();
+    removeSelectedStoryMedia();
     selectedVideo.current = null;
+    selectedMediaPosition.current = null;
     setEditingVideo(false);
     setVideoOpen(false);
     synchronize();
-  }
-
-  function getStoryMediaContainer(
-    target: EventTarget | null,
-  ): HTMLElement | null {
-    const element = target as HTMLElement | null;
-
-    if (!element?.closest) return null;
-
-    const figure = element.closest(
-      "figure[data-story-image='true']",
-    ) as HTMLElement | null;
-
-    if (figure) {
-      return (
-        (figure.closest(
-          "section[data-story-gallery='true']",
-        ) as HTMLElement | null) || figure
-      );
-    }
-
-    return element.closest(
-      "section[data-story-gallery='true']",
-    ) as HTMLElement | null;
-  }
-
-  function handleMediaDragStart(
-    event: ReactDragEvent<HTMLDivElement>,
-  ) {
-    const media = getStoryMediaContainer(event.target);
-
-    if (!media) return;
-
-    draggedStoryMedia.current = media;
-    event.dataTransfer.effectAllowed = "move";
-    event.dataTransfer.setData("text/story-media", "move");
-
-    window.setTimeout(() => {
-      media.style.opacity = "0.45";
-    }, 0);
-  }
-
-  function handleMediaDragOver(
-    event: ReactDragEvent<HTMLDivElement>,
-  ) {
-    if (!draggedStoryMedia.current) return;
-    event.preventDefault();
-    event.dataTransfer.dropEffect = "move";
-  }
-
-  function handleMediaDrop(event: ReactDragEvent<HTMLDivElement>) {
-    const dragged = draggedStoryMedia.current;
-    const editor = editorRef.current;
-
-    if (!dragged || !editor) return;
-
-    event.preventDefault();
-
-    const rawTarget = (event.target as HTMLElement).closest(
-      "p,h2,h3,blockquote,ul,ol,figure[data-story-image='true'],section[data-story-gallery='true']",
-    ) as HTMLElement | null;
-
-    const target = rawTarget
-      ? getStoryMediaContainer(rawTarget) || rawTarget
-      : null;
-
-    if (!target || target === dragged || dragged.contains(target)) {
-      editor.append(dragged);
-    } else {
-      const rect = target.getBoundingClientRect();
-      const insertAfter = event.clientY > rect.top + rect.height / 2;
-
-      target.parentNode?.insertBefore(
-        dragged,
-        insertAfter ? target.nextSibling : target,
-      );
-    }
-
-    dragged.style.opacity = "";
-    draggedStoryMedia.current = null;
-    synchronize();
-  }
-
-  function handleMediaDragEnd() {
-    if (draggedStoryMedia.current) {
-      draggedStoryMedia.current.style.opacity = "";
-    }
-
-    draggedStoryMedia.current = null;
   }
 
   function choiceClass(active: boolean) {
@@ -1077,7 +1456,7 @@ export function StoryRichTextEditor({
   }
 
   return (
-    <div>
+    <div ref={editorContainerRef}>
       <input
         type="hidden"
         name="content"
@@ -1085,178 +1464,381 @@ export function StoryRichTextEditor({
         readOnly
       />
 
-      <div className="mb-3 flex flex-wrap items-center gap-x-2 gap-y-2 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/55 p-2">
-        <div className="flex items-center gap-1.5">
+      <div
+        ref={toolbarAnchorRef}
+        className="mb-3"
+        style={
+          toolbarPosition
+            ? { height: toolbarPosition.height }
+            : undefined
+        }
+      >
+        <div
+          ref={toolbarRef}
+          className={`relative z-[90] flex flex-col items-stretch gap-2 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/95 p-2 shadow-[0_14px_35px_rgba(20,20,10,0.12)] backdrop-blur-md lg:w-full lg:flex-row lg:gap-3 ${
+            compactToolbar && !toolbarOpen
+              ? "w-fit"
+              : "w-full"
+          }`}
+          style={
+            toolbarPosition
+              ? {
+                  position: "fixed",
+                  top: 12,
+                  left:
+                    compactToolbar && !toolbarOpen
+                      ? toolbarPosition.left +
+                        toolbarPosition.width -
+                        54
+                      : toolbarPosition.left,
+                  width:
+                    compactToolbar && !toolbarOpen
+                      ? 54
+                      : toolbarPosition.width,
+                }
+              : compactToolbar && !toolbarOpen
+                ? {
+                    marginLeft: "auto",
+                    width: 54,
+                  }
+                : undefined
+          }
+        >
           <button
             type="button"
-            title="Bold"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => command("bold")}
-            className={toolbarButton}
+            aria-expanded={toolbarOpen}
+            aria-label={
+              toolbarOpen
+                ? "Hide formatting tools"
+                : "Show formatting tools"
+            }
+            title={
+              toolbarOpen
+                ? "Hide formatting tools"
+                : "Show formatting tools"
+            }
+            onClick={() =>
+              setToolbarOpen((current) => !current)
+            }
+            className="absolute right-2 top-2 z-10 grid h-9 w-9 cursor-pointer place-items-center rounded-lg border border-[#d5ad68]/35 bg-[#071321] text-xl text-[#f4efe4] transition hover:bg-[#142844] lg:hidden"
           >
-            <strong className="text-base">B</strong>
+            {toolbarOpen ? "−" : "+"}
           </button>
 
-          <button
-            type="button"
-            title="Italic"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => command("italic")}
-            className={toolbarButton}
-          >
-            <em className="font-serif text-base">I</em>
-          </button>
+          {!toolbarOpen ? (
+            <span
+              aria-hidden="true"
+              className="h-9 w-9 lg:hidden"
+            />
+          ) : null}
 
-          <button
-            type="button"
-            title="Underline"
-            onMouseDown={(event) => event.preventDefault()}
-            onClick={() => command("underline")}
-            className={toolbarButton}
-          >
-            <span className="text-base underline">U</span>
-          </button>
-        </div>
-
-        <span className="hidden h-7 w-px bg-[#242617]/14 sm:block" />
-
-        <div className="flex items-center gap-1.5">
-          {[
-            ["P", "p"],
-            ["H2", "h2"],
-            ["H3", "h3"],
-            ["“ ”", "blockquote"],
-          ].map(([label, block]) => (
+        <div className={`${toolbarOpen ? "flex" : "hidden"} min-w-0 flex-1 flex-col justify-center gap-2 pr-11 lg:flex lg:pr-0`}>
+          <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
             <button
-              key={block}
               type="button"
-              title={block}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => command("formatBlock", block)}
+              title="Bold"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={() => command("bold")}
               className={toolbarButton}
             >
-              {label}
+              <strong className="text-base">B</strong>
             </button>
-          ))}
-        </div>
 
-        <span className="hidden h-7 w-px bg-[#242617]/14 sm:block" />
-
-        <div className="flex items-center gap-1.5">
-          <ToolbarDropdown
-            label="Font"
-            onBeforeOpen={rememberSelection}
-            onSelect={(value) => command("fontName", value)}
-            options={[
-              { value: "Anyway", label: "Anyway" },
-              { value: "Georgia", label: "Editorial serif" },
-              { value: "Arial", label: "Sans serif" },
-            ]}
-          />
-
-          <ToolbarDropdown
-            label="Size"
-            onBeforeOpen={rememberSelection}
-            onSelect={(value) => command("fontSize", value)}
-            options={[
-              { value: "2", label: "Small" },
-              { value: "3", label: "Normal" },
-              { value: "5", label: "Large" },
-            ]}
-          />
-        </div>
-
-        <span className="hidden h-7 w-px bg-[#242617]/14 sm:block" />
-
-        <div className="flex items-center gap-1.5">
-          {[
-            ["≡", "justifyLeft", "Align left"],
-            ["≣", "justifyCenter", "Align center"],
-            ["≡", "justifyRight", "Align right"],
-            ["•", "insertUnorderedList", "Bulleted list"],
-            ["1.", "insertOrderedList", "Numbered list"],
-          ].map(([label, action, title]) => (
             <button
-              key={action}
               type="button"
-              title={title}
-              onMouseDown={(event) => event.preventDefault()}
-              onClick={() => command(action)}
+              title="Italic"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={() => command("italic")}
               className={toolbarButton}
             >
-              {label}
+              <em className="font-serif text-base">I</em>
             </button>
-          ))}
+
+            <button
+              type="button"
+              title="Underline"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={() => command("underline")}
+              className={toolbarButton}
+            >
+              <span className="text-base underline">U</span>
+            </button>
+
+            <span className="hidden h-7 w-px bg-[#242617]/14 lg:block" />
+
+            {[
+              ["P", "p"],
+              ["H2", "h2"],
+              ["H3", "h3"],
+              ["“ ”", "blockquote"],
+            ].map(([label, block]) => (
+              <button
+                key={block}
+                type="button"
+                title={block}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  rememberSelection();
+                }}
+                onClick={() =>
+                  formatTextBlock(
+                    block as
+                      | "p"
+                      | "h2"
+                      | "h3"
+                      | "blockquote",
+                  )
+                }
+                className={toolbarButton}
+              >
+                {label}
+              </button>
+            ))}
+
+            <span className="hidden h-7 w-px bg-[#242617]/14 lg:block" />
+
+            <span
+              aria-hidden="true"
+              className="basis-full md:hidden"
+            />
+
+            <ToolbarDropdown
+              label="Font"
+              onBeforeOpen={rememberSelection}
+              onSelect={(value) =>
+                command("fontName", value)
+              }
+              options={[
+                { value: "Anyway", label: "Anyway" },
+                {
+                  value: "Georgia",
+                  label: "Editorial serif",
+                },
+                {
+                  value: "Arial",
+                  label: "Sans serif",
+                },
+              ]}
+            />
+
+            <ToolbarDropdown
+              label="Size"
+              onBeforeOpen={rememberSelection}
+              onSelect={(value) =>
+                command("fontSize", value)
+              }
+              options={[
+                { value: "2", label: "Small" },
+                { value: "3", label: "Normal" },
+                { value: "5", label: "Large" },
+              ]}
+            />
+          </div>
+
+          <div className="grid grid-cols-4 gap-1.5 md:grid-cols-8 lg:flex lg:flex-wrap lg:items-center">
+            {(
+              [
+                [
+                  "left",
+                  "justifyLeft",
+                  "Align left",
+                ],
+                [
+                  "center",
+                  "justifyCenter",
+                  "Align center",
+                ],
+                [
+                  "right",
+                  "justifyRight",
+                  "Align right",
+                ],
+                [
+                  "justify",
+                  "justifyFull",
+                  "Justify",
+                ],
+              ] as const
+            ).map(([alignment, action, title]) => (
+              <button
+                key={action}
+                type="button"
+                title={title}
+                aria-label={title}
+                onPointerDown={(event) => {
+                  event.preventDefault();
+                  rememberSelection();
+                }}
+                onClick={() => command(action)}
+                className={toolbarButton}
+              >
+                <TextAlignmentIcon
+                  alignment={alignment}
+                />
+              </button>
+            ))}
+
+            <span className="hidden h-7 w-px bg-[#242617]/14 lg:block" />
+
+            <button
+              type="button"
+              title="Bulleted list"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={() =>
+                toggleList("ul")
+              }
+              className={toolbarButton}
+            >
+              <span className="text-base leading-none">
+                •
+              </span>
+            </button>
+
+            <button
+              type="button"
+              title="Numbered list"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={() =>
+                toggleList("ol")
+              }
+              className={toolbarButton}
+            >
+              <span className="text-sm leading-none">
+                1.
+              </span>
+            </button>
+
+            <span className="hidden h-7 w-px bg-[#242617]/14 lg:block" />
+
+            <button
+              type="button"
+              title="Add or edit link"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={editLink}
+              className={toolbarButton}
+            >
+              <span className="text-[11px] font-semibold">
+                Link
+              </span>
+            </button>
+
+            <button
+              type="button"
+              title="Remove link"
+              onPointerDown={(event) => {
+                event.preventDefault();
+                rememberSelection();
+              }}
+              onClick={removeLink}
+              className={toolbarButton}
+            >
+              <span className="text-[11px] font-semibold">
+                Unlink
+              </span>
+            </button>
+          </div>
         </div>
 
-        <span className="hidden h-7 w-px bg-[#242617]/14 sm:block" />
+        <div className={`${toolbarOpen ? "grid" : "hidden"} w-full shrink-0 grid-cols-[minmax(0,1fr)_2.5rem] gap-2 md:grid-cols-[minmax(0,1fr)_5.5rem] lg:grid lg:w-[12rem] lg:grid-cols-[minmax(0,1fr)_2.5rem]`}>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-1">
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              rememberSelection();
+            }}
+            onClick={openMedia}
+            className="h-9 w-full cursor-pointer rounded-lg border border-[#b88a3b]/35 bg-[#b88a3b] px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-[#071321] transition hover:bg-[#d5ad68]"
+          >
+            <span className="mr-2 text-sm font-normal">
+              +
+            </span>
+            Photo
+          </button>
 
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            rememberSelection();
-          }}
-          onClick={openVideo}
-          className="h-9 cursor-pointer rounded-lg border border-[#414832]/35 bg-[#414832] px-5 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-[#596044] sm:ml-auto"
-        >
-          <span className="mr-2 text-sm font-normal">+</span>
-          Video
-        </button>
+          <button
+            type="button"
+            onPointerDown={(event) => {
+              event.preventDefault();
+              rememberSelection();
+            }}
+            onClick={openVideo}
+            className="h-9 w-full cursor-pointer rounded-lg border border-[#414832]/35 bg-[#414832] px-3 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-[#596044]"
+          >
+            <span className="mr-2 text-sm font-normal">
+              +
+            </span>
+            Video
+          </button>
+          </div>
 
-        <button
-          type="button"
-          onPointerDown={(event) => {
-            event.preventDefault();
-            rememberSelection();
-          }}
-          onClick={openMedia}
-          className="h-9 cursor-pointer rounded-lg border border-[#b88a3b]/35 bg-[#b88a3b] px-5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#071321] transition hover:bg-[#d5ad68]"
-        >
-          <span className="mr-2 text-sm font-normal">+</span>
-          Photo
-        </button>
+          <div className="grid grid-cols-1 gap-2 md:grid-cols-2 lg:grid-cols-1">
+            <button
+              type="button"
+              aria-label="Go back"
+              title="Go back"
+              onClick={() => {
+                if (onNavigateBack) {
+                  onNavigateBack();
+                  return;
+                }
+
+                if (window.history.length > 1) {
+                  router.back();
+                } else {
+                  router.push("/admin/stories");
+                }
+              }}
+              className="grid h-9 w-10 cursor-pointer place-items-center rounded-lg border border-[#d5ad68]/35 bg-[#071321] text-2xl leading-none text-[#f4efe4] transition hover:bg-[#142844]"
+            >
+              <span className="-mt-1">‹</span>
+            </button>
+
+            <button
+              type="button"
+              aria-label="Back to top"
+              title="Back to top"
+              onClick={() =>
+                window.scrollTo({
+                  top: 0,
+                  behavior: "smooth",
+                })
+              }
+              className={`grid h-9 w-10 place-items-center rounded-lg border border-[#d5ad68]/35 bg-[#071321] text-2xl leading-none text-[#f4efe4] transition ${
+                showScrollTop
+                  ? "cursor-pointer opacity-100"
+                  : "pointer-events-none opacity-25"
+              }`}
+            >
+              <span className="-mt-1 block rotate-90">‹</span>
+            </button>
+          </div>
+        </div>
+        </div>
       </div>
 
       <div
         ref={editorRef}
-        contentEditable
-        suppressContentEditableWarning
         aria-label="Story content editor"
-        onInput={synchronize}
-        onKeyUp={rememberSelection}
-        onMouseUp={rememberSelection}
-        onDragStart={handleMediaDragStart}
-        onDragOver={handleMediaDragOver}
-        onDrop={handleMediaDrop}
-        onDragEnd={handleMediaDragEnd}
-        onClick={(event) => {
-          const target = event.target as HTMLElement;
-
-          const video = target.closest(
-            "figure[data-story-video='true']",
-          ) as HTMLElement | null;
-
-          if (video) {
-            event.preventDefault();
-            openVideoEditor(video);
-            return;
-          }
-
-          const figure = target.closest(
-            "figure[data-story-image='true']",
-          ) as HTMLElement | null;
-
-          if (figure) {
-            event.preventDefault();
-
-            const gallery = figure.closest(
-              "section[data-story-gallery='true']",
-            ) as HTMLElement | null;
-
-            openMediaEditor(gallery || figure);
-          }
-        }}
+        style={typographyStyle}
         className={`${styles.content} ${styles.editor}`}
       />
 
@@ -1282,6 +1864,7 @@ export function StoryRichTextEditor({
           existingImageUrls={existingPhotoUrls}
           onCancel={() => {
             selectedFigure.current = null;
+    selectedMediaPosition.current = null;
             setEditingPhoto(false);
             setPhotoOpen(false);
           }}

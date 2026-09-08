@@ -71,8 +71,13 @@ function installSpatialLayouts(root: HTMLElement) {
       0,
       40,
     );
+    const normalizedComposition =
+      gallery.dataset.storyComposition === "true" ||
+      gallery.dataset.compositionHeight !== undefined;
+
     const canvasHeight = clampNumber(
-      gallery.dataset.canvasHeight,
+      gallery.dataset.compositionHeight ??
+        gallery.dataset.canvasHeight,
       430,
       120,
       10000,
@@ -83,9 +88,15 @@ function installSpatialLayouts(root: HTMLElement) {
     gallery.style.setProperty("width", `${compositionWidth}%`);
     gallery.style.setProperty(
       "aspect-ratio",
-      `1000 / ${canvasHeight}`,
+      normalizedComposition
+        ? `${compositionWidth * 10} / ${canvasHeight}`
+        : `1000 / ${canvasHeight}`,
     );
     gallery.style.setProperty("height", "auto");
+    gallery.style.setProperty(
+      "overflow",
+      normalizedComposition ? "hidden" : "visible",
+    );
     gallery.style.setProperty("container-type", "inline-size");
     gallery.style.setProperty("gap", "0", "important");
     gallery.style.setProperty("margin-inline", "auto");
@@ -135,11 +146,19 @@ function installSpatialLayouts(root: HTMLElement) {
 
       figure.style.setProperty("position", "absolute", "important");
       figure.style.setProperty("left", `${x}%`, "important");
-      figure.style.setProperty("top", `${y / 10}cqw`, "important");
+      figure.style.setProperty(
+        "top",
+        normalizedComposition
+          ? `${(y / canvasHeight) * 100}%`
+          : `${y / 10}cqw`,
+        "important",
+      );
       figure.style.setProperty("width", `${width}%`, "important");
       figure.style.setProperty(
         "height",
-        `${height / 10}cqw`,
+        normalizedComposition
+          ? `${(height / canvasHeight) * 100}%`
+          : `${height / 10}cqw`,
         "important",
       );
       figure.style.setProperty(

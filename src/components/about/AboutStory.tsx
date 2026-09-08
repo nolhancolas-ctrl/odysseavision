@@ -48,8 +48,8 @@ export function AboutStory({ content }: AboutStoryProps) {
           <div className="my-8 h-px w-16 bg-[#596044]" />
 
           <div className="space-y-5 text-sm leading-8 text-[#333525]/75 md:text-[15px]">
-            {paragraphs.map((paragraph) => (
-              <p key={paragraph}>{paragraph}</p>
+            {paragraphs.map((paragraph, paragraphIndex) => (
+              <p key={`${paragraphIndex}-${paragraph}`}>{paragraph}</p>
             ))}
           </div>
 

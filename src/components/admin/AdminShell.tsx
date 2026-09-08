@@ -196,7 +196,13 @@ function AdminFloatingBackButton({ pathname }: { pathname: string }) {
     };
   }, [canShow, pathname]);
 
-  if (!canShow) {
+  if (
+    !canShow ||
+    (
+      /^\/admin\/stories\/[^/]+$/.test(pathname) &&
+      pathname !== "/admin/stories/settings"
+    )
+  ) {
     return null;
   }
 
@@ -212,7 +218,7 @@ function AdminFloatingBackButton({ pathname }: { pathname: string }) {
 
         router.push("/admin");
       }}
-      className={`fixed right-5 top-24 z-[80] flex h-12 w-12 items-center justify-center rounded-full border border-[#d5ad68]/35 bg-[#071321] text-3xl leading-none text-[#f4efe4] shadow-[0_20px_60px_rgba(7,19,33,0.25)] transition duration-300 hover:-translate-y-1 hover:bg-[#142844] lg:right-8 ${
+      className={`fixed right-2 top-5 z-[95] flex h-9 w-9 items-center justify-center rounded-lg border border-[#d5ad68]/35 bg-[#071321] text-2xl leading-none text-[#f4efe4] shadow-[0_20px_60px_rgba(7,19,33,0.25)] transition duration-300 hover:-translate-y-1 hover:bg-[#142844] lg:right-2 ${
         visible
           ? "pointer-events-auto translate-y-0 opacity-100"
           : "pointer-events-none -translate-y-5 opacity-0"

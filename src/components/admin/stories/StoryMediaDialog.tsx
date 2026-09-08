@@ -47,6 +47,7 @@ export type StoryMediaDraft = {
   size: StoryImageSize;
   layout: StoryGalleryLayout;
   compositionWidth: number;
+  compositionHeight: number;
   photoGap: number;
   cornerRadius: number;
 };
@@ -77,6 +78,7 @@ export function createEmptyStoryMediaDraft(): StoryMediaDraft {
     size: "medium",
     layout: "grid",
     compositionWidth: 100,
+    compositionHeight: 560,
     photoGap: 12,
     cornerRadius: 16,
   };
@@ -346,8 +348,6 @@ function getCompositionCanvasHeight(items: StoryMediaItem[]) {
   return Math.max(120, Math.ceil(contentBottom));
 }
 
-// STORY_NORMALIZED_SPATIAL_PREVIEW
-const STORY_COMPOSITION_BASE_WIDTH = 1000;
 
 function getLayoutVariantOptions(layout: StoryGalleryLayout) {
   if (layout === "row") {
@@ -1043,6 +1043,7 @@ function SortablePhoto({
   active,
   single,
   alignment,
+  compositionHeight,
   onSelect,
   onUpdate,
 }: {
@@ -1051,6 +1052,7 @@ function SortablePhoto({
   active: boolean;
   single: boolean;
   alignment: StoryImageAlignment;
+  compositionHeight: number;
   onSelect: () => void;
   onUpdate: (
     patch: Partial<Omit<StoryMediaItem, "id">>,
@@ -1092,8 +1094,8 @@ function SortablePhoto({
       const widthDelta =
         ((pointerEvent.clientX - startX) / canvasRect.width) * 100;
       const heightDelta =
-        ((pointerEvent.clientY - startY) / canvasRect.width) *
-        STORY_COMPOSITION_BASE_WIDTH;
+        ((pointerEvent.clientY - startY) / canvasRect.height) *
+        compositionHeight;
 
       onUpdate({
         width: Math.max(
@@ -1149,20 +1151,28 @@ function SortablePhoto({
     window.addEventListener("pointerup", stop);
   }
 
+  const safeCompositionHeight = Math.max(
+    120,
+    compositionHeight,
+  );
+  const itemTop = (itemY / safeCompositionHeight) * 100;
+  const itemFrameHeight =
+    (itemHeight / safeCompositionHeight) * 100;
+
   const spatialStyle = single
     ? {
         position: "relative" as const,
         left: `${itemX}%`,
         width: `${item.width}%`,
-        height: `${itemHeight / 10}cqw`,
-        marginTop: `${itemY / 10}cqw`,
+        height: `${itemFrameHeight}%`,
+        marginTop: `${itemTop}%`,
       }
     : {
         position: "absolute" as const,
         left: `${itemX}%`,
-        top: `${itemY / 10}cqw`,
+        top: `${itemTop}%`,
         width: `${item.width}%`,
-        height: `${itemHeight / 10}cqw`,
+        height: `${itemFrameHeight}%`,
       };
 
   return (
@@ -1305,6 +1315,34 @@ export function StoryMediaDialog({
   const [compositionWidth, setCompositionWidth] = useState(
     Math.max(40, Math.min(100, initialDraft.compositionWidth ?? 100)),
   );
+  const [compositionHeight, setCompositionHeight] =
+    useState(
+      Math.max(
+        120,
+        Math.min(
+          1200,
+          initialDraft.compositionHeight ??
+            getCompositionCanvasHeight(
+              initialDraft.items,
+            ),
+        ),
+      ),
+    );
+  const [keepPhotoScale, setKeepPhotoScale] = useState(true);
+  const [keepFrameScale, setKeepFrameScale] = useState(true);
+
+  const fittedContentHeight = Math.max(
+    120,
+    Math.min(
+      1200,
+      Math.ceil(getCompositionCanvasHeight(items) / 10) * 10,
+    ),
+  );
+
+  useEffect(() => {
+    setCompositionHeight(fittedContentHeight);
+  }, [fittedContentHeight]);
+
   const [photoGap, setPhotoGap] = useState(
     Math.max(0, Math.min(32, initialDraft.photoGap ?? 12)),
   );
@@ -1367,6 +1405,115 @@ export function StoryMediaDialog({
       window.removeEventListener("keydown", closeOnEscape);
     };
   }, [onCancel]);
+
+  function changePhotoWidth(value: number) {
+    if (!activeItem) return;
+
+    const previousWidth = Math.max(12, activeItem.width);
+    const previousHeight = Math.max(
+      120,
+      activeItem.height ?? 280,
+    );
+    const width = Math.max(
+      12,
+      Math.min(100 - (activeItem.x ?? 0), value),
+    );
+
+    updateItem(
+      activeItem.id,
+      keepPhotoScale
+        ? {
+            width,
+            height: Math.max(
+              120,
+              Math.min(
+                1200,
+                Math.round(
+                  previousHeight * width / previousWidth / 10,
+                ) * 10,
+              ),
+            ),
+          }
+        : { width },
+    );
+  }
+
+  function changePhotoHeight(value: number) {
+    if (!activeItem) return;
+
+    const previousWidth = Math.max(12, activeItem.width);
+    const previousHeight = Math.max(
+      120,
+      activeItem.height ?? 280,
+    );
+    const height = Math.max(
+      120,
+      Math.min(1200, Math.round(value / 10) * 10),
+    );
+
+    updateItem(
+      activeItem.id,
+      keepPhotoScale
+        ? {
+            height,
+            width: Math.max(
+              12,
+              Math.min(
+                100 - (activeItem.x ?? 0),
+                Math.round(
+                  previousWidth * height / previousHeight,
+                ),
+              ),
+            ),
+          }
+        : { height },
+    );
+  }
+
+  function changeFrameWidth(value: number) {
+    const width = Math.max(40, Math.min(100, Math.round(value)));
+
+    if (keepFrameScale) {
+      setCompositionHeight(
+        Math.max(
+          120,
+          Math.min(
+            1200,
+            Math.round(
+              compositionHeight * width /
+              Math.max(40, compositionWidth) / 10,
+            ) * 10,
+          ),
+        ),
+      );
+    }
+
+    setCompositionWidth(width);
+  }
+
+  function changeFrameHeight(value: number) {
+    const height = Math.max(
+      120,
+      Math.min(1200, Math.round(value / 10) * 10),
+    );
+
+    if (keepFrameScale) {
+      setCompositionWidth(
+        Math.max(
+          40,
+          Math.min(
+            100,
+            Math.round(
+              compositionWidth * height /
+              Math.max(120, compositionHeight),
+            ),
+          ),
+        ),
+      );
+    }
+
+    setCompositionHeight(height);
+  }
 
   function updateItem(
     id: string,
@@ -1720,6 +1867,8 @@ export function StoryMediaDialog({
                   style={{
                     maxWidth: 1050,
                     width: `${compositionWidth}%`,
+                    aspectRatio: `${compositionWidth * 10} / ${compositionHeight}`,
+                    overflow: "hidden",
                     ...({
                       "--story-preview-gap": `${photoGap}px`,
                       "--story-preview-radius": `${cornerRadius}px`,
@@ -1743,54 +1892,27 @@ export function StoryMediaDialog({
                       items={items.map((item) => item.id)}
                       strategy={rectSortingStrategy}
                     >
-                      {items.length === 1 ? (
-                        <div className="flow-root">
+                      <div className="relative h-full w-full">
+                        {items.map((item, index) => (
                           <SortablePhoto
-                            item={items[0]}
-                            index={0}
-                            active={activeItem?.id === items[0].id}
-                            single
-                            alignment={alignment}
-                            onSelect={() => setActiveId(items[0].id)}
+                            key={item.id}
+                            item={item}
+                            index={index}
+                            active={
+                              activeItem?.id === item.id
+                            }
+                            single={false}
+                            alignment="center"
+                            compositionHeight={compositionHeight}
+                            onSelect={() =>
+                              setActiveId(item.id)
+                            }
                             onUpdate={(patch) =>
-                              updateItem(items[0].id, patch)
+                              updateItem(item.id, patch)
                             }
                           />
-
-                          <p className="mb-4 text-sm leading-7 text-[#242617]/62">
-                            Images and words share the same space. Resize
-                            and position the photo to preview how the
-                            surrounding story will flow.
-                          </p>
-
-                          <p className="text-sm leading-7 text-[#242617]/62">
-                            The text automatically adapts around a
-                            left- or right-aligned image.
-                          </p>
-                        </div>
-                      ) : (
-                        <div
-                          className="relative w-full transition-[aspect-ratio] duration-200 ease-out"
-                          style={{
-                            aspectRatio: `${STORY_COMPOSITION_BASE_WIDTH} / ${getCompositionCanvasHeight(items)}`,
-                          }}
-                        >
-                          {items.map((item, index) => (
-                            <SortablePhoto
-                              key={item.id}
-                              item={item}
-                              index={index}
-                              active={activeItem?.id === item.id}
-                              single={false}
-                              alignment="center"
-                              onSelect={() => setActiveId(item.id)}
-                              onUpdate={(patch) =>
-                                updateItem(item.id, patch)
-                              }
-                            />
-                          ))}
-                        </div>
-                      )}
+                        ))}
+                      </div>
                     </SortableContext>
                   </DndContext>
                 </div>
@@ -1858,9 +1980,7 @@ export function StoryMediaDialog({
                         step="1"
                         value={activeItem.width}
                         onChange={(event) =>
-                          updateItem(activeItem.id, {
-                            width: Number(event.target.value),
-                          })
+                          changePhotoWidth(Number(event.target.value))
                         }
                         className="w-full accent-[#b88a3b]"
                       />
@@ -1878,14 +1998,27 @@ export function StoryMediaDialog({
                         step="10"
                         value={activeItem.height ?? 280}
                         onChange={(event) =>
-                          updateItem(activeItem.id, {
-                            height: Number(event.target.value),
-                          })
+                          changePhotoHeight(Number(event.target.value))
                         }
                         className="w-full accent-[#b88a3b]"
                       />
                     </div>
 
+
+                      <label className="mt-4 flex cursor-pointer items-center gap-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/60">
+                        <input
+                          type="checkbox"
+                          checked={keepPhotoScale}
+                          onChange={(event) =>
+                            setKeepPhotoScale(event.target.checked)
+                          }
+                          className="peer sr-only"
+                        />
+                        <span className="flex h-5 w-5 items-center justify-center rounded-md border border-[#242617]/25 bg-white text-white peer-checked:border-[#b88a3b] peer-checked:bg-[#b88a3b]">
+                          ✓
+                        </span>
+                        <span>Lock aspect ratio</span>
+                      </label>
                     <div className="mt-4">
                       <span className="mb-2 block text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
                         Watermark
@@ -2040,12 +2173,46 @@ export function StoryMediaDialog({
                         step="1"
                         value={compositionWidth}
                         onChange={(event) =>
-                          setCompositionWidth(Number(event.target.value))
+                          changeFrameWidth(Number(event.target.value))
                         }
                         className="w-full accent-[#b88a3b]"
                       />
                     </label>
 
+                    <label className="block">
+                      <span className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
+                        <span>Total height</span>
+                        <span>{compositionHeight}px</span>
+                      </span>
+
+                      <input
+                        type="range"
+                        min="120"
+                        max="1200"
+                        step="10"
+                        value={compositionHeight}
+                        onChange={(event) =>
+                          changeFrameHeight(Number(event.currentTarget.value))
+                        }
+                        className="w-full accent-[#b88a3b]"
+                      />
+                    </label>
+
+
+                    <label className="flex cursor-pointer items-center gap-3 text-[10px] font-bold uppercase tracking-[0.14em] text-[#242617]/60">
+                      <input
+                        type="checkbox"
+                        checked={keepFrameScale}
+                        onChange={(event) =>
+                          setKeepFrameScale(event.target.checked)
+                        }
+                        className="peer sr-only"
+                      />
+                      <span className="flex h-5 w-5 items-center justify-center rounded-md border border-[#242617]/25 bg-white text-white peer-checked:border-[#b88a3b] peer-checked:bg-[#b88a3b]">
+                        ✓
+                      </span>
+                      <span>Lock aspect ratio</span>
+                    </label>
                     <label className="block">
                       <span className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
                         <span>Photo spacing</span>
@@ -2126,6 +2293,7 @@ export function StoryMediaDialog({
                   size,
                   layout,
                   compositionWidth,
+                  compositionHeight,
                   photoGap,
                   cornerRadius,
                 })

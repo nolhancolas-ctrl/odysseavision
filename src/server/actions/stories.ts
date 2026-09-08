@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { db } from "@/lib/db";
 import { deleteBlobsIfUnreferenced } from "@/lib/admin/blobCleanup";
 
@@ -75,6 +76,27 @@ async function resolveCategory(formData: FormData) {
 }
 
 
+
+function getStoryDraftSnapshot(
+  formData: FormData,
+): Prisma.InputJsonObject {
+  return {
+    title: String(formData.get("title") ?? ""),
+    slug: String(formData.get("slug") ?? ""),
+    excerpt: String(formData.get("excerpt") ?? ""),
+    articleIntro: String(formData.get("articleIntro") ?? ""),
+    content: String(formData.get("content") ?? ""),
+    imageSrc: String(formData.get("imageSrc") ?? ""),
+    date: String(formData.get("date") ?? ""),
+    readTime: String(formData.get("readTime") ?? ""),
+    status: parseStatus(formData.get("status")),
+    categoryId: String(formData.get("categoryId") ?? ""),
+    newCategory: String(formData.get("newCategory") ?? ""),
+    featured: formData.get("featured") === "on",
+    order: Number(formData.get("order") ?? 0) || 0,
+  };
+}
+
 function getStoryData(formData: FormData) {
   const title = String(formData.get("title") ?? "").trim();
   const manualSlug = String(formData.get("slug") ?? "").trim();
@@ -92,6 +114,8 @@ function getStoryData(formData: FormData) {
     title,
     slug,
     excerpt: String(formData.get("excerpt") ?? "").trim() || null,
+    articleIntro:
+      String(formData.get("articleIntro") ?? "").trim() || null,
     content: String(formData.get("content") ?? "").trim() || null,
     imageSrc:
       String(formData.get("imageSrc") ?? "").trim() ||
@@ -202,6 +226,50 @@ export async function setFeaturedStory(storyId: string | null) {
   };
 }
 
+
+export async function saveStoryDraft(
+  id: string,
+  formData: FormData,
+) {
+  const story = await db.story.findUnique({
+    where: { id },
+    select: { id: true },
+  });
+
+  if (!story) {
+    throw new Error("The story could not be found.");
+  }
+
+  const savedAt = new Date();
+
+  await db.story.update({
+    where: { id },
+    data: {
+      draftData: getStoryDraftSnapshot(formData),
+      draftUpdatedAt: savedAt,
+    },
+  });
+
+  return {
+    saved: true,
+    savedAt: savedAt.toISOString(),
+  };
+}
+
+export async function discardStoryDraft(id: string) {
+  await db.story.update({
+    where: { id },
+    data: {
+      draftData: Prisma.DbNull,
+      draftUpdatedAt: null,
+    },
+  });
+
+  return {
+    discarded: true,
+  };
+}
+
 export async function createStory(formData: FormData) {
   const category = await resolveCategory(formData);
   const data = getStoryData(formData);
@@ -217,6 +285,49 @@ export async function createStory(formData: FormData) {
   redirect("/admin/stories");
 }
 
+
+export async function saveStoryChanges(
+  id: string,
+  formData: FormData,
+) {
+  const category = await resolveCategory(formData);
+  const data = getStoryData(formData);
+
+  const previous = await db.story.findUnique({
+    where: { id },
+    select: { imageSrc: true },
+  });
+
+  await db.story.update({
+    where: { id },
+    data: {
+      ...data,
+      category: {
+        connect: {
+          id: category.id,
+        },
+      },
+      draftData: Prisma.DbNull,
+      draftUpdatedAt: null,
+    },
+  });
+
+  if (
+    previous?.imageSrc &&
+    previous.imageSrc !== data.imageSrc
+  ) {
+    await deleteBlobsIfUnreferenced([
+      previous.imageSrc,
+    ]);
+  }
+
+  revalidateStories();
+
+  return {
+    saved: true,
+  };
+}
+
 export async function updateStory(id: string, formData: FormData) {
   const category = await resolveCategory(formData);
   const data = getStoryData(formData);
@@ -230,7 +341,13 @@ export async function updateStory(id: string, formData: FormData) {
     where: { id },
     data: {
       ...data,
-      categoryId: category?.id ?? null,
+      category: {
+        connect: {
+          id: category.id,
+        },
+      },
+      draftData: Prisma.DbNull,
+      draftUpdatedAt: null,
     },
   });
 

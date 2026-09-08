@@ -123,8 +123,7 @@
 
 .editor {
   min-height: 360px;
-  max-height: 720px;
-  overflow-y: auto;
+  overflow: visible;
   border: 1px solid rgba(36, 38, 23, 0.1);
   border-radius: 1rem;
   background: rgba(244, 239, 228, 0.8);
@@ -132,7 +131,17 @@
   outline: none;
 }
 
-.editor:focus {
+.editor :global(.story-tiptap-document) {
+  min-height: 320px;
+  outline: none;
+}
+
+.editor :global(.ProseMirror-selectednode) {
+  outline: 2px solid rgba(184, 138, 59, 0.72);
+  outline-offset: 4px;
+}
+
+.editor:focus-within {
   border-color: rgba(184, 138, 59, 0.7);
   background: rgba(255, 255, 255, 0.55);
 }
@@ -796,4 +805,34 @@
   max-height: none !important;
   margin: 0;
   object-fit: cover;
+}
+
+
+/* Story editor links and compact writing rhythm */
+.content a {
+  color: var(--story-accent-color, #b88a3b);
+  font-weight: 600;
+  text-decoration: underline;
+  text-decoration-thickness: 0.08em;
+  text-underline-offset: 0.18em;
+}
+
+.content a:hover {
+  color: #8c6729;
+}
+
+/*
+ * Enter creates compact paragraphs in both the editor and
+ * the published article. Heading, list and media spacing
+ * remains controlled by their dedicated rules.
+ */
+.content p,
+.editor :global(.story-tiptap-document > p) {
+  margin-bottom: 0.6rem;
+}
+
+.content p:last-child,
+.editor :global(.story-tiptap-document > p:last-child),
+.editor li > p {
+  margin-bottom: 0;
 }

@@ -28,9 +28,9 @@ function Paragraphs({ text }: { text: string }) {
       {text
         .split("\n")
         .filter(Boolean)
-        .map((paragraph) => (
+        .map((paragraph, paragraphIndex) => (
           <p
-            key={paragraph}
+            key={`${paragraphIndex}-${paragraph}`}
             className="mt-5 text-sm leading-8 text-[#333525]/75 first:mt-0"
           >
             {paragraph}

@@ -5,6 +5,10 @@ import { SiteFooter } from "@/components/layout/SiteFooter";
 import { StoryContent } from "@/components/stories/StoryContent";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { getPublicStoryBySlug } from "@/lib/content/stories";
+import {
+  getStoryTypographySettings,
+  getStoryTypographyVariables,
+} from "@/lib/content/storyTypography";
 
 export const dynamic = "force-dynamic";
 
@@ -16,11 +20,17 @@ type StoryPageProps = {
 
 export default async function StoryPage({ params }: StoryPageProps) {
   const { slug } = await params;
-  const story = await getPublicStoryBySlug(slug);
+  const [story, typography] = await Promise.all([
+    getPublicStoryBySlug(slug),
+    getStoryTypographySettings(),
+  ]);
 
   if (!story) {
     notFound();
   }
+
+  const typographyVariables =
+    getStoryTypographyVariables(typography);
 
   return (
     <main className="min-h-screen bg-[#f4efe4] text-[#242617]">
@@ -64,15 +74,38 @@ export default async function StoryPage({ params }: StoryPageProps) {
         </div>
       </section>
 
-      <article className="bg-[#f4efe4] px-6 py-16 md:px-14 md:py-24">
+      <article
+        style={typographyVariables}
+        className="bg-[#f4efe4] px-6 py-16 md:px-14 md:py-24"
+      >
         <div className="mx-auto max-w-3xl">
-          <p className="font-serif text-3xl leading-[1.25] text-[#242617] md:text-4xl">
-            {story.description}
-          </p>
+          {story.articleIntro ? (
+            <>
+              <p
+                style={{
+                  color: "var(--story-heading-color)",
+                  fontFamily: "var(--story-heading-font)",
+                  fontSize: "clamp(22px, 3vw, 30px)",
+                  lineHeight: "1.35",
+                  letterSpacing:
+                    "var(--story-heading-letter-spacing)",
+                }}
+              >
+                {story.articleIntro}
+              </p>
 
-          <div className="my-10 h-px w-full bg-[#242617]/15" />
+              <div className="my-8 h-px w-full bg-[#242617]/15" />
+            </>
+          ) : null}
 
-          <StoryContent content={story.content || story.description} />
+          <StoryContent
+            content={
+              story.content ||
+              story.articleIntro ||
+              story.description
+            }
+            typography={typography}
+          />
 
           <Link
             href="/stories"

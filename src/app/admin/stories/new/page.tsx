@@ -2,13 +2,21 @@ import Link from "next/link";
 import { StoryForm } from "@/components/admin/stories/StoryForm";
 import { createStory } from "@/server/actions/stories";
 import { db } from "@/lib/db";
+import {
+  getStoryTypographySettings,
+  getStoryTypographyVariables,
+} from "@/lib/content/storyTypography";
 
 export const dynamic = "force-dynamic";
 
 export default async function NewStoryPage() {
-  const categories = await db.storyCategory.findMany({
-    orderBy: [{ order: "asc" }, { name: "asc" }],
-  });
+  const [categories, typography] =
+    await Promise.all([
+      db.storyCategory.findMany({
+        orderBy: [{ order: "asc" }, { name: "asc" }],
+      }),
+      getStoryTypographySettings(),
+    ]);
 
   return (
     <div className="space-y-8">
@@ -40,6 +48,9 @@ export default async function NewStoryPage() {
         categories={categories}
         action={createStory}
         submitLabel="Create story"
+        typographyStyle={getStoryTypographyVariables(
+          typography,
+        )}
       />
     </div>
   );

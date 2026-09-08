@@ -129,6 +129,7 @@ export function StoriesArchive({
 }: StoriesArchiveProps) {
   const [category, setCategory] = useState("All stories");
   const [sort, setSort] = useState("latest");
+  const [showAllStories, setShowAllStories] = useState(false);
 
   const safeStories = Array.isArray(stories) ? stories : [];
   const safeCategories =
@@ -154,10 +155,19 @@ export function StoriesArchive({
     filteredStories[0];
 
   const remainingStories = primaryStory
-    ? filteredStories
-        .filter((story) => story.slug !== primaryStory.slug)
-        .slice(0, 8)
+    ? filteredStories.filter(
+        (story) => story.slug !== primaryStory.slug,
+      )
     : [];
+
+  const hasMoreStories = remainingStories.length > 8;
+  const visibleStories = showAllStories
+    ? remainingStories
+    : remainingStories.slice(0, 8);
+
+  useEffect(() => {
+    setShowAllStories(false);
+  }, [category, sort]);
 
   const categoryOptions = safeCategories.map((item) => ({
     value: item,
@@ -273,9 +283,9 @@ export function StoriesArchive({
               </div>
             </article>
 
-            {remainingStories.length > 0 ? (
+            {visibleStories.length > 0 ? (
               <div className="grid gap-5 py-10 sm:grid-cols-2 lg:grid-cols-4">
-                {remainingStories.map((story) => (
+                {visibleStories.map((story) => (
                   <article
                     key={story.slug}
                     className="border border-[#242617]/12 bg-[#f7f2e8]"
@@ -324,20 +334,22 @@ export function StoriesArchive({
           </p>
         )}
 
-        <div
-          className={
-            remainingStories.length === 0
-              ? "pt-8 text-center"
-              : "text-center"
-          }
-        >
-          <button
-            type="button"
-            className="cursor-pointer border border-[#242617]/25 px-8 py-3 text-[9px] font-semibold uppercase tracking-[0.18em] transition hover:border-[#596044] hover:bg-[#596044] hover:text-[#f4efe4]"
-          >
-            {content?.ctaLabel || "Load more stories"}
-          </button>
-        </div>
+        {hasMoreStories ? (
+          <div className="text-center">
+            <button
+              type="button"
+              aria-expanded={showAllStories}
+              onClick={() =>
+                setShowAllStories((current) => !current)
+              }
+              className="cursor-pointer border border-[#242617]/25 px-8 py-3 text-[9px] font-semibold uppercase tracking-[0.18em] transition hover:border-[#596044] hover:bg-[#596044] hover:text-[#f4efe4]"
+            >
+              {showAllStories
+                ? "View less"
+                : content?.ctaLabel || "Load more stories"}
+            </button>
+          </div>
+        ) : null}
       </div>
     </section>
   );

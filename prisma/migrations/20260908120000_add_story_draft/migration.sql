@@ -1,0 +1,3 @@
+ALTER TABLE "Story"
+ADD COLUMN "draftData" JSONB,
+ADD COLUMN "draftUpdatedAt" TIMESTAMP(3);

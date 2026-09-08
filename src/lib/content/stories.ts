@@ -9,6 +9,7 @@ export type PublicStory = {
   title: string;
   category: string;
   description: string;
+  articleIntro: string;
   content: string;
   imageSrc: string;
   date: string;
@@ -39,6 +40,7 @@ function getStaticStories(): PublicStory[] {
     title: story.title,
     category: story.category,
     description: story.description,
+    articleIntro: "",
     content: story.description,
     imageSrc: story.image.src,
     date: story.date,
@@ -77,6 +79,7 @@ export async function getPublicStoriesArchive(): Promise<PublicStoriesArchive> {
       title: story.title,
       category: story.category?.name ?? "Stories",
       description: story.excerpt ?? "",
+      articleIntro: story.articleIntro ?? "",
       content: story.content ?? story.excerpt ?? "",
       imageSrc: story.imageSrc,
       date: story.date ? story.date.toISOString().slice(0, 10) : "",
@@ -125,6 +128,7 @@ export async function getPublicStoryBySlug(
       title: story.title,
       category: story.category?.name ?? "Stories",
       description: story.excerpt ?? "",
+      articleIntro: story.articleIntro ?? "",
       content: story.content ?? story.excerpt ?? "",
       imageSrc: story.imageSrc,
       date: story.date ? story.date.toISOString().slice(0, 10) : "",

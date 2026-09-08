@@ -74,7 +74,10 @@ model Story {
   title          String
   slug           String    @unique
   excerpt        String?
+  articleIntro   String?
   content        String?
+  draftData      Json?
+  draftUpdatedAt DateTime?
   readTime       String?
   author         String?
   date           DateTime?
