@@ -12,9 +12,35 @@
   display: none;
 }
 
+.coastPhoto,
+.turtlePhoto,
+.zebraPhoto,
+.mantaPhoto {
+  position: absolute !important;
+}
+
+.coastPhoto {
+  top: calc(50% - 163px);
+  left: 2%;
+}
+
+.turtlePhoto {
+  bottom: calc(50% - 189px);
+  left: 11%;
+}
+
+.zebraPhoto {
+  top: calc(50% - 163px);
+  right: 2%;
+}
+
+.mantaPhoto {
+  right: 11%;
+  bottom: calc(50% - 189px);
+}
+
 /*
  * Sur tablette ou écran presque carré, toute l’image reste visible.
- * Le fond ambiant situé derrière remplit les espaces restants.
  */
 @media
   (min-width: 768px)
@@ -25,29 +51,27 @@
 }
 
 /*
- * La composition complète avec les cartes postales latérales
- * apparaît uniquement lorsque l’écran est réellement assez large.
+ * Les wrappers ne génèrent aucune boîte.
+ * Les quatre photos sont positionnées par rapport au même .layout.
  */
 @media
   (min-width: 1180px)
   and (min-aspect-ratio: 17 / 10) {
-  .layout {
-    grid-template-columns:
-      minmax(220px, 1fr)
-      minmax(410px, 620px)
-      minmax(220px, 1fr);
-    gap: 2rem;
-  }
-
   .side {
-    display: block;
+    display: contents;
   }
 }
 
 @media
   (min-width: 1280px)
   and (min-aspect-ratio: 17 / 10) {
-  .layout {
-    gap: 3.5rem;
+  .coastPhoto,
+  .zebraPhoto {
+    top: calc(50% - 190px);
+  }
+
+  .turtlePhoto,
+  .mantaPhoto {
+    bottom: calc(50% - 220px);
   }
 }

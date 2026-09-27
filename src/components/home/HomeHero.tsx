@@ -52,12 +52,12 @@ export function HomeHero({ content }: HomeHeroProps) {
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/60" />
 
       <div className={`${styles.layout} relative z-20 mx-auto grid min-h-[100svh] w-full max-w-[1500px] items-center px-5 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28 md:px-10`}>
-        <div className={`${styles.side} pointer-events-none relative h-[430px] xl:h-[500px]`}>
+        <div className={`${styles.side} pointer-events-none`}>
           {postalCoast ? (
             <PhotoFrame
               src={postalCoast}
               label={fileLabel(postalCoast, homeImages.postalCoast.label)}
-              className="absolute left-[2%] top-[12%] h-[270px] w-[200px] rotate-[-4deg] border-[6px] border-white/90 xl:h-[315px] xl:w-[232px]"
+              className={`${styles.coastPhoto} h-[270px] w-[200px] rotate-[-4deg] border-[6px] border-white/90 xl:h-[315px] xl:w-[232px]`}
               showWatermark={shouldShowWatermark(content, "postalCoast")}
             />
           ) : null}
@@ -66,13 +66,13 @@ export function HomeHero({ content }: HomeHeroProps) {
             <PhotoFrame
               src={postalTurtle}
               label={fileLabel(postalTurtle, homeImages.postalTurtle.label)}
-              className="absolute bottom-[6%] right-[-44%] h-[155px] w-[132px] rotate-[2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[158px]"
+              className={`${styles.turtlePhoto} h-[155px] w-[132px] rotate-[2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[158px]`}
               showWatermark={shouldShowWatermark(content, "postalTurtle")}
             />
           ) : null}
         </div>
 
-        <div className="mx-auto max-w-[620px] text-center">
+        <div className="relative z-10 mx-auto max-w-[620px] text-center">
           <h1 className="font-serif text-[clamp(2.75rem,14vw,6.7rem)] uppercase leading-[0.92] tracking-[-0.045em]">
             {content?.title || "Wild Stories"}
           </h1>
@@ -106,12 +106,12 @@ export function HomeHero({ content }: HomeHeroProps) {
           </div>
         </div>
 
-        <div className={`${styles.side} pointer-events-none relative h-[430px] xl:h-[500px]`}>
+        <div className={`${styles.side} pointer-events-none`}>
           {postalZebra ? (
             <PhotoFrame
               src={postalZebra}
               label={fileLabel(postalZebra, homeImages.postalZebra.label)}
-              className="absolute right-[8%] top-[10%] h-[280px] w-[205px] rotate-[3deg] border-[6px] border-white/90 xl:h-[325px] xl:w-[238px]"
+              className={`${styles.zebraPhoto} h-[270px] w-[200px] rotate-[4deg] border-[6px] border-white/90 xl:h-[315px] xl:w-[232px]`}
               showWatermark={shouldShowWatermark(content, "postalZebra")}
             />
           ) : null}
@@ -120,7 +120,7 @@ export function HomeHero({ content }: HomeHeroProps) {
             <PhotoFrame
               src={postalManta}
               label={fileLabel(postalManta, homeImages.postalManta.label)}
-              className="absolute bottom-[5%] left-[10%] h-[155px] w-[136px] rotate-[-2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[162px]"
+              className={`${styles.mantaPhoto} h-[155px] w-[132px] rotate-[-2deg] border-[6px] border-white/90 xl:h-[185px] xl:w-[158px]`}
               showWatermark={shouldShowWatermark(content, "postalManta")}
             />
           ) : null}
