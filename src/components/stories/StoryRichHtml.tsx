@@ -1,12 +1,19 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 type StoryRichHtmlProps = {
   html: string;
   className: string;
   style?: CSSProperties;
+};
+
+type ActiveStoryImage = {
+  src: string;
+  alt: string;
+  caption: string;
 };
 
 type WatermarkSettings = {
@@ -170,6 +177,9 @@ function installSpatialLayouts(root: HTMLElement) {
       figure.style.setProperty("margin", "0", "important");
       figure.style.setProperty("max-width", "none", "important");
       figure.style.setProperty("background", "transparent");
+        figure.style.setProperty("display", "flex", "important");
+        figure.style.setProperty("flex-direction", "column");
+        figure.style.setProperty("overflow", "hidden");
       figure.style.setProperty(
         "border-radius",
         `${cornerRadius + photoGap / 2}px`,
@@ -179,9 +189,10 @@ function installSpatialLayouts(root: HTMLElement) {
 
       if (image) {
         image.style.setProperty("width", "100%", "important");
-        image.style.setProperty("height", "100%", "important");
+        image.style.setProperty("height", "0", "important");
         image.style.setProperty("min-height", "0", "important");
         image.style.setProperty("max-height", "none", "important");
+          image.style.setProperty("flex", "1 1 0%");
         image.style.setProperty("object-fit", "cover");
         image.style.setProperty(
           "object-position",
@@ -207,6 +218,8 @@ export function StoryRichHtml({
   style,
 }: StoryRichHtmlProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const [activeImage, setActiveImage] =
+    useState<ActiveStoryImage | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
@@ -215,6 +228,81 @@ export function StoryRichHtml({
 
     installSpatialLayouts(root);
   }, [html]);
+
+  useEffect(() => {
+    const root = rootRef.current;
+
+    if (!root) return;
+
+    function openMobileImage(event: MouseEvent) {
+      if (
+        !window.matchMedia("(max-width: 767px)").matches ||
+        !(event.target instanceof HTMLImageElement) ||
+        !event.target.matches(
+          'figure[data-story-image="true"] > img',
+        )
+      ) {
+        return;
+      }
+
+      const source =
+        event.target.currentSrc || event.target.src;
+
+      if (!source) return;
+
+      const figure = event.target.closest(
+        'figure[data-story-image="true"]',
+      );
+
+      event.preventDefault();
+
+      setActiveImage({
+        src: source,
+        alt: event.target.alt || "",
+        caption:
+          figure
+            ?.querySelector("figcaption")
+            ?.textContent
+            ?.trim() || "",
+      });
+    }
+
+    root.addEventListener("click", openMobileImage);
+
+    return () => {
+      root.removeEventListener("click", openMobileImage);
+    };
+  }, [html]);
+
+  useEffect(() => {
+    if (!activeImage) return;
+
+    const bodyOverflow = document.body.style.overflow;
+    const htmlOverflow =
+      document.documentElement.style.overflow;
+
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setActiveImage(null);
+      }
+    }
+
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.body.style.overflow = bodyOverflow;
+      document.documentElement.style.overflow =
+        htmlOverflow;
+      window.removeEventListener(
+        "keydown",
+        closeOnEscape,
+      );
+    };
+  }, [activeImage]);
+
 
   useEffect(() => {
     const root = rootRef.current;
@@ -285,11 +373,53 @@ export function StoryRichHtml({
   }, [html]);
 
   return (
-    <div
-      ref={rootRef}
-      className={className}
-      style={style}
-      dangerouslySetInnerHTML={{ __html: html }}
-    />
+    <>
+      <div
+        ref={rootRef}
+        className={className}
+        style={style}
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+
+      {activeImage
+        ? createPortal(
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Story photo preview"
+              className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-black/95 p-4 md:hidden"
+              onClick={() => setActiveImage(null)}
+            >
+              <button
+                type="button"
+                aria-label="Close photo"
+                onClick={() => setActiveImage(null)}
+                className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/55 text-3xl text-white"
+              >
+                ×
+              </button>
+
+              <figure
+                className="m-0 flex max-h-[92dvh] w-full flex-col items-center justify-center"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <img
+                  src={activeImage.src}
+                  alt={activeImage.alt}
+                  className="max-h-[82dvh] max-w-full object-contain"
+                  onError={() => setActiveImage(null)}
+                />
+
+                {activeImage.caption ? (
+                  <figcaption className="mt-3 max-w-2xl px-4 text-center text-sm italic leading-6 text-white/75">
+                    {activeImage.caption}
+                  </figcaption>
+                ) : null}
+              </figure>
+            </div>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }

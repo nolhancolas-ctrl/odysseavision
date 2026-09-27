@@ -135,8 +135,8 @@ export default async function StoryPreviewPage({
         </div>
       </section>
 
-      <article className="bg-[#f4efe4] px-6 py-16 md:px-14 md:py-24">
-        <div className="mx-auto max-w-3xl">
+      <article className="bg-[#f4efe4] px-6 py-16 md:px-8 md:py-24 lg:px-14">
+        <div className="mx-auto max-w-3xl md:max-w-5xl">
           {articleIntro ? (
             <>
               <p

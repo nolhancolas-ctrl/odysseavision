@@ -74,7 +74,8 @@ export async function getPublicPortfolioCategories(): Promise<
         label: category.name,
         href: `/portfolio/${category.slug}`,
         description:
-          cover.description ??
+            category.description?.trim() ||
+            cover.description?.trim() ||
           "A curated selection of visual stories from Odyssea Vision.",
       };
     });

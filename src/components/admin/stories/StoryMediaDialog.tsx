@@ -1202,7 +1202,7 @@ function SortablePhoto({
       className="group bg-transparent"
     >
       <div
-        className={`relative h-full min-h-0 overflow-hidden bg-[#e9e0d1] transition-[border-color,box-shadow] duration-180 ${
+        className={`relative flex h-full min-h-0 flex-col overflow-hidden bg-[#e9e0d1] transition-[border-color,box-shadow] duration-180 ${
           active
             ? "border border-[#b88a3b] ring-2 ring-inset ring-[#b88a3b]/25"
             : "border border-[#242617]/10"
@@ -1219,7 +1219,7 @@ function SortablePhoto({
           alt={item.alt}
           draggable={false}
           onPointerDown={beginCrop}
-          className="h-full w-full cursor-move select-none object-cover"
+          className="h-0 min-h-0 w-full flex-1 cursor-move select-none object-cover"
           style={{
             objectPosition: `${cropX}% ${cropY}%`,
             transform: `scale(${cropZoom})`,
@@ -1253,7 +1253,7 @@ function SortablePhoto({
         </button>
 
         {item.caption ? (
-          <figcaption className="absolute inset-x-0 bottom-0 bg-white/90 px-4 py-3 pr-14 text-xs italic text-[#242617]/60 backdrop-blur-sm">
+          <figcaption className="relative z-10 shrink-0 border-t border-[#242617]/10 bg-white/90 px-4 py-3 pr-14 text-xs italic text-[#242617]/60 backdrop-blur-sm">
             {item.caption}
           </figcaption>
         ) : null}
@@ -1341,7 +1341,7 @@ export function StoryMediaDialog({
 
   useEffect(() => {
     setCompositionHeight(fittedContentHeight);
-  }, [fittedContentHeight]);
+  }, [fittedContentHeight, items]);
 
   const [photoGap, setPhotoGap] = useState(
     Math.max(0, Math.min(32, initialDraft.photoGap ?? 12)),

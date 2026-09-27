@@ -1111,7 +1111,7 @@ export function StoryRichTextEditor({
                 `box-sizing:border-box;` +
                 `background:transparent;`
               )
-        }border-radius:${
+        }display:flex;flex-direction:column;overflow:hidden;border-radius:${
           safeCornerRadius + safePhotoGap / 2
         }px;" `
       : "";
@@ -1119,7 +1119,9 @@ export function StoryRichTextEditor({
     const imageStyle =
       `display:block;` +
       `width:100%;` +
-      `height:100%;` +
+      `height:0;` +
+        `min-height:0;` +
+        `flex:1 1 0%;` +
       `object-fit:cover;` +
       `object-position:${safeCropX}% ${safeCropY}%;` +
       `transform:scale(${safeCropZoom});` +
@@ -1350,6 +1352,15 @@ function saveMediaDraft(draft: StoryMediaDraft) {
           ? "large"
           : "medium";
 
+    const aspectRatio =
+      figure.classList.contains("story-video-ratio-9-16")
+        ? "9:16"
+        : figure.classList.contains("story-video-ratio-1-1")
+          ? "1:1"
+          : figure.classList.contains("story-video-ratio-4-5")
+            ? "4:5"
+            : "16:9";
+
     selectedVideo.current = figure;
     setEditingVideo(true);
     setVideoDraft({
@@ -1357,6 +1368,7 @@ function saveMediaDraft(draft: StoryMediaDraft) {
       caption: caption?.textContent || "",
       alignment,
       size,
+      aspectRatio,
     });
     setVideoOpen(true);
   }
@@ -1409,7 +1421,8 @@ function saveMediaDraft(draft: StoryMediaDraft) {
       `data-video-source="${source}" ` +
       `draggable="true" ` +
       `class="story-video story-media-${draft.alignment} ` +
-      `story-media-${draft.size}">` +
+      `story-media-${draft.size} ` +
+      `story-video-ratio-${draft.aspectRatio.replace(":", "-")}">` +
       `<div class="story-video-frame">${player}</div>` +
       caption +
       `</figure>`

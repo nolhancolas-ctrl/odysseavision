@@ -14,6 +14,12 @@ export type StoryVideoSize =
   | "medium"
   | "large";
 
+export type StoryVideoAspectRatio =
+  | "16:9"
+  | "9:16"
+  | "1:1"
+  | "4:5";
+
 export type StoryVideoKind =
   | "youtube"
   | "vimeo"
@@ -24,6 +30,7 @@ export type StoryVideoDraft = {
   caption: string;
   alignment: StoryVideoAlignment;
   size: StoryVideoSize;
+  aspectRatio: StoryVideoAspectRatio;
 };
 
 export type ResolvedStoryVideo = {
@@ -46,6 +53,7 @@ export function createEmptyStoryVideoDraft(): StoryVideoDraft {
     caption: "",
     alignment: "center",
     size: "large",
+    aspectRatio: "16:9",
   };
 }
 
@@ -203,6 +211,10 @@ export function StoryVideoDialog({
     initialDraft.alignment,
   );
   const [size, setSize] = useState(initialDraft.size);
+  const [aspectRatio, setAspectRatio] = useState(
+    initialDraft.aspectRatio ?? "16:9",
+  );
+  const activeAspectRatio = aspectRatio ?? "16:9";
   const [error, setError] = useState("");
 
   const resolvedVideo = useMemo(
@@ -248,6 +260,7 @@ export function StoryVideoDialog({
       caption: caption.trim(),
       alignment,
       size,
+        aspectRatio: activeAspectRatio,
     });
   }
 
@@ -288,7 +301,20 @@ export function StoryVideoDialog({
               Live preview
             </p>
 
-            <div className="mt-5 aspect-video overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-[#071321] shadow-[0_18px_50px_rgba(7,19,33,0.12)]">
+              <div
+                className="mx-auto mt-5 w-full overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-[#071321] shadow-[0_18px_50px_rgba(7,19,33,0.12)]"
+                style={{
+                  aspectRatio: activeAspectRatio.replace(":", " / "),
+                  maxWidth:
+                    activeAspectRatio === "9:16"
+                      ? "360px"
+                      : activeAspectRatio === "4:5"
+                        ? "480px"
+                        : activeAspectRatio === "1:1"
+                          ? "560px"
+                          : undefined,
+                }}
+              >
               {resolvedVideo ? (
                 <VideoPreview video={resolvedVideo} />
               ) : (
@@ -344,6 +370,37 @@ export function StoryVideoDialog({
               />
             </label>
 
+              <div>
+                <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+                  Format
+                </p>
+
+                <div className="grid grid-cols-2 gap-2">
+                  {(
+                    [
+                      ["16:9", "Landscape"],
+                      ["9:16", "Portrait"],
+                      ["1:1", "Square"],
+                      ["4:5", "Portrait"],
+                    ] as const
+                  ).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={activeAspectRatio === value}
+                      onClick={() => setAspectRatio(value)}
+                      className={`${optionClass(
+                        activeAspectRatio === value,
+                      )} flex-col gap-0.5`}
+                    >
+                      <span>{label}</span>
+                      <span className="text-[9px] opacity-65">
+                        {value}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </div>
             <div>
               <p className="mb-3 text-[10px] font-bold uppercase tracking-[0.18em] text-[#242617]/45">
                 Placement

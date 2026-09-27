@@ -116,6 +116,148 @@ function StatusDropdown({
   );
 }
 
+function DescriptionEditor({
+  initialValue,
+}: {
+  initialValue: string;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState(initialValue);
+  const panelRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open) return;
+
+    function closeOnOutsideClick(event: MouseEvent) {
+      if (
+        panelRef.current &&
+        !panelRef.current.contains(event.target as Node)
+      ) {
+        setOpen(false);
+      }
+    }
+
+    function closeOnEscape(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setOpen(false);
+      }
+    }
+
+    document.addEventListener(
+      "mousedown",
+      closeOnOutsideClick,
+    );
+    window.addEventListener("keydown", closeOnEscape);
+
+    return () => {
+      document.removeEventListener(
+        "mousedown",
+        closeOnOutsideClick,
+      );
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [open]);
+
+  const summary =
+    value.trim() ||
+    "Add a description";
+
+  return (
+    <div ref={panelRef} className="relative">
+      <input
+        type="hidden"
+        name="description"
+        value={value}
+      />
+
+      <span className="mb-2 block text-xs font-bold uppercase tracking-[0.18em] text-[#242617]/45">
+        Description
+      </span>
+
+      <button
+        type="button"
+        aria-expanded={open}
+        aria-haspopup="dialog"
+        onClick={() => setOpen((current) => !current)}
+        className="flex h-[58px] w-full cursor-pointer items-center justify-between gap-4 rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/80 px-4 text-left text-sm text-[#242617] outline-none transition hover:border-[#b88a3b]/55 focus:border-[#b88a3b]/70"
+      >
+        <span
+          className={
+            value.trim()
+              ? "min-w-0 flex-1 truncate"
+              : "min-w-0 flex-1 truncate text-[#242617]/38"
+          }
+        >
+          {summary}
+        </span>
+
+        <span
+          aria-hidden="true"
+          className={`shrink-0 text-xl leading-none text-[#242617]/45 transition ${
+            open ? "-rotate-90" : "rotate-0"
+          }`}
+        >
+          ›
+        </span>
+      </button>
+
+      {open ? (
+        <div
+          role="dialog"
+          aria-label="Edit category description"
+          className="absolute right-0 top-full z-[80] mt-3 w-[min(380px,calc(100vw-3rem))] rounded-[1.5rem] border border-[#242617]/12 bg-[#f7f2e8] p-4 shadow-[0_24px_70px_rgba(20,20,10,0.2)]"
+        >
+          <div className="mb-3 flex items-center justify-between gap-4">
+            <div>
+              <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#b88a3b]">
+                Portfolio preview
+              </p>
+              <p className="mt-1 text-xs text-[#242617]/48">
+                Maximum 320 characters
+              </p>
+            </div>
+
+            <button
+              type="button"
+              aria-label="Close description editor"
+              onClick={() => setOpen(false)}
+              className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full bg-[#071321] text-lg text-white"
+            >
+              ×
+            </button>
+          </div>
+
+          <textarea
+            value={value}
+            onChange={(event) =>
+              setValue(event.target.value.slice(0, 320))
+            }
+            placeholder="A curated selection of visual stories..."
+            maxLength={320}
+            rows={6}
+            autoFocus
+            className="min-h-[150px] w-full resize-y rounded-2xl border border-[#242617]/12 bg-white/65 px-4 py-3 text-sm leading-6 text-[#242617] outline-none transition placeholder:text-[#242617]/28 focus:border-[#b88a3b]/70"
+          />
+
+          <div className="mt-3 flex items-center justify-between gap-4">
+            <span className="text-[10px] font-semibold tabular-nums text-[#242617]/38">
+              {value.length}/320
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setOpen(false)}
+              className="h-10 cursor-pointer rounded-full bg-[#242617] px-5 text-[10px] font-bold uppercase tracking-[0.16em] text-[#f4efe4] transition hover:bg-[#b88a3b]"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function PortfolioCategoryForm({
   category,
   action,
@@ -167,6 +309,10 @@ export function PortfolioCategoryForm({
           </span>
           <StatusDropdown value={uploadStatus} onChange={setUploadStatus} />
         </div>
+
+        <DescriptionEditor
+          initialValue={category?.description ?? ""}
+        />
       </div>
 
       <div className="mt-7 flex flex-wrap gap-3">

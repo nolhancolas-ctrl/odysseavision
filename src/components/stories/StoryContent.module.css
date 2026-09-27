@@ -67,12 +67,24 @@
 }
 
 .content :global(.story-media-caption) {
-  border-top: 1px solid rgba(36, 38, 23, 0.08);
+  width: 100%;
+  box-sizing: border-box;
+  margin: 0;
+  border-top: 1px solid rgba(36, 38, 23, 0.1);
+  border-radius: 0 0 1.25rem 1.25rem;
   padding: 0.8rem 1rem;
-  color: rgba(36, 38, 23, 0.52);
+  background: rgba(255, 255, 255, 0.92);
+  color: rgba(36, 38, 23, 0.82);
   font-size: 0.75rem;
   font-style: italic;
   line-height: 1.55;
+  opacity: 1;
+}
+
+.content
+  :global(figure:has(> .story-media-caption) > img) {
+  border-bottom-right-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
 }
 
 .content :global(.story-media-left) {
@@ -656,6 +668,30 @@
   box-shadow: 0 20px 55px rgba(7, 19, 33, 0.14);
 }
 
+.content
+  :global(
+    .story-video.story-video-ratio-9-16
+      .story-video-frame
+  ) {
+  aspect-ratio: 9 / 16;
+}
+
+.content
+  :global(
+    .story-video.story-video-ratio-1-1
+      .story-video-frame
+  ) {
+  aspect-ratio: 1 / 1;
+}
+
+.content
+  :global(
+    .story-video.story-video-ratio-4-5
+      .story-video-frame
+  ) {
+  aspect-ratio: 4 / 5;
+}
+
 .content :global(.story-video-frame iframe),
 .content :global(.story-video-frame video) {
   display: block;
@@ -786,7 +822,10 @@
       > .story-gallery-item
   ) {
   position: absolute !important;
+    display: flex !important;
   min-width: 0;
+    flex-direction: column;
+    overflow: hidden;
   margin: 0 !important;
   background: transparent;
   box-sizing: border-box;
@@ -800,13 +839,28 @@
   ) {
   display: block;
   width: 100% !important;
-  height: 100% !important;
+  height: 0 !important;
   min-height: 0 !important;
   max-height: none !important;
+    flex: 1 1 0%;
   margin: 0;
   object-fit: cover;
 }
 
+
+
+.content
+  :global(
+    .story-gallery[data-spatial-layout="true"]
+      > .story-gallery-item
+      > .story-media-caption
+  ) {
+  position: relative;
+  z-index: 3;
+  flex: 0 0 auto;
+  margin: 0;
+  background: rgba(255, 255, 255, 0.92);
+}
 
 /* Story editor links and compact writing rhythm */
 .content a {
@@ -822,17 +876,50 @@
 }
 
 /*
- * Enter creates compact paragraphs in both the editor and
- * the published article. Heading, list and media spacing
- * remains controlled by their dedicated rules.
+ * Enter keeps a natural writing rhythm in the editor.
+ * Published paragraph spacing remains independent.
  */
-.content p,
-.editor :global(.story-tiptap-document > p) {
+.content p {
   margin-bottom: 0.6rem;
+}
+
+.editor :global(.story-tiptap-document) {
+  line-height: 1.6;
+}
+
+.editor :global(.story-tiptap-document > p) {
+  margin: 0 0 0.7rem;
+}
+
+.editor
+  :global(
+    .story-tiptap-document
+      > [data-story-gallery="true"]
+  ),
+.editor
+  :global(
+    .story-tiptap-document
+      > figure[data-story-image="true"]
+  ),
+.editor
+  :global(
+    .story-tiptap-document
+      > figure[data-story-video="true"]
+  ) {
+  margin-bottom: 0 !important;
 }
 
 .content p:last-child,
 .editor :global(.story-tiptap-document > p:last-child),
 .editor li > p {
   margin-bottom: 0;
+}
+
+
+@media (max-width: 767px) {
+  .content
+    :global(figure[data-story-image="true"] > img) {
+    cursor: zoom-in;
+    touch-action: manipulation;
+  }
 }

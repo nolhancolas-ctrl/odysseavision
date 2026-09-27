@@ -4,6 +4,7 @@ import { homeImages } from "@/data/home";
 import type { PublicSectionContent } from "@/lib/content/site";
 import { FrameWatermark } from "@/components/ui/FrameWatermark";
 import { shouldShowImageWatermark } from "@/lib/content/image-watermarks";
+import styles from "./HomeHero.module.css";
 
 type HomeHeroProps = {
   content?: PublicSectionContent;
@@ -32,7 +33,16 @@ export function HomeHero({ content }: HomeHeroProps) {
   return (
     <section className="relative min-h-[100svh] overflow-hidden bg-[#10170d] text-white">
       <div
-        className="absolute inset-0 bg-cover bg-center"
+        aria-hidden="true"
+        className="absolute -inset-5 scale-105 bg-cover bg-center opacity-55 blur-md"
+        style={{
+          backgroundImage: `url(${background})`,
+        }}
+      />
+
+      <div
+        aria-hidden="true"
+        className={`absolute inset-0 ${styles.background}`}
         style={{
           backgroundImage: `linear-gradient(rgba(10, 14, 8, 0.47), rgba(10, 14, 8, 0.58)), url(${background})`,
         }}
@@ -41,8 +51,8 @@ export function HomeHero({ content }: HomeHeroProps) {
 
       <div className="absolute inset-0 bg-gradient-to-b from-black/25 via-transparent to-black/60" />
 
-      <div className="relative z-20 mx-auto grid min-h-[100svh] w-full max-w-[1500px] grid-cols-1 items-center px-5 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28 md:px-10 lg:grid-cols-[minmax(220px,1fr)_minmax(410px,620px)_minmax(220px,1fr)] lg:gap-8 xl:gap-14">
-        <div className="pointer-events-none relative hidden h-[430px] lg:block xl:h-[500px]">
+      <div className={`${styles.layout} relative z-20 mx-auto grid min-h-[100svh] w-full max-w-[1500px] items-center px-5 pb-10 pt-24 sm:px-6 sm:pb-14 sm:pt-28 md:px-10`}>
+        <div className={`${styles.side} pointer-events-none relative h-[430px] xl:h-[500px]`}>
           {postalCoast ? (
             <PhotoFrame
               src={postalCoast}
@@ -96,12 +106,12 @@ export function HomeHero({ content }: HomeHeroProps) {
           </div>
         </div>
 
-        <div className="pointer-events-none relative hidden h-[430px] lg:block xl:h-[500px]">
+        <div className={`${styles.side} pointer-events-none relative h-[430px] xl:h-[500px]`}>
           {postalZebra ? (
             <PhotoFrame
               src={postalZebra}
               label={fileLabel(postalZebra, homeImages.postalZebra.label)}
-              className="absolute right-[3%] top-[10%] h-[280px] w-[205px] rotate-[3deg] border-[6px] border-white/90 xl:right-[-30%] xl:h-[325px] xl:w-[238px]"
+              className="absolute right-[8%] top-[10%] h-[280px] w-[205px] rotate-[3deg] border-[6px] border-white/90 xl:h-[325px] xl:w-[238px]"
               showWatermark={shouldShowWatermark(content, "postalZebra")}
             />
           ) : null}

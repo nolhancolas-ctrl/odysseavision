@@ -6,6 +6,7 @@ import {
   type PublicPortfolioCategory,
 } from "@/lib/content/portfolio";
 import type { PublicSectionContent } from "@/lib/content/site";
+import styles from "./HomePortfolioPreview.module.css";
 
 
 const HOME_PORTFOLIO_ORDER = ["ocean", "wildlife", "landscape", "portrait"] as const;
@@ -33,7 +34,7 @@ function PortfolioPreviewCard({
   return (
     <Link
       href={item.href}
-      className="group flex min-h-[420px] w-full flex-col bg-[#30331f] p-5 transition active:scale-[0.99] sm:min-h-[470px] sm:hover:-translate-y-1 sm:hover:bg-[#3b3e27]"
+      className="group flex min-h-[420px] w-full flex-col bg-[#30331f] p-4 transition xl:p-5 active:scale-[0.99] sm:min-h-[470px] sm:hover:-translate-y-1 sm:hover:bg-[#3b3e27]"
     >
       <p className="mb-2 font-serif text-3xl text-[#b7a879]/75">
         {item.number}
@@ -46,7 +47,7 @@ function PortfolioPreviewCard({
       <PhotoFrame
         src={item.image}
         label={item.label}
-        className="mb-6 h-52 w-full [&_img]:object-center"
+        className="mb-6 aspect-[4/3] w-full [&_img]:object-cover [&_img]:object-center"
         showWatermark={false}
       />
 
@@ -81,7 +82,7 @@ export async function HomePortfolioPreview({
           </h2>
         </div>
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <div className={styles.grid}>
           {portfolioCategories.map((item) => (
             <PortfolioPreviewCard key={item.title} item={item} />
           ))}

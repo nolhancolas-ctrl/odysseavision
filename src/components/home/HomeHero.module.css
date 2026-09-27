@@ -1,0 +1,53 @@
+.background {
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+
+.layout {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.side {
+  display: none;
+}
+
+/*
+ * Sur tablette ou écran presque carré, toute l’image reste visible.
+ * Le fond ambiant situé derrière remplit les espaces restants.
+ */
+@media
+  (min-width: 768px)
+  and (max-aspect-ratio: 1699 / 1000) {
+  .background {
+    background-size: contain;
+  }
+}
+
+/*
+ * La composition complète avec les cartes postales latérales
+ * apparaît uniquement lorsque l’écran est réellement assez large.
+ */
+@media
+  (min-width: 1180px)
+  and (min-aspect-ratio: 17 / 10) {
+  .layout {
+    grid-template-columns:
+      minmax(220px, 1fr)
+      minmax(410px, 620px)
+      minmax(220px, 1fr);
+    gap: 2rem;
+  }
+
+  .side {
+    display: block;
+  }
+}
+
+@media
+  (min-width: 1280px)
+  and (min-aspect-ratio: 17 / 10) {
+  .layout {
+    gap: 3.5rem;
+  }
+}

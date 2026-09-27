@@ -76,9 +76,9 @@ export default async function StoryPage({ params }: StoryPageProps) {
 
       <article
         style={typographyVariables}
-        className="bg-[#f4efe4] px-6 py-16 md:px-14 md:py-24"
+        className="bg-[#f4efe4] px-6 py-16 md:px-8 md:py-24 lg:px-14"
       >
-        <div className="mx-auto max-w-3xl">
+        <div className="mx-auto max-w-3xl md:max-w-5xl">
           {story.articleIntro ? (
             <>
               <p

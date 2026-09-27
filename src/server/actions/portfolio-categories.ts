@@ -47,6 +47,9 @@ async function getUniqueCategorySlug(baseSlug: string, currentId?: string) {
 export async function createPortfolioCategory(formData: FormData) {
   const name = String(formData.get("name") || "").trim();
   const slugInput = String(formData.get("slug") || "").trim();
+  const description = String(
+    formData.get("description") || "",
+  ).trim().slice(0, 320);
   const orderEntry = formData.get("order");
   const returnTo = safeAdminReturn(formData.get("returnTo"));
 
@@ -74,12 +77,14 @@ const order =
     data: {
       name,
       slug,
+      description: description || null,
       order: Number.isFinite(order) ? order : 0,
     },
   });
 
   revalidatePath("/admin/portfolio");
   revalidatePath("/portfolio");
+  revalidatePath("/");
 
   redirect(returnTo);
 }
@@ -90,6 +95,9 @@ export async function updatePortfolioCategory(
 ) {
   const name = String(formData.get("name") || "").trim();
   const slugInput = String(formData.get("slug") || "").trim();
+  const description = String(
+    formData.get("description") || "",
+  ).trim().slice(0, 320);
   const orderEntry = formData.get("order");
 const parsedOrder = Number(orderEntry);
   const returnTo = safeAdminReturn(formData.get("returnTo"));
@@ -105,6 +113,7 @@ const parsedOrder = Number(orderEntry);
     data: {
       name,
       slug,
+      description: description || null,
       ...(orderEntry !== null && Number.isFinite(parsedOrder)
   ? { order: parsedOrder }
   : {}),
@@ -114,6 +123,7 @@ const parsedOrder = Number(orderEntry);
   revalidatePath("/admin/portfolio");
   revalidatePath(`/admin/portfolio/categories/${categoryId}`);
   revalidatePath("/portfolio");
+  revalidatePath("/");
   revalidatePath(`/portfolio/${slug}`);
 
   redirect(returnTo);
@@ -152,6 +162,7 @@ export async function reorderPortfolioCategories(
   );
 
   revalidatePath("/portfolio");
+  revalidatePath("/");
   revalidatePath("/admin/portfolio");
   revalidatePath("/admin/portfolio/settings");
 }
@@ -176,6 +187,7 @@ export async function deletePortfolioCategory(
 
   revalidatePath("/admin/portfolio");
   revalidatePath("/portfolio");
+  revalidatePath("/");
 
   redirect(returnTo);
 }
