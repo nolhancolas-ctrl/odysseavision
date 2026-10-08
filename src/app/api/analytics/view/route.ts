@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { isAdminAuthenticated } from "@/lib/admin/auth";
 import { db } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
@@ -16,32 +17,63 @@ function cleanPath(value: unknown) {
   return trimmed.slice(0, 300);
 }
 
+function analyticsResponse(
+  body: Record<string, unknown>,
+  status = 200,
+) {
+  return NextResponse.json(body, {
+    status,
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  });
+}
+
 export async function POST(request: Request) {
   try {
+    if (await isAdminAuthenticated()) {
+      return analyticsResponse({
+        ok: true,
+        tracked: false,
+        reason: "admin-session",
+      });
+    }
+
     const body = await request.json().catch(() => ({}));
     const path = cleanPath(body.path);
 
     if (!path) {
-      return NextResponse.json({ ok: false });
+      return analyticsResponse({
+        ok: false,
+        tracked: false,
+      });
     }
 
     await db.pageView.create({
       data: {
         path,
-        referrer: request.headers.get("referer")?.slice(0, 500) ?? null,
-        userAgent: request.headers.get("user-agent")?.slice(0, 500) ?? null,
+        referrer:
+          request.headers
+            .get("referer")
+            ?.slice(0, 500) ?? null,
+        userAgent:
+          request.headers
+            .get("user-agent")
+            ?.slice(0, 500) ?? null,
       },
     });
 
-    return NextResponse.json(
-      { ok: true },
-      {
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      },
-    );
+    return analyticsResponse({
+      ok: true,
+      tracked: true,
+    });
   } catch {
-    return NextResponse.json({ ok: false }, { status: 500 });
+    return analyticsResponse(
+      {
+        ok: false,
+        tracked: false,
+      },
+      500,
+    );
   }
 }

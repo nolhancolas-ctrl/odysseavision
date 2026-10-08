@@ -67,12 +67,23 @@ export type MessageCenterData = {
   }[];
 };
 
+const ANALYTICS_TIME_ZONE = "Europe/Paris";
+
+const dateKeyFormatter = new Intl.DateTimeFormat("en-CA", {
+  timeZone: ANALYTICS_TIME_ZONE,
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
 const shortDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: ANALYTICS_TIME_ZONE,
   month: "short",
   day: "numeric",
 });
 
 const fullDateFormatter = new Intl.DateTimeFormat("en-US", {
+  timeZone: ANALYTICS_TIME_ZONE,
   month: "short",
   day: "numeric",
   year: "numeric",
@@ -107,7 +118,17 @@ function toDate(value: unknown) {
 
 function dateKey(value: unknown) {
   const date = toDate(value);
-  return date ? date.toISOString().slice(0, 10) : "";
+
+  if (!date) {
+    return "";
+  }
+
+  const parts = dateKeyFormatter.formatToParts(date);
+  const year = parts.find((part) => part.type === "year")?.value;
+  const month = parts.find((part) => part.type === "month")?.value;
+  const day = parts.find((part) => part.type === "day")?.value;
+
+  return year && month && day ? `${year}-${month}-${day}` : "";
 }
 
 function formatShortDate(value: unknown) {
@@ -249,11 +270,42 @@ function groupRowsByDay(rows: RawRow[], dateColumn?: string, limit = 30) {
     }));
 }
 
-function detectPageViewTable(metas: TableMeta[]) {
-  return (
-    findTableByExactName(metas, ["PageView", "page_views", "PageViews"]) ??
-    metas.find((meta) => meta.table.toLowerCase().includes("pageview"))
-  );
+
+function buildRollingDailySeries(values: unknown[], days = 90) {
+  const todayKey = dateKey(new Date());
+
+  if (!todayKey) {
+    return [];
+  }
+
+  const [year, month, day] = todayKey
+    .split("-")
+    .map((value) => Number(value));
+
+  const keys = Array.from({ length: days }, (_, index) => {
+    const offset = index - (days - 1);
+    const date = new Date(
+      Date.UTC(year, month - 1, day + offset, 12),
+    );
+
+    return date.toISOString().slice(0, 10);
+  });
+
+  const counts = new Map(keys.map((key) => [key, 0]));
+
+  for (const value of values) {
+    const key = dateKey(value);
+
+    if (counts.has(key)) {
+      counts.set(key, (counts.get(key) ?? 0) + 1);
+    }
+  }
+
+  return keys.map((key) => ({
+    label: formatShortDate(`${key}T12:00:00.000Z`),
+    title: key,
+    value: counts.get(key) ?? 0,
+  }));
 }
 
 function detectSubscriberTable(metas: TableMeta[]) {
@@ -308,11 +360,84 @@ function detectMessageTable(metas: TableMeta[]) {
   });
 }
 
-export async function getViewInsightData(): Promise<ViewInsightData> {
-  const metas = await getTableMetas();
-  const table = detectPageViewTable(metas);
 
-  if (!table) {
+export async function getViewInsightData(): Promise<ViewInsightData> {
+  const now = new Date();
+  const seriesStart = new Date(
+    now.getTime() - 92 * 24 * 60 * 60 * 1000,
+  );
+
+  try {
+    const [
+      total,
+      seriesRows,
+      groupedPaths,
+      recentRows,
+    ] = await Promise.all([
+      db.pageView.count(),
+      db.pageView.findMany({
+        where: {
+          createdAt: {
+            gte: seriesStart,
+          },
+        },
+        select: {
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "asc",
+        },
+      }),
+      db.pageView.groupBy({
+        by: ["path"],
+        _count: {
+          path: true,
+        },
+        orderBy: {
+          _count: {
+            path: "desc",
+          },
+        },
+        take: 8,
+      }),
+      db.pageView.findMany({
+        select: {
+          path: true,
+          referrer: true,
+          userAgent: true,
+          createdAt: true,
+        },
+        orderBy: {
+          createdAt: "desc",
+        },
+        take: 20,
+      }),
+    ]);
+
+    const todayKey = dateKey(now);
+
+    return {
+      available: true,
+      total,
+      today: seriesRows.filter(
+        (row) => dateKey(row.createdAt) === todayKey,
+      ).length,
+      series: buildRollingDailySeries(
+        seriesRows.map((row) => row.createdAt),
+        90,
+      ),
+      topPaths: groupedPaths.map((item) => ({
+        path: item.path || "/",
+        count: item._count.path,
+      })),
+      recentViews: recentRows.map((row) => ({
+        path: row.path || "/",
+        referrer: row.referrer?.trim() || "Direct",
+        userAgent: row.userAgent?.trim() || "",
+        date: formatFullDate(row.createdAt),
+      })),
+    };
+  } catch {
     return {
       available: false,
       total: 0,
@@ -322,39 +447,6 @@ export async function getViewInsightData(): Promise<ViewInsightData> {
       recentViews: [],
     };
   }
-
-  const dateColumn = pickColumn(table, ["createdAt", "date", "timestamp"]);
-  const pathColumn = pickColumn(table, ["path", "pathname", "url"]) ?? "path";
-  const referrerColumn = pickColumn(table, ["referrer", "referer"]);
-  const userAgentColumn = pickColumn(table, ["userAgent", "agent"]);
-  const rows = await getRows(table.table, dateColumn, 3000);
-  const todayKey = new Date().toISOString().slice(0, 10);
-
-  const pathCounts = new Map<string, number>();
-
-  for (const row of rows) {
-    const path = toText(row[pathColumn]) || "/";
-    pathCounts.set(path, (pathCounts.get(path) ?? 0) + 1);
-  }
-
-  return {
-    available: true,
-    total: rows.length,
-    today: dateColumn
-      ? rows.filter((row) => dateKey(row[dateColumn]) === todayKey).length
-      : 0,
-    series: groupRowsByDay(rows, dateColumn, 30),
-    topPaths: Array.from(pathCounts.entries())
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 8)
-      .map(([path, count]) => ({ path, count })),
-    recentViews: rows.slice(0, 20).map((row) => ({
-      path: toText(row[pathColumn]) || "/",
-      referrer: referrerColumn ? toText(row[referrerColumn]) || "Direct" : "Direct",
-      userAgent: userAgentColumn ? toText(row[userAgentColumn]) : "",
-      date: dateColumn ? formatFullDate(row[dateColumn]) : "—",
-    })),
-  };
 }
 
 function subscriberName(row: RawRow) {
