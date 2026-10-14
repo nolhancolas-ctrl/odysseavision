@@ -5,6 +5,66 @@
   line-height: 2;
 }
 
+/* DOM order is photo, left text, right text; desktop grid places text beside it. */
+.textMediaLayout,
+.content :global(.story-text-media) {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: clamp(0.75rem, 2vw, 1.5rem);
+  clear: both;
+  width: 100%;
+  min-width: 0;
+  margin: 1.5rem 0;
+}
+
+.textMediaLayout > :first-child,
+.content :global(.story-text-media > .story-gallery) {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+}
+
+.textMediaLayout :global(.story-side-text),
+.content :global(.story-side-text) {
+  min-width: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  text-align: start;
+}
+
+.textMediaLayout :global(.story-side-text-left),
+.content :global(.story-side-text-left) {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.textMediaLayout :global(.story-side-text-right),
+.content :global(.story-side-text-right) {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.textMediaLayout :global(.story-side-text:empty),
+.content :global(.story-side-text:empty) {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  .textMediaLayout,
+  .content :global(.story-text-media) {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .textMediaLayout > *,
+  .content :global(.story-text-media > *) {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+  }
+}
+
 .content p {
   margin: 0 0 1.65rem;
 }

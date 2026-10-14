@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { photoFrameGeometry } from "@/components/stories/storyComposition";
+import styles from "@/components/stories/StoryContent.module.css";
 import {
   closestCenter,
   pointerWithin,
@@ -50,6 +52,9 @@ export type StoryMediaDraft = {
   compositionHeight: number;
   photoGap: number;
   cornerRadius: number;
+  sideTextEnabled?: boolean;
+  leftText?: string;
+  rightText?: string;
 };
 
 type Props = {
@@ -1044,6 +1049,7 @@ function SortablePhoto({
   single,
   alignment,
   compositionHeight,
+  compositionWidth,
   onSelect,
   onUpdate,
 }: {
@@ -1053,6 +1059,7 @@ function SortablePhoto({
   single: boolean;
   alignment: StoryImageAlignment;
   compositionHeight: number;
+  compositionWidth: number;
   onSelect: () => void;
   onUpdate: (
     patch: Partial<Omit<StoryMediaItem, "id">>,
@@ -1092,7 +1099,7 @@ function SortablePhoto({
 
     function move(pointerEvent: PointerEvent) {
       const widthDelta =
-        ((pointerEvent.clientX - startX) / canvasRect.width) * 100;
+        ((pointerEvent.clientX - startX) / canvasRect.width) * compositionWidth;
       const heightDelta =
         ((pointerEvent.clientY - startY) / canvasRect.height) *
         compositionHeight;
@@ -1169,10 +1176,7 @@ function SortablePhoto({
       }
     : {
         position: "absolute" as const,
-        left: `${itemX}%`,
-        top: `${itemTop}%`,
-        width: `${item.width}%`,
-        height: `${itemFrameHeight}%`,
+        ...photoFrameGeometry(item, compositionWidth, safeCompositionHeight),
       };
 
   return (
@@ -1330,6 +1334,10 @@ export function StoryMediaDialog({
     );
   const [keepPhotoScale, setKeepPhotoScale] = useState(true);
   const [keepFrameScale, setKeepFrameScale] = useState(true);
+  const [sideTextEnabled, setSideTextEnabled] = useState(initialDraft.sideTextEnabled ?? false);
+  const [leftText, setLeftText] = useState(initialDraft.leftText ?? "");
+  const [rightText, setRightText] = useState(initialDraft.rightText ?? "");
+  const showSideText = sideTextEnabled && alignment === "center" && items.length === 1;
 
   const fittedContentHeight = Math.max(
     120,
@@ -1338,10 +1346,6 @@ export function StoryMediaDialog({
       Math.ceil(getCompositionCanvasHeight(items) / 10) * 10,
     ),
   );
-
-  useEffect(() => {
-    setCompositionHeight(fittedContentHeight);
-  }, [fittedContentHeight, items]);
 
   const [photoGap, setPhotoGap] = useState(
     Math.max(0, Math.min(32, initialDraft.photoGap ?? 12)),
@@ -1570,6 +1574,14 @@ export function StoryMediaDialog({
         next = resolveComposition(next, id);
       }
 
+      // Single-photo alignment is relative to the visible frame, not the
+      // full reference canvas used by multi-photo layout presets.
+      if (next.length === 1 && (width !== undefined || height !== undefined)) {
+        const photo = next[0];
+        const freeWidth = Math.max(0, compositionWidth - photo.width);
+        next = [{ ...photo, x: alignment === "right" ? freeWidth : alignment === "center" ? freeWidth / 2 : 0 }];
+      }
+
       return next;
     });
   }
@@ -1640,12 +1652,12 @@ export function StoryMediaDialog({
       current.map((item, index) => {
         if (index !== 0 || current.length !== 1) return item;
 
-        const width = value === "full" ? 100 : item.width;
+        const width = value === "full" ? compositionWidth : item.width;
         const x =
           value === "right"
-            ? 100 - width
+            ? Math.max(0, compositionWidth - width)
             : value === "center"
-              ? (100 - width) / 2
+              ? Math.max(0, (compositionWidth - width) / 2)
               : 0;
 
         return {
@@ -1861,11 +1873,11 @@ export function StoryMediaDialog({
                   </div>
                 </div>
 
+                <div className={showSideText ? styles.textMediaLayout : undefined} style={{ maxWidth: 1050, marginInline: "auto" }}>
                 <div
                   data-story-media-canvas
                   className="flow-root rounded-[1.75rem] border border-[#242617]/10 bg-[#f3ecdf] shadow-inner"
                   style={{
-                    maxWidth: 1050,
                     width: `${compositionWidth}%`,
                     aspectRatio: `${compositionWidth * 10} / ${compositionHeight}`,
                     overflow: "hidden",
@@ -1904,6 +1916,7 @@ export function StoryMediaDialog({
                             single={false}
                             alignment="center"
                             compositionHeight={compositionHeight}
+                            compositionWidth={compositionWidth}
                             onSelect={() =>
                               setActiveId(item.id)
                             }
@@ -1915,6 +1928,13 @@ export function StoryMediaDialog({
                       </div>
                     </SortableContext>
                   </DndContext>
+                </div>
+                {showSideText ? (
+                  <>
+                    <div className="story-side-text story-side-text-left">{leftText}</div>
+                    <div className="story-side-text story-side-text-right">{rightText}</div>
+                  </>
+                ) : null}
                 </div>
               </section>
 
@@ -1975,6 +1995,7 @@ export function StoryMediaDialog({
 
                       <input
                         type="range"
+                        aria-label="Selected photo width"
                         min="12"
                         max="100"
                         step="1"
@@ -1993,6 +2014,7 @@ export function StoryMediaDialog({
 
                       <input
                         type="range"
+                        aria-label="Selected photo height"
                         min="120"
                         max="1200"
                         step="10"
@@ -2159,6 +2181,13 @@ export function StoryMediaDialog({
                   <h3 className="mt-2 font-serif text-2xl text-[#242617]">
                     Composition frame
                   </h3>
+                  <p className="mt-2 text-xs leading-5 text-[#242617]/60">
+                    Frame and photo dimensions are independent. A smaller frame clips the photos without resizing them.
+                  </p>
+                  <button type="button" className="mt-3 rounded-xl border border-[#242617]/20 px-3 py-2 text-xs" onClick={() => {
+                    setCompositionWidth(Math.max(40, Math.min(100, Math.ceil(Math.max(...items.map(item => (item.x ?? 0) + item.width))))));
+                    setCompositionHeight(fittedContentHeight);
+                  }}>Fit frame to photos</button>
 
                   <div className="mt-5 space-y-5">
                     <label className="block">
@@ -2168,6 +2197,7 @@ export function StoryMediaDialog({
                       </span>
                       <input
                         type="range"
+                        aria-label="Frame width"
                         min="40"
                         max="100"
                         step="1"
@@ -2187,6 +2217,7 @@ export function StoryMediaDialog({
 
                       <input
                         type="range"
+                        aria-label="Frame height"
                         min="120"
                         max="1200"
                         step="10"
@@ -2251,6 +2282,26 @@ export function StoryMediaDialog({
                   </div>
                 </section>
 
+                {items.length === 1 && alignment === "center" ? (
+                  <section className="rounded-[1.5rem] border border-[#242617]/10 bg-white/40 p-5">
+                    <label className="flex items-center gap-3 text-sm font-semibold">
+                      <input type="checkbox" checked={sideTextEnabled} onChange={event => setSideTextEnabled(event.target.checked)} className="h-5 w-5 accent-[#b88a3b]" />
+                      Text on both sides
+                    </label>
+                    <p className="mt-2 text-xs leading-5 text-[#242617]/60">On mobile: photo first, then left text, then right text. Line breaks are preserved.</p>
+                    {sideTextEnabled ? (
+                      <div className="mt-4 space-y-4">
+                        <label className="block text-sm">Left text
+                          <textarea rows={7} value={leftText} onChange={event => setLeftText(event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-[#242617]/20 bg-white p-3 font-normal" />
+                        </label>
+                        <label className="block text-sm">Right text
+                          <textarea rows={7} value={rightText} onChange={event => setRightText(event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-[#242617]/20 bg-white p-3 font-normal" />
+                        </label>
+                      </div>
+                    ) : null}
+                  </section>
+                ) : null}
+
                 {error ? (
                   <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-5 py-4 text-sm text-red-800">
                     {error}
@@ -2296,6 +2347,9 @@ export function StoryMediaDialog({
                   compositionHeight,
                   photoGap,
                   cornerRadius,
+                  sideTextEnabled,
+                  leftText,
+                  rightText,
                 })
               }
               className="h-12 rounded-full bg-[#202711] px-7 text-[10px] font-bold uppercase tracking-[0.16em] text-white transition hover:bg-[#b88a3b] disabled:cursor-not-allowed disabled:bg-[#242617]/25"

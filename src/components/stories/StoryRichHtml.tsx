@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { useEffect, useRef } from "react";
+import { installIndependentCompositions } from "./storyComposition";
 
 type StoryRichHtmlProps = {
   html: string;
@@ -49,11 +50,13 @@ function clampNumber(
 
 function installSpatialLayouts(root: HTMLElement) {
   const mobile = window.matchMedia("(max-width: 767px)").matches;
+  installIndependentCompositions(root, mobile);
   const galleries = root.querySelectorAll<HTMLElement>(
     'section[data-story-gallery="true"][data-spatial-layout="true"]',
   );
 
   galleries.forEach((gallery) => {
+    if (gallery.dataset.storyCoordinates === "independent") return;
     const compositionWidth = clampNumber(
       gallery.dataset.compositionWidth,
       100,

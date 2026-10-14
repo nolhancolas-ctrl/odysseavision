@@ -5,6 +5,7 @@ import {
   type Editor,
 } from "@tiptap/core";
 import { ListItem } from "@tiptap/extension-list";
+import { installIndependentCompositions } from "@/components/stories/storyComposition";
 
 export const STORY_MEDIA_EDIT_EVENT =
   "story-media-edit";
@@ -89,6 +90,7 @@ export const StoryMediaNode = TiptapNode.create({
   parseHTML() {
     return [
       { tag: "story-media[data-html]" },
+      { tag: "section[data-story-text-media='true']" },
       { tag: "figure[data-story-image='true']" },
       { tag: "section[data-story-gallery='true']" },
       { tag: "figure[data-story-video='true']" },
@@ -116,6 +118,10 @@ export const StoryMediaNode = TiptapNode.create({
       dom.contentEditable = "false";
       dom.draggable = true;
       dom.dataset.storyTiptapMedia = "true";
+      const mobileQuery = window.matchMedia("(max-width: 767px)");
+      const refreshComposition = () => installIndependentCompositions(dom, mobileQuery.matches);
+      refreshComposition();
+      mobileQuery.addEventListener("change", refreshComposition);
 
       const openEditor = (event: MouseEvent) => {
         event.preventDefault();
@@ -156,6 +162,7 @@ export const StoryMediaNode = TiptapNode.create({
         },
         ignoreMutation: () => true,
         destroy() {
+          mobileQuery.removeEventListener("change", refreshComposition);
           dom.removeEventListener("click", openEditor);
         },
       };
@@ -283,6 +290,8 @@ export function normalizeLegacyStoryHtml(html: string) {
   );
 
   for (const gallery of storyGalleries) {
+    // Independent frames must survive even when they contain a single photo.
+    if (gallery.dataset.storyCoordinates === "independent") continue;
     const figures = Array.from(
       gallery.querySelectorAll<HTMLElement>(
         ':scope > figure[data-story-image="true"]',

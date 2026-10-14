@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import sanitizeHtml from "sanitize-html";
+import { sanitizeStoryHtml } from "./sanitizeStoryHtml";
 import styles from "@/components/stories/StoryContent.module.css";
 import { StoryRichHtml } from "@/components/stories/StoryRichHtml";
 import {
@@ -129,100 +129,6 @@ function parseStoryContent(content: string): StoryBlock[] {
   return blocks;
 }
 
-function sanitizeStoryHtml(content: string) {
-  return sanitizeHtml(content, {
-    allowedTags: [
-      ...sanitizeHtml.defaults.allowedTags,
-      "img",
-      "figure",
-"section",
-      "iframe",
-      "video",
-      "figcaption",
-      "u",
-      "font",
-    ],
-    allowedAttributes: {
-      "*": ["class", "style", "data-spatial-layout", "data-canvas-height", "data-x", "data-y", "data-height", "data-crop-x", "data-crop-y", "data-crop-zoom"],
-      a: ["href", "target", "rel"],
-      img: [
-        "src",
-        "alt",
-        "title",
-        "loading",
-        "decoding",
-        "width",
-        "height",
-      ],
-      iframe: [
-        "src",
-        "title",
-        "loading",
-        "allow",
-        "allowfullscreen",
-        "frameborder",
-        "referrerpolicy",
-      ],
-      video: [
-        "src",
-        "controls",
-        "preload",
-        "playsinline",
-        "poster",
-      ],
-      figure: [
-        "class",
-        "data-story-image",
-        "data-story-video",
-        "data-video-kind",
-        "data-video-source",
-"data-story-image-index",
-"data-watermark",
-      "data-width",
-      "draggable",
-        "contenteditable",
-        "tabindex",
-
-      "data-composition-width",
-      "data-photo-gap",
-      "data-corner-radius",      ],
-      section: [
-"class",
-"data-story-gallery",
-"data-layout",
-"data-size",
-"data-count",
-"contenteditable",
-"tabindex",
-
-      "style",
-      "data-composition-width",
-      "data-composition-height",
-      "data-story-composition",
-      "data-photo-gap",
-      "data-corner-radius",
-      "draggable",],
-figcaption: ["class"],
-      font: ["face", "size", "color"],
-    },
-    allowedStyles: {
-      "*": {
-        "text-align": [/^(?:left|center|right|justify)$/],
-        "font-family": [/^[A-Za-z0-9 "'_, -]{1,120}$/],
-        "font-size": [
-          /^(?:\d+(?:\.\d+)?(?:px|em|rem|%)|xx-small|x-small|small|medium|large|x-large|xx-large)$/,
-        ],
-      "width": [/^\d+(?:\.\d+)?%$/],
-      "max-width": [/^\d+(?:\.\d+)?%$/],
-      "gap": [/^\d+(?:\.\d+)?px$/],
-      "margin-inline": [/^auto$/],
-      "border-radius": [/^\d+(?:\.\d+)?px$/],
-      },
-    },
-    allowedSchemes: ["http", "https", "mailto"],
-    allowProtocolRelative: false,
-  });
-}
 
 export function StoryContent({
   content,
