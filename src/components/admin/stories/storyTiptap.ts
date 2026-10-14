@@ -276,6 +276,111 @@ export function normalizeLegacyStoryHtml(html: string) {
     }
   }
 
+  const storyGalleries = Array.from(
+    container.querySelectorAll<HTMLElement>(
+      'section[data-story-gallery="true"]',
+    ),
+  );
+
+  for (const gallery of storyGalleries) {
+    const figures = Array.from(
+      gallery.querySelectorAll<HTMLElement>(
+        ':scope > figure[data-story-image="true"]',
+      ),
+    );
+
+    for (const figure of figures) {
+      for (const property of [
+        "position",
+        "left",
+        "top",
+        "width",
+        "height",
+        "padding",
+        "margin",
+        "max-width",
+        "display",
+      ]) {
+        const value = figure.style.getPropertyValue(property);
+
+        if (value) {
+          figure.style.setProperty(property, value);
+        }
+      }
+
+      const image = figure.querySelector<HTMLElement>(":scope > img");
+
+      if (!image) continue;
+
+      for (const property of [
+        "width",
+        "height",
+        "min-height",
+        "max-height",
+        "flex",
+        "object-fit",
+        "object-position",
+        "transform",
+        "transform-origin",
+      ]) {
+        const value = image.style.getPropertyValue(property);
+
+        if (value) {
+          image.style.setProperty(property, value);
+        }
+      }
+    }
+
+    if (figures.length !== 1) continue;
+
+    const figure = figures[0];
+    const parsedWidth = Number(figure.dataset.width);
+    const width = Number.isFinite(parsedWidth)
+      ? Math.max(12, Math.min(100, parsedWidth))
+      : 100;
+    const parsedX = Number(figure.dataset.x);
+    const x = Number.isFinite(parsedX)
+      ? Math.max(0, Math.min(100, parsedX))
+      : (100 - width) / 2;
+    const parsedHeight = Number(figure.dataset.height);
+    const height = Number.isFinite(parsedHeight)
+      ? Math.max(120, Math.min(10000, parsedHeight))
+      : 320;
+    const alignment =
+      width >= 99
+        ? "full"
+        : x <= 1
+          ? "left"
+          : x + width >= 99
+            ? "right"
+            : "center";
+    const size =
+      gallery.dataset.size === "small"
+        ? "small"
+        : gallery.dataset.size === "large"
+          ? "large"
+          : "medium";
+    const widthClass = Math.max(
+      20,
+      Math.min(100, Math.round(width / 5) * 5),
+    );
+
+    figure.className =
+      `story-media story-media-${alignment} ` +
+      `story-media-${size} story-media-width-${widthClass}`;
+    figure.removeAttribute("data-story-image-index");
+    figure.style.setProperty("position", "relative");
+    figure.style.removeProperty("left");
+    figure.style.removeProperty("top");
+    figure.style.setProperty("width", `${width}%`);
+    figure.style.setProperty("max-width", `${width}%`);
+    figure.style.setProperty("height", `${height}px`);
+    figure.style.setProperty("padding", "0");
+    figure.style.removeProperty("margin");
+
+    gallery.replaceWith(figure);
+  }
+
   return container.innerHTML;
 }
 

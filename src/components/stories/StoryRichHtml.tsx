@@ -1,19 +1,12 @@
 "use client";
 
 import type { CSSProperties } from "react";
-import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
+import { useEffect, useRef } from "react";
 
 type StoryRichHtmlProps = {
   html: string;
   className: string;
   style?: CSSProperties;
-};
-
-type ActiveStoryImage = {
-  src: string;
-  alt: string;
-  caption: string;
 };
 
 type WatermarkSettings = {
@@ -55,6 +48,7 @@ function clampNumber(
 }
 
 function installSpatialLayouts(root: HTMLElement) {
+  const mobile = window.matchMedia("(max-width: 767px)").matches;
   const galleries = root.querySelectorAll<HTMLElement>(
     'section[data-story-gallery="true"][data-spatial-layout="true"]',
   );
@@ -81,7 +75,6 @@ function installSpatialLayouts(root: HTMLElement) {
     const normalizedComposition =
       gallery.dataset.storyComposition === "true" ||
       gallery.dataset.compositionHeight !== undefined;
-
     const canvasHeight = clampNumber(
       gallery.dataset.compositionHeight ??
         gallery.dataset.canvasHeight,
@@ -89,61 +82,204 @@ function installSpatialLayouts(root: HTMLElement) {
       120,
       10000,
     );
-
-    gallery.style.setProperty("display", "block", "important");
-    gallery.style.setProperty("position", "relative");
-    gallery.style.setProperty("width", `${compositionWidth}%`);
-    gallery.style.setProperty(
-      "aspect-ratio",
-      normalizedComposition
-        ? `${compositionWidth * 10} / ${canvasHeight}`
-        : `1000 / ${canvasHeight}`,
-    );
-    gallery.style.setProperty("height", "auto");
-    gallery.style.setProperty(
-      "overflow",
-      normalizedComposition ? "hidden" : "visible",
-    );
-    gallery.style.setProperty("container-type", "inline-size");
-    gallery.style.setProperty("gap", "0", "important");
-    gallery.style.setProperty("margin-inline", "auto");
-
     const figures = gallery.querySelectorAll<HTMLElement>(
       'figure[data-story-image="true"]',
     );
 
-    figures.forEach((figure) => {
+    if (mobile) {
+      gallery.style.setProperty("display", "flex", "important");
+      gallery.style.setProperty("position", "relative", "important");
+      gallery.style.setProperty("width", "100%", "important");
+      gallery.style.setProperty("height", "auto", "important");
+      gallery.style.setProperty("aspect-ratio", "auto", "important");
+      gallery.style.setProperty("overflow", "visible", "important");
+      gallery.style.setProperty("container-type", "normal", "important");
+      gallery.style.setProperty("flex-direction", "column", "important");
+      gallery.style.setProperty("float", "none", "important");
+      gallery.style.setProperty("clear", "both", "important");
+      gallery.style.setProperty(
+        "gap",
+        `${Math.max(12, photoGap)}px`,
+        "important",
+      );
+      gallery.style.setProperty("margin", "1.5rem 0", "important");
+
+      figures.forEach((figure) => {
+        figure.style.setProperty("position", "relative", "important");
+        figure.style.setProperty("inset", "auto", "important");
+        figure.style.setProperty("left", "auto", "important");
+        figure.style.setProperty("top", "auto", "important");
+        figure.style.setProperty("width", "100%", "important");
+        figure.style.setProperty("height", "auto", "important");
+        figure.style.setProperty("max-width", "100%", "important");
+        figure.style.setProperty("padding", "0", "important");
+        figure.style.setProperty("margin", "0", "important");
+        figure.style.setProperty("display", "flex", "important");
+        figure.style.setProperty("flex", "0 0 auto", "important");
+        figure.style.setProperty("flex-direction", "column", "important");
+        figure.style.setProperty("overflow", "hidden");
+        figure.style.setProperty("background", "transparent");
+        figure.style.setProperty("border-radius", `${cornerRadius}px`);
+
+        const image = figure.querySelector<HTMLImageElement>("img");
+
+        if (!image) return;
+
+        image.style.setProperty("display", "block", "important");
+        image.style.setProperty("width", "100%", "important");
+        image.style.setProperty("height", "auto", "important");
+        image.style.setProperty("min-height", "0", "important");
+        image.style.setProperty("max-height", "none", "important");
+        image.style.setProperty("flex", "0 0 auto", "important");
+        image.style.setProperty("object-fit", "contain", "important");
+        image.style.setProperty("object-position", "center", "important");
+        image.style.setProperty("transform", "none", "important");
+        image.style.setProperty("transform-origin", "center", "important");
+        image.style.setProperty("border-radius", `${cornerRadius}px`);
+      });
+
+      return;
+    }
+
+    if (figures.length === 1) {
+      const figure = figures[0];
       const x = clampNumber(figure.dataset.x, 0, 0, 100);
-      const y = clampNumber(
-        figure.dataset.y,
-        0,
-        0,
-        canvasHeight,
-      );
-      const width = clampNumber(
-        figure.dataset.width,
-        100,
-        12,
-        100,
-      );
+      const width = clampNumber(figure.dataset.width, 100, 12, 100);
       const height = clampNumber(
         figure.dataset.height,
         320,
         120,
         10000,
       );
-      const cropX = clampNumber(
-        figure.dataset.cropX,
-        50,
-        0,
-        100,
+      const cropX = clampNumber(figure.dataset.cropX, 50, 0, 100);
+      const cropY = clampNumber(figure.dataset.cropY, 50, 0, 100);
+      const cropZoom = clampNumber(
+        figure.dataset.cropZoom,
+        1,
+        1,
+        2.5,
       );
-      const cropY = clampNumber(
-        figure.dataset.cropY,
-        50,
-        0,
-        100,
+      const alignment =
+        width >= 99
+          ? "full"
+          : x <= 1
+            ? "left"
+            : x + width >= 99
+              ? "right"
+              : "center";
+
+      gallery.style.setProperty("display", "block", "important");
+      gallery.style.setProperty("position", "relative", "important");
+      gallery.style.setProperty("width", `${width}%`, "important");
+      gallery.style.setProperty("max-width", `${width}%`, "important");
+      gallery.style.setProperty("height", "auto", "important");
+      gallery.style.setProperty("aspect-ratio", "auto", "important");
+      gallery.style.setProperty("overflow", "visible", "important");
+      gallery.style.setProperty("container-type", "normal", "important");
+      gallery.style.setProperty("gap", "0", "important");
+
+      if (alignment === "left") {
+        gallery.style.setProperty("float", "left", "important");
+        gallery.style.setProperty("clear", "left", "important");
+        gallery.style.setProperty(
+          "margin",
+          "0.45rem 2rem 1.25rem 0",
+          "important",
+        );
+      } else if (alignment === "right") {
+        gallery.style.setProperty("float", "right", "important");
+        gallery.style.setProperty("clear", "right", "important");
+        gallery.style.setProperty(
+          "margin",
+          "0.45rem 0 1.25rem 2rem",
+          "important",
+        );
+      } else {
+        gallery.style.setProperty("float", "none", "important");
+        gallery.style.setProperty("clear", "both", "important");
+        gallery.style.setProperty("margin", "2.4rem auto", "important");
+      }
+
+      figure.style.removeProperty("inset");
+      figure.style.setProperty("position", "relative", "important");
+      figure.style.setProperty("left", "auto", "important");
+      figure.style.setProperty("top", "auto", "important");
+      figure.style.setProperty("width", "100%", "important");
+      figure.style.setProperty("height", `${height}px`, "important");
+      figure.style.setProperty("max-width", "100%", "important");
+      figure.style.setProperty(
+        "padding",
+        `${photoGap / 2}px`,
+        "important",
       );
+      figure.style.setProperty("margin", "0", "important");
+      figure.style.setProperty("display", "flex", "important");
+      figure.style.setProperty("flex-direction", "column");
+      figure.style.setProperty("overflow", "hidden");
+      figure.style.setProperty("background", "transparent");
+      figure.style.setProperty(
+        "border-radius",
+        `${cornerRadius + photoGap / 2}px`,
+      );
+
+      const image = figure.querySelector<HTMLImageElement>("img");
+
+      if (!image) return;
+
+      image.style.setProperty("display", "block", "important");
+      image.style.setProperty("width", "100%", "important");
+      image.style.setProperty("height", "0", "important");
+      image.style.setProperty("min-height", "0", "important");
+      image.style.setProperty("max-height", "none", "important");
+      image.style.setProperty("flex", "1 1 0%", "important");
+      image.style.setProperty("object-fit", "cover");
+      image.style.setProperty("object-position", `${cropX}% ${cropY}%`);
+      image.style.setProperty("transform", `scale(${cropZoom})`);
+      image.style.setProperty("transform-origin", `${cropX}% ${cropY}%`);
+      image.style.setProperty("border-radius", `${cornerRadius}px`);
+
+      return;
+    }
+
+    gallery.style.setProperty("display", "block", "important");
+    gallery.style.setProperty("position", "relative", "important");
+    gallery.style.setProperty("width", `${compositionWidth}%`, "important");
+    gallery.style.setProperty(
+      "aspect-ratio",
+      normalizedComposition
+        ? `${compositionWidth * 10} / ${canvasHeight}`
+        : `1000 / ${canvasHeight}`,
+      "important",
+    );
+    gallery.style.setProperty("height", "auto", "important");
+    gallery.style.setProperty(
+      "overflow",
+      normalizedComposition ? "hidden" : "visible",
+      "important",
+    );
+    gallery.style.setProperty("container-type", "inline-size", "important");
+    gallery.style.setProperty("flex-direction", "initial", "important");
+    gallery.style.setProperty("float", "none", "important");
+    gallery.style.setProperty("clear", "both", "important");
+    gallery.style.setProperty("gap", "0", "important");
+    gallery.style.setProperty(
+      "margin",
+      "var(--story-section-spacing, 48px) auto",
+      "important",
+    );
+
+    figures.forEach((figure) => {
+      const x = clampNumber(figure.dataset.x, 0, 0, 100);
+      const y = clampNumber(figure.dataset.y, 0, 0, canvasHeight);
+      const width = clampNumber(figure.dataset.width, 100, 12, 100);
+      const height = clampNumber(
+        figure.dataset.height,
+        320,
+        120,
+        10000,
+      );
+      const cropX = clampNumber(figure.dataset.cropX, 50, 0, 100);
+      const cropY = clampNumber(figure.dataset.cropY, 50, 0, 100);
       const cropZoom = clampNumber(
         figure.dataset.cropZoom,
         1,
@@ -151,6 +287,7 @@ function installSpatialLayouts(root: HTMLElement) {
         2.5,
       );
 
+      figure.style.removeProperty("inset");
       figure.style.setProperty("position", "absolute", "important");
       figure.style.setProperty("left", `${x}%`, "important");
       figure.style.setProperty(
@@ -177,9 +314,10 @@ function installSpatialLayouts(root: HTMLElement) {
       figure.style.setProperty("margin", "0", "important");
       figure.style.setProperty("max-width", "none", "important");
       figure.style.setProperty("background", "transparent");
-        figure.style.setProperty("display", "flex", "important");
-        figure.style.setProperty("flex-direction", "column");
-        figure.style.setProperty("overflow", "hidden");
+      figure.style.setProperty("display", "flex", "important");
+      figure.style.setProperty("flex", "0 1 auto", "important");
+      figure.style.setProperty("flex-direction", "column");
+      figure.style.setProperty("overflow", "hidden");
       figure.style.setProperty(
         "border-radius",
         `${cornerRadius + photoGap / 2}px`,
@@ -187,28 +325,132 @@ function installSpatialLayouts(root: HTMLElement) {
 
       const image = figure.querySelector<HTMLImageElement>("img");
 
-      if (image) {
-        image.style.setProperty("width", "100%", "important");
-        image.style.setProperty("height", "0", "important");
-        image.style.setProperty("min-height", "0", "important");
-        image.style.setProperty("max-height", "none", "important");
-          image.style.setProperty("flex", "1 1 0%");
-        image.style.setProperty("object-fit", "cover");
-        image.style.setProperty(
-          "object-position",
-          `${cropX}% ${cropY}%`,
-        );
-        image.style.setProperty("transform", `scale(${cropZoom})`);
-        image.style.setProperty(
-          "transform-origin",
-          `${cropX}% ${cropY}%`,
-        );
-        image.style.setProperty(
-          "border-radius",
-          `${cornerRadius}px`,
-        );
-      }
+      if (!image) return;
+
+      image.style.setProperty("display", "block", "important");
+      image.style.setProperty("width", "100%", "important");
+      image.style.setProperty("height", "0", "important");
+      image.style.setProperty("min-height", "0", "important");
+      image.style.setProperty("max-height", "none", "important");
+      image.style.setProperty("flex", "1 1 0%", "important");
+      image.style.setProperty("object-fit", "cover");
+      image.style.setProperty("object-position", `${cropX}% ${cropY}%`);
+      image.style.setProperty("transform", `scale(${cropZoom})`);
+      image.style.setProperty("transform-origin", `${cropX}% ${cropY}%`);
+      image.style.setProperty("border-radius", `${cornerRadius}px`);
     });
+  });
+
+  const standaloneFigures = root.querySelectorAll<HTMLElement>(
+    'figure.story-media[data-story-image="true"][data-width][data-height]',
+  );
+
+  standaloneFigures.forEach((figure) => {
+    const requestedWidth = clampNumber(
+      figure.dataset.width,
+      100,
+      12,
+      100,
+    );
+    const width = figure.classList.contains("story-media-full")
+      ? 100
+      : requestedWidth;
+    const height = clampNumber(
+      figure.dataset.height,
+      320,
+      120,
+      10000,
+    );
+    const cropX = clampNumber(figure.dataset.cropX, 50, 0, 100);
+    const cropY = clampNumber(figure.dataset.cropY, 50, 0, 100);
+    const cropZoom = clampNumber(
+      figure.dataset.cropZoom,
+      1,
+      1,
+      2.5,
+    );
+    const cornerRadius = clampNumber(
+      figure.dataset.cornerRadius,
+      16,
+      0,
+      40,
+    );
+    const image = figure.querySelector<HTMLImageElement>(":scope > img");
+
+    figure.style.setProperty("display", "flex", "important");
+    figure.style.setProperty("flex-direction", "column", "important");
+    figure.style.setProperty("overflow", "hidden");
+
+    if (mobile) {
+      figure.style.setProperty("position", "relative", "important");
+      figure.style.setProperty("inset", "auto", "important");
+      figure.style.setProperty("float", "none", "important");
+      figure.style.setProperty("clear", "both", "important");
+      figure.style.setProperty("width", "100%", "important");
+      figure.style.setProperty("max-width", "100%", "important");
+      figure.style.setProperty("height", "auto", "important");
+      figure.style.setProperty("margin", "1.25rem 0", "important");
+      figure.style.setProperty("padding", "0", "important");
+
+      if (!image) return;
+
+      image.style.setProperty("display", "block", "important");
+      image.style.setProperty("width", "100%", "important");
+      image.style.setProperty("height", "auto", "important");
+      image.style.setProperty("min-height", "0", "important");
+      image.style.setProperty("max-height", "none", "important");
+      image.style.setProperty("flex", "0 0 auto", "important");
+      image.style.setProperty("object-fit", "contain", "important");
+      image.style.setProperty("object-position", "center", "important");
+      image.style.setProperty("transform", "none", "important");
+      image.style.setProperty("transform-origin", "center", "important");
+
+      return;
+    }
+
+    figure.style.removeProperty("inset");
+    figure.style.setProperty("position", "relative", "important");
+    figure.style.setProperty("width", `${width}%`, "important");
+    figure.style.setProperty("max-width", `${width}%`, "important");
+    figure.style.setProperty("height", `${height}px`, "important");
+    figure.style.setProperty("padding", "0", "important");
+    figure.style.setProperty("border-radius", `${cornerRadius}px`);
+
+    if (figure.classList.contains("story-media-left")) {
+      figure.style.setProperty("float", "left", "important");
+      figure.style.setProperty("clear", "left", "important");
+      figure.style.setProperty(
+        "margin",
+        "0.45rem 2rem 1.25rem 0",
+        "important",
+      );
+    } else if (figure.classList.contains("story-media-right")) {
+      figure.style.setProperty("float", "right", "important");
+      figure.style.setProperty("clear", "right", "important");
+      figure.style.setProperty(
+        "margin",
+        "0.45rem 0 1.25rem 2rem",
+        "important",
+      );
+    } else {
+      figure.style.setProperty("float", "none", "important");
+      figure.style.setProperty("clear", "both", "important");
+      figure.style.setProperty("margin", "2.4rem auto", "important");
+    }
+
+    if (!image) return;
+
+    image.style.setProperty("display", "block", "important");
+    image.style.setProperty("width", "100%", "important");
+    image.style.setProperty("height", "0", "important");
+    image.style.setProperty("min-height", "0", "important");
+    image.style.setProperty("max-height", "none", "important");
+    image.style.setProperty("flex", "1 1 0%", "important");
+    image.style.setProperty("object-fit", "cover");
+    image.style.setProperty("object-position", `${cropX}% ${cropY}%`);
+    image.style.setProperty("transform", `scale(${cropZoom})`);
+    image.style.setProperty("transform-origin", `${cropX}% ${cropY}%`);
+    image.style.setProperty("border-radius", `${cornerRadius}px`);
   });
 }
 
@@ -218,90 +460,22 @@ export function StoryRichHtml({
   style,
 }: StoryRichHtmlProps) {
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const [activeImage, setActiveImage] =
-    useState<ActiveStoryImage | null>(null);
 
   useEffect(() => {
     const root = rootRef.current;
 
     if (!root) return;
 
-    installSpatialLayouts(root);
-  }, [html]);
+    const mobileQuery = window.matchMedia("(max-width: 767px)");
+    const updateLayout = () => installSpatialLayouts(root);
 
-  useEffect(() => {
-    const root = rootRef.current;
-
-    if (!root) return;
-
-    function openMobileImage(event: MouseEvent) {
-      if (
-        !window.matchMedia("(max-width: 767px)").matches ||
-        !(event.target instanceof HTMLImageElement) ||
-        !event.target.matches(
-          'figure[data-story-image="true"] > img',
-        )
-      ) {
-        return;
-      }
-
-      const source =
-        event.target.currentSrc || event.target.src;
-
-      if (!source) return;
-
-      const figure = event.target.closest(
-        'figure[data-story-image="true"]',
-      );
-
-      event.preventDefault();
-
-      setActiveImage({
-        src: source,
-        alt: event.target.alt || "",
-        caption:
-          figure
-            ?.querySelector("figcaption")
-            ?.textContent
-            ?.trim() || "",
-      });
-    }
-
-    root.addEventListener("click", openMobileImage);
+    updateLayout();
+    mobileQuery.addEventListener("change", updateLayout);
 
     return () => {
-      root.removeEventListener("click", openMobileImage);
+      mobileQuery.removeEventListener("change", updateLayout);
     };
   }, [html]);
-
-  useEffect(() => {
-    if (!activeImage) return;
-
-    const bodyOverflow = document.body.style.overflow;
-    const htmlOverflow =
-      document.documentElement.style.overflow;
-
-    document.body.style.overflow = "hidden";
-    document.documentElement.style.overflow = "hidden";
-
-    function closeOnEscape(event: KeyboardEvent) {
-      if (event.key === "Escape") {
-        setActiveImage(null);
-      }
-    }
-
-    window.addEventListener("keydown", closeOnEscape);
-
-    return () => {
-      document.body.style.overflow = bodyOverflow;
-      document.documentElement.style.overflow =
-        htmlOverflow;
-      window.removeEventListener(
-        "keydown",
-        closeOnEscape,
-      );
-    };
-  }, [activeImage]);
 
 
   useEffect(() => {
@@ -373,53 +547,11 @@ export function StoryRichHtml({
   }, [html]);
 
   return (
-    <>
-      <div
-        ref={rootRef}
-        className={className}
-        style={style}
-        dangerouslySetInnerHTML={{ __html: html }}
-      />
-
-      {activeImage
-        ? createPortal(
-            <div
-              role="dialog"
-              aria-modal="true"
-              aria-label="Story photo preview"
-              className="fixed inset-0 z-[2147483000] flex items-center justify-center bg-black/95 p-4 md:hidden"
-              onClick={() => setActiveImage(null)}
-            >
-              <button
-                type="button"
-                aria-label="Close photo"
-                onClick={() => setActiveImage(null)}
-                className="absolute right-4 top-4 z-10 flex h-12 w-12 items-center justify-center rounded-full border border-white/25 bg-black/55 text-3xl text-white"
-              >
-                ×
-              </button>
-
-              <figure
-                className="m-0 flex max-h-[92dvh] w-full flex-col items-center justify-center"
-                onClick={(event) => event.stopPropagation()}
-              >
-                <img
-                  src={activeImage.src}
-                  alt={activeImage.alt}
-                  className="max-h-[82dvh] max-w-full object-contain"
-                  onError={() => setActiveImage(null)}
-                />
-
-                {activeImage.caption ? (
-                  <figcaption className="mt-3 max-w-2xl px-4 text-center text-sm italic leading-6 text-white/75">
-                    {activeImage.caption}
-                  </figcaption>
-                ) : null}
-              </figure>
-            </div>,
-            document.body,
-          )
-        : null}
-    </>
+    <div
+      ref={rootRef}
+      className={className}
+      style={style}
+      dangerouslySetInnerHTML={{ __html: html }}
+    />
   );
 }

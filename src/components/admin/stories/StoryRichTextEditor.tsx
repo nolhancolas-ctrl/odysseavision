@@ -884,16 +884,32 @@ export function StoryRichTextEditor({
       .filter((item) => item !== null) as StoryMediaItem[];
 
     const className = container.className;
+    const firstItem = items[0];
+    const storedAlignment = container.getAttribute("data-alignment");
 
     const alignment: StoryImageAlignment =
-      className.includes("story-media-left")
-        ? "left"
-        : className.includes("story-media-right")
-          ? "right"
-          : className.includes("story-media-full") &&
-              (items[0]?.width ?? 100) >= 99
-            ? "full"
-            : "center";
+      storedAlignment === "left" ||
+      storedAlignment === "center" ||
+      storedAlignment === "right" ||
+      storedAlignment === "full"
+        ? storedAlignment
+        : className.includes("story-media-left")
+          ? "left"
+          : className.includes("story-media-right")
+            ? "right"
+            : className.includes("story-media-full") ||
+                (items.length === 1 &&
+                  (firstItem?.width ?? 100) >= 99)
+              ? "full"
+              : items.length === 1 &&
+                  firstItem?.x !== undefined &&
+                  firstItem.x <= 1
+                ? "left"
+                : items.length === 1 &&
+                    firstItem?.x !== undefined &&
+                    firstItem.x + firstItem.width >= 99
+                  ? "right"
+                  : "center";
 
     const size: StoryImageSize =
       container.getAttribute("data-size") === "small" ||
@@ -1100,13 +1116,17 @@ export function StoryRichTextEditor({
     const frameStyle = frame
       ? `style="${
           standalone
-            ? `max-width:${safeCompositionWidth}%;`
+            ? (
+                `width:${serializedWidth}%;` +
+                `max-width:${serializedWidth}%;` +
+                `height:${safeHeight}px;`
+              )
             : (
                 `position:absolute;` +
                 `left:${safeX}%;` +
                 `top:${(safeY / safeCompositionHeight) * 100}%;` +
-                `width:${safeWidth}% !important;` +
-                `height:${(safeHeight / safeCompositionHeight) * 100}% !important;` +
+                `width:${safeWidth}%;` +
+                `height:${(safeHeight / safeCompositionHeight) * 100}%;` +
                 `padding:${safePhotoGap / 2}px;` +
                 `box-sizing:border-box;` +
                 `background:transparent;`
@@ -1242,32 +1262,45 @@ function saveMediaDraft(draft: StoryMediaDraft) {
       ),
     );
 
+    const singleItem = draft.items[0];
     const mediaHtml =
-      `<section contenteditable="false" tabindex="0" draggable="true" ` +
-      `data-story-gallery="true" ` +
-      `data-story-composition="true" ` +
-      `data-layout="${draft.layout}" ` +
-      `data-size="${draft.size}" ` +
-      `data-count="${draft.items.length}" ` +
-      `data-composition-width="${compositionWidth}" ` +
-      `data-composition-height="${canvasHeight}" ` +
-      `data-photo-gap="${draft.photoGap}" ` +
-      `data-corner-radius="${draft.cornerRadius}" ` +
-      `data-spatial-layout="true" ` +
-      `data-canvas-height="${canvasHeight}" ` +
-      `style="position:relative;display:block;width:${compositionWidth}%;aspect-ratio:${compositionWidth * 10} / ${canvasHeight};container-type:inline-size;overflow:hidden;gap:0;margin-inline:auto;" ` +
-      `class="story-gallery story-gallery-${draft.layout} story-gallery-${draft.size}">` +
-      draft.items
-        .map((item, index) =>
-          buildFigureHtml(
-            item,
-            "story-gallery-item",
-            index,
+      draft.items.length === 1 && singleItem
+        ? buildFigureHtml(
+            draft.alignment === "full"
+              ? { ...singleItem, width: 100, x: 0 }
+              : singleItem,
+            `story-media story-media-${draft.alignment} story-media-${draft.size}`,
+            undefined,
             draft,
-          ),
-        )
-        .join("") +
-      `</section>`;
+            true,
+          )
+        : (
+            `<section contenteditable="false" tabindex="0" draggable="true" ` +
+            `data-story-gallery="true" ` +
+            `data-story-composition="true" ` +
+            `data-layout="${draft.layout}" ` +
+            `data-size="${draft.size}" ` +
+            `data-count="${draft.items.length}" ` +
+            `data-composition-width="${compositionWidth}" ` +
+            `data-composition-height="${canvasHeight}" ` +
+            `data-photo-gap="${draft.photoGap}" ` +
+            `data-corner-radius="${draft.cornerRadius}" ` +
+            `data-spatial-layout="true" ` +
+            `data-canvas-height="${canvasHeight}" ` +
+            `style="position:relative;display:block;width:${compositionWidth}%;aspect-ratio:${compositionWidth * 10} / ${canvasHeight};container-type:inline-size;overflow:hidden;gap:0;margin-inline:auto;" ` +
+            `class="story-gallery story-gallery-${draft.layout} story-gallery-${draft.size}">` +
+            draft.items
+              .map((item, index) =>
+                buildFigureHtml(
+                  item,
+                  "story-gallery-item",
+                  index,
+                  draft,
+                ),
+              )
+              .join("") +
+            `</section>`
+          );
 
     const replaced =
       editingPhoto &&
