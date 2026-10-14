@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { db } from "@/lib/db";
 import { editablePages } from "@/data/sitePages";
+import { DEFAULT_FAVICON_SRC, faviconMetadata, resolveFaviconSrc } from "@/lib/favicon";
 
 export const SEO_SETTING_KEY = "seo";
 
@@ -92,7 +93,7 @@ export const defaultSeoSettings: SeoSettings = {
     "photography, film, wildlife, ocean, travel, documentary, Odyssea Vision",
   author: "Andrew & Morgane",
   language: "en",
-  faviconSrc: "",
+  faviconSrc: DEFAULT_FAVICON_SRC,
 
   instagramUrl: "",
   youtubeUrl: "",
@@ -137,12 +138,7 @@ function normalizeTwitterCard(value: unknown): "summary" | "summary_large_image"
 }
 
 function normalizeFaviconSrc(value: unknown) {
-  const faviconSrc = textValue(
-    value,
-    defaultSeoSettings.faviconSrc,
-  ).trim();
-
-  return faviconSrc === "/favicon.ico" ? "" : faviconSrc;
+  return resolveFaviconSrc(value);
 }
 
 function normalizeWatermarkOwner(value: unknown): WatermarkOwner {
@@ -322,11 +318,7 @@ export function buildMetadata(settings: SeoSettings, pageKey = "home"): Metadata
     description,
     keywords,
     authors: settings.author ? [{ name: settings.author }] : undefined,
-    icons: settings.faviconSrc
-      ? {
-          icon: settings.faviconSrc,
-        }
-      : undefined,
+    icons: faviconMetadata(settings.faviconSrc),
     alternates: {
       canonical: canonicalUrl,
     },
@@ -365,3 +357,4 @@ export async function getPageMetadata(pageKey: string): Promise<Metadata> {
   const settings = await getSeoSettings();
   return buildMetadata(settings, pageKey);
 }
+
