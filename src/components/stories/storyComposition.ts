@@ -13,6 +13,22 @@ export function photoFrameGeometry(
   };
 }
 
+export function alignedPhotoX(
+  alignment: "left" | "center" | "right" | "full",
+  frameWidth: number,
+  photoWidth: number,
+) {
+  if (alignment === "center") {
+    return (frameWidth - photoWidth) / 2;
+  }
+
+  if (alignment === "right") {
+    return frameWidth - photoWidth;
+  }
+
+  return 0;
+}
+
 function number(
   value: string | undefined,
   fallback: number,
@@ -44,7 +60,7 @@ export function installIndependentCompositions(
   ];
 
   for (const gallery of galleries) {
-    const width = number(gallery.dataset.compositionWidth, 100, 40, 100);
+    const width = number(gallery.dataset.compositionWidth, 100, 12, 100);
     const height = number(gallery.dataset.compositionHeight, 560, 120, 1200);
     const gap = number(gallery.dataset.photoGap, 12, 0, 32);
     const radius = number(gallery.dataset.cornerRadius, 16, 0, 40);
@@ -84,7 +100,7 @@ export function installIndependentCompositions(
         {
           width: number(figure.dataset.width, 100, 12, 100),
           height: number(figure.dataset.height, 320, 120, 10000),
-          x: number(figure.dataset.x, 0, 0, 100),
+          x: number(figure.dataset.x, 0, -100, 100),
           y: number(figure.dataset.y, 0, 0, 10000),
         },
         width,

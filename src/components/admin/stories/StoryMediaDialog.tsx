@@ -2,7 +2,10 @@
 
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { photoFrameGeometry } from "@/components/stories/storyComposition";
+import {
+  alignedPhotoX,
+  photoFrameGeometry,
+} from "@/components/stories/storyComposition";
 import styles from "@/components/stories/StoryContent.module.css";
 import {
   closestCenter,
@@ -103,6 +106,46 @@ function clampWidth(value: number) {
     12,
     Math.min(100, Math.round(value * 10) / 10),
   );
+}
+
+export function fitIntrinsicPhoto(
+  naturalWidth: number,
+  naturalHeight: number,
+) {
+  const sourceWidth = Math.max(1, naturalWidth);
+  const sourceHeight = Math.max(1, naturalHeight);
+  const scale = Math.min(
+    1,
+    1000 / sourceWidth,
+    1200 / sourceHeight,
+  );
+  const width = clampWidth((sourceWidth * scale) / 10);
+  const height = Math.max(
+    120,
+    Math.min(
+      1200,
+      Math.round((width * 10 * sourceHeight) / sourceWidth),
+    ),
+  );
+
+  return {
+    width,
+    height,
+  };
+}
+
+async function readIntrinsicPhotoSize(file: File) {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const dimensions = {
+      width: bitmap.width,
+      height: bitmap.height,
+    };
+    bitmap.close();
+    return dimensions;
+  } catch {
+    return null;
+  }
 }
 
 function optionClass(active: boolean) {
@@ -1107,7 +1150,7 @@ function SortablePhoto({
       onUpdate({
         width: Math.max(
           12,
-          Math.min(100 - itemX, startWidth + widthDelta),
+          Math.min(100, startWidth + widthDelta),
         ),
         height: Math.max(120, startHeight + heightDelta),
       });
@@ -1287,15 +1330,13 @@ export function StoryMediaDialog({
 
     const normalized = initialDraft.items.map(normalizeMediaItem);
 
-    if (!hasSavedSpatialLayout) {
-      return arrangeItems(
+    let restored = !hasSavedSpatialLayout
+      ? arrangeItems(
         normalized,
         initialDraft.layout,
         initialDraft.size,
-      );
-    }
-
-    let restored = normalized;
+      )
+      : normalized;
 
     if (
       initialDraft.layout === "mosaic" &&
@@ -1305,19 +1346,40 @@ export function StoryMediaDialog({
         repairPersistedEditorialMosaic(normalized);
     }
 
-    return compositionHasOverlaps(restored)
+    restored = compositionHasOverlaps(restored)
       ? arrangeItems(
           restored,
           initialDraft.layout,
           initialDraft.size,
         )
       : restored;
+
+    if (restored.length === 1) {
+      const photo = restored[0];
+      const frameWidth = Math.max(
+        12,
+        Math.min(100, initialDraft.compositionWidth ?? 100),
+      );
+
+      return [
+        {
+          ...photo,
+          x: alignedPhotoX(
+            initialDraft.alignment,
+            frameWidth,
+            photo.width,
+          ),
+        },
+      ];
+    }
+
+    return restored;
   });
   const [alignment, setAlignment] = useState(initialDraft.alignment);
   const [size, setSize] = useState(initialDraft.size);
   const [layout, setLayout] = useState(initialDraft.layout);
   const [compositionWidth, setCompositionWidth] = useState(
-    Math.max(40, Math.min(100, initialDraft.compositionWidth ?? 100)),
+    Math.max(12, Math.min(100, initialDraft.compositionWidth ?? 100)),
   );
   const [compositionHeight, setCompositionHeight] =
     useState(
@@ -1337,7 +1399,7 @@ export function StoryMediaDialog({
   const [sideTextEnabled, setSideTextEnabled] = useState(initialDraft.sideTextEnabled ?? false);
   const [leftText, setLeftText] = useState(initialDraft.leftText ?? "");
   const [rightText, setRightText] = useState(initialDraft.rightText ?? "");
-  const showSideText = sideTextEnabled && alignment === "center" && items.length === 1;
+  const showSideTextEditor = alignment === "center" && items.length === 1;
 
   const fittedContentHeight = Math.max(
     120,
@@ -1418,10 +1480,7 @@ export function StoryMediaDialog({
       120,
       activeItem.height ?? 280,
     );
-    const width = Math.max(
-      12,
-      Math.min(100 - (activeItem.x ?? 0), value),
-    );
+    const width = Math.max(12, Math.min(100, value));
 
     updateItem(
       activeItem.id,
@@ -1463,7 +1522,7 @@ export function StoryMediaDialog({
             width: Math.max(
               12,
               Math.min(
-                100 - (activeItem.x ?? 0),
+                100,
                 Math.round(
                   previousWidth * height / previousHeight,
                 ),
@@ -1475,7 +1534,10 @@ export function StoryMediaDialog({
   }
 
   function changeFrameWidth(value: number) {
-    const width = Math.max(40, Math.min(100, Math.round(value)));
+    const width = Math.max(
+      12,
+      Math.min(100, Math.round(value * 10) / 10),
+    );
 
     if (keepFrameScale) {
       setCompositionHeight(
@@ -1485,13 +1547,27 @@ export function StoryMediaDialog({
             1200,
             Math.round(
               compositionHeight * width /
-              Math.max(40, compositionWidth) / 10,
+              Math.max(12, compositionWidth) / 10,
             ) * 10,
           ),
         ),
       );
     }
 
+    setItems((current) =>
+      current.length === 1
+        ? [
+            {
+              ...current[0],
+              x: alignedPhotoX(
+                alignment,
+                width,
+                current[0].width,
+              ),
+            },
+          ]
+        : current,
+    );
     setCompositionWidth(width);
   }
 
@@ -1502,18 +1578,31 @@ export function StoryMediaDialog({
     );
 
     if (keepFrameScale) {
-      setCompositionWidth(
-        Math.max(
-          40,
-          Math.min(
-            100,
-            Math.round(
-              compositionWidth * height /
-              Math.max(120, compositionHeight),
-            ),
-          ),
+      const width = Math.max(
+        12,
+        Math.min(
+          100,
+          Math.round(
+            compositionWidth * height /
+            Math.max(120, compositionHeight) * 10,
+          ) / 10,
         ),
       );
+      setItems((current) =>
+        current.length === 1
+          ? [
+              {
+                ...current[0],
+                x: alignedPhotoX(
+                  alignment,
+                  width,
+                  current[0].width,
+                ),
+              },
+            ]
+          : current,
+      );
+      setCompositionWidth(width);
     }
 
     setCompositionHeight(height);
@@ -1578,8 +1667,16 @@ export function StoryMediaDialog({
       // full reference canvas used by multi-photo layout presets.
       if (next.length === 1 && (width !== undefined || height !== undefined)) {
         const photo = next[0];
-        const freeWidth = Math.max(0, compositionWidth - photo.width);
-        next = [{ ...photo, x: alignment === "right" ? freeWidth : alignment === "center" ? freeWidth / 2 : 0 }];
+        next = [
+          {
+            ...photo,
+            x: alignedPhotoX(
+              alignment,
+              compositionWidth,
+              photo.width,
+            ),
+          },
+        ];
       }
 
       return next;
@@ -1653,12 +1750,7 @@ export function StoryMediaDialog({
         if (index !== 0 || current.length !== 1) return item;
 
         const width = value === "full" ? compositionWidth : item.width;
-        const x =
-          value === "right"
-            ? Math.max(0, compositionWidth - width)
-            : value === "center"
-              ? Math.max(0, (compositionWidth - width) / 2)
-              : 0;
+        const x = alignedPhotoX(value, compositionWidth, width);
 
         return {
           ...item,
@@ -1680,6 +1772,7 @@ export function StoryMediaDialog({
     try {
       for (let index = 0; index < files.length; index += 1) {
         const file = files[index];
+        const intrinsicSize = await readIntrinsicPhotoSize(file);
         const formData = new FormData();
 
         formData.set("file", file);
@@ -1730,13 +1823,27 @@ export function StoryMediaDialog({
           );
         }
 
+        const fittedPhoto = intrinsicSize
+          ? fitIntrinsicPhoto(
+              intrinsicSize.width,
+              intrinsicSize.height,
+            )
+          : { width: 70, height: 560 };
         const photo: StoryMediaItem = {
           id: createId(),
           src,
           alt: titleFromFile(file.name),
           caption: "",
           watermark: "NONE",
-          width: files.length + next.length <= 2 ? 50 : 33,
+          width:
+            files.length === 1 && next.length === 0
+              ? fittedPhoto.width
+              : files.length + next.length <= 2
+                ? 50
+                : 33,
+          height: fittedPhoto.height,
+          x: 0,
+          y: 0,
         };
 
         next.push(photo);
@@ -1744,11 +1851,21 @@ export function StoryMediaDialog({
         setActiveId(photo.id);
       }
 
-      setItems((current) =>
-        current.length === 1
-          ? current.map((item) => ({ ...item, width: 70 }))
-          : arrangeItems(current, layout),
-      );
+      if (next.length === 1) {
+        const photo = next[0];
+        const width = clampWidth(photo.width);
+        const height = Math.max(
+          120,
+          Math.min(1200, photo.height ?? 560),
+        );
+
+        setAlignment("center");
+        setCompositionWidth(width);
+        setCompositionHeight(height);
+        setItems([{ ...photo, width, height, x: 0, y: 0 }]);
+      } else {
+        setItems(arrangeItems(next, layout));
+      }
     } catch (uploadError) {
       setError(
         uploadError instanceof Error
@@ -1873,7 +1990,7 @@ export function StoryMediaDialog({
                   </div>
                 </div>
 
-                <div className={showSideText ? styles.textMediaLayout : undefined} style={{ maxWidth: 1050, marginInline: "auto" }}>
+                <div className={showSideTextEditor ? styles.textMediaLayout : undefined} style={{ maxWidth: 1050, marginInline: "auto" }}>
                 <div
                   data-story-media-canvas
                   className="flow-root rounded-[1.75rem] border border-[#242617]/10 bg-[#f3ecdf] shadow-inner"
@@ -1929,10 +2046,34 @@ export function StoryMediaDialog({
                     </SortableContext>
                   </DndContext>
                 </div>
-                {showSideText ? (
+                {showSideTextEditor ? (
                   <>
-                    <div className="story-side-text story-side-text-left">{leftText}</div>
-                    <div className="story-side-text story-side-text-right">{rightText}</div>
+                    <textarea
+                      aria-label="Left side text"
+                      value={leftText}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setLeftText(value);
+                        setSideTextEnabled(
+                          Boolean(value.trim() || rightText.trim()),
+                        );
+                      }}
+                      placeholder="Write the text displayed on the left of the photo"
+                      className="story-side-text story-side-text-left story-side-text-editor"
+                    />
+                    <textarea
+                      aria-label="Right side text"
+                      value={rightText}
+                      onChange={(event) => {
+                        const value = event.target.value;
+                        setRightText(value);
+                        setSideTextEnabled(
+                          Boolean(leftText.trim() || value.trim()),
+                        );
+                      }}
+                      placeholder="Write the text displayed on the right of the photo"
+                      className="story-side-text story-side-text-right story-side-text-editor"
+                    />
                   </>
                 ) : null}
                 </div>
@@ -2170,6 +2311,17 @@ export function StoryMediaDialog({
                       </p>
                     ) : null}
                   </div>
+
+                  {items.length === 1 && alignment === "center" ? (
+                    <div className="mt-5 border-t border-[#242617]/10 pt-5">
+                      <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
+                        Side text
+                      </span>
+                      <p className="mt-2 text-xs leading-5 text-[#242617]/60">
+                        Write directly in the two fields beside the photo. Empty fields are not published. On mobile, their content moves below the photo.
+                      </p>
+                    </div>
+                  ) : null}
                 </section>
 
 
@@ -2185,7 +2337,17 @@ export function StoryMediaDialog({
                     Frame and photo dimensions are independent. A smaller frame clips the photos without resizing them.
                   </p>
                   <button type="button" className="mt-3 rounded-xl border border-[#242617]/20 px-3 py-2 text-xs" onClick={() => {
-                    setCompositionWidth(Math.max(40, Math.min(100, Math.ceil(Math.max(...items.map(item => (item.x ?? 0) + item.width))))));
+                    changeFrameWidth(
+                      items.length === 1
+                        ? items[0].width
+                        : Math.ceil(
+                            Math.max(
+                              ...items.map(
+                                (item) => (item.x ?? 0) + item.width,
+                              ),
+                            ),
+                          ),
+                    );
                     setCompositionHeight(fittedContentHeight);
                   }}>Fit frame to photos</button>
 
@@ -2198,9 +2360,9 @@ export function StoryMediaDialog({
                       <input
                         type="range"
                         aria-label="Frame width"
-                        min="40"
+                        min="12"
                         max="100"
-                        step="1"
+                        step="0.1"
                         value={compositionWidth}
                         onChange={(event) =>
                           changeFrameWidth(Number(event.target.value))
@@ -2281,26 +2443,6 @@ export function StoryMediaDialog({
                     </label>
                   </div>
                 </section>
-
-                {items.length === 1 && alignment === "center" ? (
-                  <section className="rounded-[1.5rem] border border-[#242617]/10 bg-white/40 p-5">
-                    <label className="flex items-center gap-3 text-sm font-semibold">
-                      <input type="checkbox" checked={sideTextEnabled} onChange={event => setSideTextEnabled(event.target.checked)} className="h-5 w-5 accent-[#b88a3b]" />
-                      Text on both sides
-                    </label>
-                    <p className="mt-2 text-xs leading-5 text-[#242617]/60">On mobile: photo first, then left text, then right text. Line breaks are preserved.</p>
-                    {sideTextEnabled ? (
-                      <div className="mt-4 space-y-4">
-                        <label className="block text-sm">Left text
-                          <textarea rows={7} value={leftText} onChange={event => setLeftText(event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-[#242617]/20 bg-white p-3 font-normal" />
-                        </label>
-                        <label className="block text-sm">Right text
-                          <textarea rows={7} value={rightText} onChange={event => setRightText(event.target.value)} className="mt-2 w-full resize-y rounded-xl border border-[#242617]/20 bg-white p-3 font-normal" />
-                        </label>
-                      </div>
-                    ) : null}
-                  </section>
-                ) : null}
 
                 {error ? (
                   <div className="rounded-2xl border border-red-500/20 bg-red-500/8 px-5 py-4 text-sm text-red-800">

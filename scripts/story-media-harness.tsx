@@ -4,6 +4,7 @@ import { createRoot } from "react-dom/client";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
 import {
+  fitIntrinsicPhoto,
   StoryMediaDialog,
   type StoryMediaDraft,
 } from "../src/components/admin/stories/StoryMediaDialog";
@@ -19,6 +20,7 @@ import {
 import { sanitizeStoryHtml } from "../src/components/stories/sanitizeStoryHtml";
 import { StoryRichHtml } from "../src/components/stories/StoryRichHtml";
 import {
+  alignedPhotoX,
   photoFrameGeometry,
   installIndependentCompositions,
 } from "../src/components/stories/storyComposition";
@@ -87,6 +89,41 @@ function tests() {
       restored.compositionHeight === 640,
     "Frame and photo values round-trip independently",
   );
+  const centeredDraft: StoryMediaDraft = {
+    ...fixture,
+    compositionWidth: 59,
+    items: [
+      {
+        ...fixture.items[0],
+        width: 100,
+        x: alignedPhotoX("center", 59, 100),
+      },
+    ],
+  };
+  const centeredPhoto = centeredDraft.items[0];
+  const centeredMidpoint =
+    centeredPhoto.x! + centeredPhoto.width / 2;
+  assert(
+    centeredPhoto.x === -20.5 && centeredMidpoint === 29.5,
+    "A narrower frame clips a centered photo equally on both sides",
+  );
+  const reopenedCentered = readMediaDraft(
+    parse(serializeMediaDraft(centeredDraft)).firstElementChild as HTMLElement,
+  );
+  assert(
+    reopenedCentered.items[0].x === -20.5,
+    "Negative centered coordinates survive saving and reopening",
+  );
+  const nativePortrait = fitIntrinsicPhoto(390, 650);
+  assert(
+    nativePortrait.width === 39 && nativePortrait.height === 650,
+    "A single photo starts at its intrinsic dimensions",
+  );
+  const boundedLandscape = fitIntrinsicPhoto(1920, 1080);
+  assert(
+    boundedLandscape.width === 100 && boundedLandscape.height === 563,
+    "Oversized photos keep their aspect ratio inside the composition canvas",
+  );
   assert(
     normalizeLegacyStoryHtml(html).includes(
       'data-story-coordinates="independent"',
@@ -143,6 +180,37 @@ function tests() {
   assert(
     migrated.items[0].width === 40 && migrated.items[0].x === 16,
     "Legacy frame-relative dimensions convert without scaling the photo",
+  );
+  const normalizedLegacy = parse(
+    normalizeLegacyStoryHtml(legacy.innerHTML),
+  );
+  const normalizedLegacyGallery = normalizedLegacy.querySelector<HTMLElement>(
+    'section[data-story-gallery="true"]',
+  )!;
+  const normalizedLegacyFigure = normalizedLegacyGallery.querySelector<HTMLElement>(
+    'figure[data-story-image="true"]',
+  )!;
+  assert(
+    normalizedLegacyGallery.dataset.storyCoordinates === "independent" &&
+      normalizedLegacyGallery.dataset.compositionWidth === "80" &&
+      normalizedLegacyFigure.dataset.width === "40" &&
+      normalizedLegacyFigure.dataset.x === "16",
+    "Legacy galleries migrate to independent coordinates without losing their frame",
+  );
+  const legacySingle =
+    '<figure data-story-image="true" data-width="100" data-height="300" class="story-media story-media-full story-media-medium"><img src="/fixture.svg"></figure>';
+  const normalizedSingle = parse(normalizeLegacyStoryHtml(legacySingle));
+  const restoredSingle = readMediaDraft(
+    normalizedSingle.firstElementChild as HTMLElement,
+  );
+  assert(
+    normalizedSingle.firstElementChild?.matches(
+      'section[data-story-gallery="true"][data-story-coordinates="independent"]',
+    ) &&
+      restoredSingle.compositionWidth === 100 &&
+      restoredSingle.compositionHeight === 300 &&
+      restoredSingle.items[0].width === 100,
+    "Persisted standalone photos regain a frame before reopening",
   );
   const disabled = { ...fixture, sideTextEnabled: false };
   const dormant = readMediaDraft(

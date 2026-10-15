@@ -155,7 +155,7 @@ export function readMediaDraft(container: HTMLElement): StoryMediaDraft {
       outerContainer.querySelector(".story-side-text-right")?.textContent ??
       "",
     compositionWidth: Math.max(
-      40,
+      12,
       Math.min(
         100,
         Number(
@@ -216,7 +216,7 @@ function buildFigureHtml(
     index === undefined ? "" : ` data-story-image-index="${index}"`;
 
   const safeCompositionWidth = Math.max(
-    40,
+    12,
     Math.min(100, frame?.compositionWidth ?? 100),
   );
   const safeCompositionHeight = Math.max(
@@ -225,7 +225,9 @@ function buildFigureHtml(
   );
   const safePhotoGap = Math.max(0, Math.min(32, frame?.photoGap ?? 12));
   const safeCornerRadius = Math.max(0, Math.min(40, frame?.cornerRadius ?? 16));
-  const safeX = Math.max(0, Math.min(100, item.x ?? 0));
+  // Centered photos can start before their frame so the viewport clips the
+  // same amount from both sides instead of appearing anchored to the left.
+  const safeX = Math.max(-100, Math.min(100, item.x ?? 0));
   const safeY = Math.max(0, item.y ?? 0);
   const safeWidth = Math.max(12, Math.min(100, item.width || 100));
   const serializedWidth = Math.round(safeWidth * 1000) / 1000;
@@ -309,8 +311,8 @@ export function serializeMediaDraft(draft: StoryMediaDraft) {
   );
 
   const compositionWidth = Math.max(
-    40,
-    Math.min(100, Math.round(draft.compositionWidth)),
+    12,
+    Math.min(100, Math.round(draft.compositionWidth * 10) / 10),
   );
 
   const galleryHtml =
