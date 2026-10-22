@@ -1,10 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import {
   alignedPhotoX,
+  maximumStoryFrameWidth,
   photoFrameGeometry,
+  separateOverlappingPhotos,
+  singlePhotoPresetWidth,
+  storyTextMediaColumns,
+  STORY_MAX_FRAME_HEIGHT,
 } from "@/components/stories/storyComposition";
 import styles from "@/components/stories/StoryContent.module.css";
 import {
@@ -195,31 +200,6 @@ function rectanglesOverlap(
   );
 }
 
-
-function compositionHasOverlaps(
-  sourceItems: StoryMediaItem[],
-) {
-  const items = sourceItems.map(normalizeMediaItem);
-
-  for (let firstIndex = 0; firstIndex < items.length; firstIndex += 1) {
-    for (
-      let secondIndex = firstIndex + 1;
-      secondIndex < items.length;
-      secondIndex += 1
-    ) {
-      if (
-        rectanglesOverlap(
-          items[firstIndex],
-          items[secondIndex],
-        )
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-}
 
 function reflowCompositionRows(
   sourceItems: StoryMediaItem[],
@@ -601,82 +581,6 @@ function arrangeEditorialMosaic(items: StoryMediaItem[]) {
 }
 
 
-function repairPersistedEditorialMosaic(
-  sourceItems: StoryMediaItem[],
-) {
-  const items = sourceItems.map(normalizeMediaItem);
-
-  if (items.length < 2) return items;
-
-  const finalY = Math.max(
-    ...items.map((item) => item.y ?? 0),
-  );
-  const finalRow = items
-    .filter(
-      (item) =>
-        Math.abs((item.y ?? 0) - finalY) < 8,
-    )
-    .sort(
-      (first, second) =>
-        (first.x ?? 0) - (second.x ?? 0),
-    );
-
-  if (finalRow.length === 0) return items;
-
-  const rowStart = Math.min(
-    ...finalRow.map((item) => item.x ?? 0),
-  );
-  const rowEnd = Math.max(
-    ...finalRow.map(
-      (item) => (item.x ?? 0) + item.width,
-    ),
-  );
-  const rowSpan = rowEnd - rowStart;
-  const looksAutomaticallyCentered =
-    Math.abs(rowStart - (100 - rowSpan) / 2) < 1.5;
-
-  if (
-    rowSpan >= 99 ||
-    !looksAutomaticallyCentered
-  ) {
-    return items;
-  }
-
-  const widthTotal = finalRow.reduce(
-    (total, item) => total + item.width,
-    0,
-  );
-
-  if (widthTotal <= 0) return items;
-
-  const positions = new Map<
-    string,
-    { x: number; width: number }
-  >();
-  let nextX = 0;
-
-  finalRow.forEach((item) => {
-    const width = (item.width / widthTotal) * 100;
-
-    positions.set(item.id, {
-      x: nextX,
-      width,
-    });
-
-    nextX += width;
-  });
-
-  return items.map((item) => {
-    const position = positions.get(item.id);
-
-    return position
-      ? {
-          ...item,
-          ...position,
-        }
-      : item;
-  });
-}
 
 function arrangeItems(
   sourceItems: StoryMediaItem[],
@@ -1309,6 +1213,10 @@ function SortablePhoto({
   );
 }
 
+const subscribeToHydration = () => () => {};
+const clientSnapshot = () => true;
+const serverSnapshot = () => false;
+
 export function StoryMediaDialog({
   initialDraft,
   editing,
@@ -1319,7 +1227,25 @@ export function StoryMediaDialog({
   onSave,
 }: Props) {
   const inputRef = useRef<HTMLInputElement | null>(null);
-  const [mounted, setMounted] = useState(false);
+  const mounted = useSyncExternalStore(subscribeToHydration, clientSnapshot, serverSnapshot);
+  const rawInitialFrameWidth = Math.max(
+    12,
+    Math.min(100, initialDraft.compositionWidth ?? 100),
+  );
+  const initialPlacementWidth =
+    singlePhotoPresetWidth(initialDraft.size, initialDraft.alignment);
+  const initialMaximumFrameWidth =
+    initialDraft.items.length === 1
+      ? maximumStoryFrameWidth(initialDraft.alignment)
+      : 100;
+  const normalizeInitialSideLayout =
+    initialDraft.items.length === 1 &&
+    initialDraft.alignment !== "full" &&
+    rawInitialFrameWidth > initialMaximumFrameWidth &&
+    (initialDraft.items[0]?.width ?? 100) >= rawInitialFrameWidth - 1;
+  const initialFrameWidth = normalizeInitialSideLayout
+    ? initialPlacementWidth
+    : Math.min(rawInitialFrameWidth, initialMaximumFrameWidth);
   const [items, setItems] = useState<StoryMediaItem[]>(() => {
     const hasSavedSpatialLayout = initialDraft.items.every(
       (item) =>
@@ -1338,36 +1264,22 @@ export function StoryMediaDialog({
       )
       : normalized;
 
-    if (
-      initialDraft.layout === "mosaic" &&
-      initialDraft.size === "medium"
-    ) {
-      restored =
-        repairPersistedEditorialMosaic(normalized);
-    }
-
-    restored = compositionHasOverlaps(restored)
-      ? arrangeItems(
-          restored,
-          initialDraft.layout,
-          initialDraft.size,
-        )
-      : restored;
+    restored = separateOverlappingPhotos(restored);
 
     if (restored.length === 1) {
       const photo = restored[0];
-      const frameWidth = Math.max(
-        12,
-        Math.min(100, initialDraft.compositionWidth ?? 100),
-      );
+      const photoWidth = normalizeInitialSideLayout
+        ? initialFrameWidth
+        : photo.width;
 
       return [
         {
           ...photo,
+          width: photoWidth,
           x: alignedPhotoX(
             initialDraft.alignment,
-            frameWidth,
-            photo.width,
+            initialFrameWidth,
+            photoWidth,
           ),
         },
       ];
@@ -1379,14 +1291,14 @@ export function StoryMediaDialog({
   const [size, setSize] = useState(initialDraft.size);
   const [layout, setLayout] = useState(initialDraft.layout);
   const [compositionWidth, setCompositionWidth] = useState(
-    Math.max(12, Math.min(100, initialDraft.compositionWidth ?? 100)),
+    initialFrameWidth,
   );
   const [compositionHeight, setCompositionHeight] =
     useState(
       Math.max(
         120,
         Math.min(
-          1200,
+          STORY_MAX_FRAME_HEIGHT,
           initialDraft.compositionHeight ??
             getCompositionCanvasHeight(
               initialDraft.items,
@@ -1399,12 +1311,14 @@ export function StoryMediaDialog({
   const [sideTextEnabled, setSideTextEnabled] = useState(initialDraft.sideTextEnabled ?? false);
   const [leftText, setLeftText] = useState(initialDraft.leftText ?? "");
   const [rightText, setRightText] = useState(initialDraft.rightText ?? "");
-  const showSideTextEditor = alignment === "center" && items.length === 1;
+  const showSideTextEditor = alignment !== "full" && items.length === 1;
+  const maximumFrameWidth =
+    items.length === 1 ? maximumStoryFrameWidth(alignment) : 100;
 
   const fittedContentHeight = Math.max(
     120,
     Math.min(
-      1200,
+      STORY_MAX_FRAME_HEIGHT,
       Math.ceil(getCompositionCanvasHeight(items) / 10) * 10,
     ),
   );
@@ -1425,19 +1339,6 @@ export function StoryMediaDialog({
   const activeItem =
     items.find((item) => item.id === activeId) ?? items[0] ?? null;
 
-  const needsSpatialNormalization = items.some(
-    (item) =>
-      item.x === undefined ||
-      item.y === undefined ||
-      item.height === undefined,
-  );
-
-  useEffect(() => {
-    if (!needsSpatialNormalization) return;
-
-    setItems((current) => arrangeItems(current, layout));
-  }, [layout, needsSpatialNormalization]);
-
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: { distance: 6 },
@@ -1451,8 +1352,6 @@ export function StoryMediaDialog({
   );
 
   useEffect(() => {
-    setMounted(true);
-
     const bodyOverflow = document.body.style.overflow;
     const htmlOverflow = document.documentElement.style.overflow;
 
@@ -1536,7 +1435,7 @@ export function StoryMediaDialog({
   function changeFrameWidth(value: number) {
     const width = Math.max(
       12,
-      Math.min(100, Math.round(value * 10) / 10),
+      Math.min(maximumFrameWidth, Math.round(value * 10) / 10),
     );
 
     if (keepFrameScale) {
@@ -1544,7 +1443,7 @@ export function StoryMediaDialog({
         Math.max(
           120,
           Math.min(
-            1200,
+            STORY_MAX_FRAME_HEIGHT,
             Math.round(
               compositionHeight * width /
               Math.max(12, compositionWidth) / 10,
@@ -1574,7 +1473,7 @@ export function StoryMediaDialog({
   function changeFrameHeight(value: number) {
     const height = Math.max(
       120,
-      Math.min(1200, Math.round(value / 10) * 10),
+      Math.min(STORY_MAX_FRAME_HEIGHT, Math.round(value / 10) * 10),
     );
 
     if (keepFrameScale) {
@@ -1582,6 +1481,7 @@ export function StoryMediaDialog({
         12,
         Math.min(
           100,
+          maximumFrameWidth,
           Math.round(
             compositionWidth * height /
             Math.max(120, compositionHeight) * 10,
@@ -1679,7 +1579,7 @@ export function StoryMediaDialog({
         ];
       }
 
-      return next;
+      return separateOverlappingPhotos(next);
     });
   }
 
@@ -1737,6 +1637,33 @@ export function StoryMediaDialog({
 
   function chooseVariant(value: StoryImageSize) {
     setSize(value);
+
+    if (items.length === 1) {
+      const photo = items[0];
+      const width = singlePhotoPresetWidth(value, alignment);
+      const previousWidth = Math.max(12, photo.width);
+      const previousHeight = Math.max(120, photo.height ?? 420);
+      const height = Math.max(
+        120,
+        Math.min(
+          1200,
+          Math.round(previousHeight * width / previousWidth / 10) * 10,
+        ),
+      );
+
+      setCompositionWidth(width);
+      setCompositionHeight(height);
+      setItems([
+        {
+          ...photo,
+          width,
+          height,
+          x: alignedPhotoX(alignment, width, width),
+        },
+      ]);
+      return;
+    }
+
     setItems((current) =>
       arrangeItems(current, layout, value),
     );
@@ -1744,21 +1671,40 @@ export function StoryMediaDialog({
 
   function chooseAlignment(value: StoryImageAlignment) {
     setAlignment(value);
+    const singlePhoto = items.length === 1 ? items[0] : null;
 
-    setItems((current) =>
-      current.map((item, index) => {
-        if (index !== 0 || current.length !== 1) return item;
+    if (!singlePhoto) return;
 
-        const width = value === "full" ? compositionWidth : item.width;
-        const x = alignedPhotoX(value, compositionWidth, width);
+    const placementWidth = singlePhotoPresetWidth(size, value);
+    const alignmentMaximum = maximumStoryFrameWidth(value);
+    const leavesFullWidth =
+      value !== "full" &&
+      compositionWidth >= 99 &&
+      singlePhoto.width >= 99;
+    const requestedFrameWidth =
+      value === "full"
+        ? 100
+        : compositionWidth >= 99 && singlePhoto.width < 99
+          ? singlePhoto.width
+          : leavesFullWidth
+            ? placementWidth
+          : compositionWidth;
+    const nextFrameWidth = Math.min(alignmentMaximum, requestedFrameWidth);
+    const width =
+      value === "full"
+        ? 100
+        : leavesFullWidth
+          ? placementWidth
+          : singlePhoto.width;
 
-        return {
-          ...item,
-          width,
-          x,
-        };
-      }),
-    );
+    setCompositionWidth(nextFrameWidth);
+    setItems([
+      {
+        ...singlePhoto,
+        width,
+        x: alignedPhotoX(value, nextFrameWidth, width),
+      },
+    ]);
   }
 
   async function uploadFiles(files: File[]) {
@@ -1829,19 +1775,36 @@ export function StoryMediaDialog({
               intrinsicSize.height,
             )
           : { width: 70, height: 560 };
+        const isFirstSinglePhoto = files.length === 1 && next.length === 0;
+        const initialWidth = isFirstSinglePhoto
+          ? Math.min(
+              fittedPhoto.width,
+              singlePhotoPresetWidth("medium", "center"),
+            )
+          : files.length + next.length <= 2
+            ? 50
+            : 33;
+        const initialHeight = isFirstSinglePhoto
+          ? Math.max(
+              120,
+              Math.min(
+                1200,
+                Math.round(
+                  fittedPhoto.height * initialWidth /
+                    Math.max(12, fittedPhoto.width) /
+                    10,
+                ) * 10,
+              ),
+            )
+          : fittedPhoto.height;
         const photo: StoryMediaItem = {
           id: createId(),
           src,
           alt: titleFromFile(file.name),
           caption: "",
           watermark: "NONE",
-          width:
-            files.length === 1 && next.length === 0
-              ? fittedPhoto.width
-              : files.length + next.length <= 2
-                ? 50
-                : 33,
-          height: fittedPhoto.height,
+          width: initialWidth,
+          height: initialHeight,
           x: 0,
           y: 0,
         };
@@ -1990,12 +1953,27 @@ export function StoryMediaDialog({
                   </div>
                 </div>
 
-                <div className={showSideTextEditor ? styles.textMediaLayout : undefined} style={{ maxWidth: 1050, marginInline: "auto" }}>
+                <div
+                  className={showSideTextEditor ? styles.textMediaLayout : undefined}
+                  data-alignment={showSideTextEditor ? alignment : undefined}
+                  style={{
+                    maxWidth: 1050,
+                    marginInline: "auto",
+                    ...(showSideTextEditor
+                      ? {
+                          gridTemplateColumns: storyTextMediaColumns(
+                            alignment,
+                            compositionWidth,
+                          ),
+                        }
+                      : {}),
+                  }}
+                >
                 <div
                   data-story-media-canvas
                   className="flow-root rounded-[1.75rem] border border-[#242617]/10 bg-[#f3ecdf] shadow-inner"
                   style={{
-                    width: `${compositionWidth}%`,
+                    width: showSideTextEditor ? "100%" : `${compositionWidth}%`,
                     aspectRatio: `${compositionWidth * 10} / ${compositionHeight}`,
                     overflow: "hidden",
                     ...({
@@ -2003,7 +1981,7 @@ export function StoryMediaDialog({
                       "--story-preview-radius": `${cornerRadius}px`,
                     } as React.CSSProperties),
                     containerType: "inline-size",
-                    marginInline: "auto",
+                    marginInline: showSideTextEditor ? "0" : "auto",
                   }}
                 >
                   <DndContext
@@ -2048,32 +2026,36 @@ export function StoryMediaDialog({
                 </div>
                 {showSideTextEditor ? (
                   <>
-                    <textarea
-                      aria-label="Left side text"
-                      value={leftText}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setLeftText(value);
-                        setSideTextEnabled(
-                          Boolean(value.trim() || rightText.trim()),
-                        );
-                      }}
-                      placeholder="Write the text displayed on the left of the photo"
-                      className="story-side-text story-side-text-left story-side-text-editor"
-                    />
-                    <textarea
-                      aria-label="Right side text"
-                      value={rightText}
-                      onChange={(event) => {
-                        const value = event.target.value;
-                        setRightText(value);
-                        setSideTextEnabled(
-                          Boolean(leftText.trim() || value.trim()),
-                        );
-                      }}
-                      placeholder="Write the text displayed on the right of the photo"
-                      className="story-side-text story-side-text-right story-side-text-editor"
-                    />
+                    {alignment === "center" || alignment === "right" ? (
+                      <textarea
+                        aria-label="Left side text"
+                        value={leftText}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setLeftText(value);
+                          setSideTextEnabled(
+                            Boolean(value.trim() || rightText.trim()),
+                          );
+                        }}
+                        placeholder="Write the text displayed on the left of the photo"
+                        className="story-side-text story-side-text-left story-side-text-editor"
+                      />
+                    ) : null}
+                    {alignment === "center" || alignment === "left" ? (
+                      <textarea
+                        aria-label="Right side text"
+                        value={rightText}
+                        onChange={(event) => {
+                          const value = event.target.value;
+                          setRightText(value);
+                          setSideTextEnabled(
+                            Boolean(leftText.trim() || value.trim()),
+                          );
+                        }}
+                        placeholder="Write the text displayed on the right of the photo"
+                        className="story-side-text story-side-text-right story-side-text-editor"
+                      />
+                    ) : null}
                   </>
                 ) : null}
                 </div>
@@ -2312,13 +2294,15 @@ export function StoryMediaDialog({
                     ) : null}
                   </div>
 
-                  {items.length === 1 && alignment === "center" ? (
+                  {items.length === 1 && alignment !== "full" ? (
                     <div className="mt-5 border-t border-[#242617]/10 pt-5">
                       <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
                         Side text
                       </span>
                       <p className="mt-2 text-xs leading-5 text-[#242617]/60">
-                        Write directly in the two fields beside the photo. Empty fields are not published. On mobile, their content moves below the photo.
+                        {alignment === "center"
+                          ? "Write directly in the two fields beside the photo. Their width automatically follows the frame width."
+                          : `Write in the field on the ${alignment === "left" ? "right" : "left"} of the photo. Its width automatically uses all remaining space.`} Empty fields are not published. On mobile, their content moves below the photo.
                       </p>
                     </div>
                   ) : null}
@@ -2337,31 +2321,40 @@ export function StoryMediaDialog({
                     Frame and photo dimensions are independent. A smaller frame clips the photos without resizing them.
                   </p>
                   <button type="button" className="mt-3 rounded-xl border border-[#242617]/20 px-3 py-2 text-xs" onClick={() => {
-                    changeFrameWidth(
-                      items.length === 1
-                        ? items[0].width
-                        : Math.ceil(
-                            Math.max(
-                              ...items.map(
-                                (item) => (item.x ?? 0) + item.width,
-                              ),
-                            ),
-                          ),
-                    );
-                    setCompositionHeight(fittedContentHeight);
+                    if (!items.length) return;
+                    const left = Math.min(...items.map(item => item.x ?? 0));
+                    const top = Math.min(...items.map(item => item.y ?? 0));
+                    const shifted = items.map(item => ({
+                      ...item, x: (item.x ?? 0) - left, y: (item.y ?? 0) - top,
+                    }));
+                    const width = Math.max(12, Math.min(maximumFrameWidth,
+                      Math.max(...shifted.map(item => item.x + item.width))));
+                    setItems(shifted.length === 1
+                      ? [{ ...shifted[0], x: alignedPhotoX(alignment, width, shifted[0].width) }]
+                      : shifted);
+                    setCompositionWidth(width);
+                    setCompositionHeight(Math.min(STORY_MAX_FRAME_HEIGHT,
+                      getCompositionCanvasHeight(shifted)));
                   }}>Fit frame to photos</button>
+                  {items.length > 1 && getCompositionCanvasHeight(items) > compositionHeight + 1 ? (
+                    <p role="status" className="mt-2 text-xs leading-5 text-[#8c6729]">
+                      Some photos extend below the frame. Increase its height with “Fit frame to photos” or choose a more compact layout.
+                    </p>
+                  ) : null}
 
                   <div className="mt-5 space-y-5">
                     <label className="block">
                       <span className="mb-2 flex items-center justify-between text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
                         <span>Total width</span>
-                        <span>{compositionWidth}%</span>
+                        <span>
+                          {compositionWidth}% / {maximumFrameWidth}% max
+                        </span>
                       </span>
                       <input
                         type="range"
                         aria-label="Frame width"
                         min="12"
-                        max="100"
+                        max={maximumFrameWidth}
                         step="0.1"
                         value={compositionWidth}
                         onChange={(event) =>
@@ -2381,7 +2374,7 @@ export function StoryMediaDialog({
                         type="range"
                         aria-label="Frame height"
                         min="120"
-                        max="1200"
+                        max={Math.max(1200, fittedContentHeight, compositionHeight)}
                         step="10"
                         value={compositionHeight}
                         onChange={(event) =>

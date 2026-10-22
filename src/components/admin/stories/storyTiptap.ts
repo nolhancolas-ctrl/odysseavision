@@ -5,7 +5,12 @@ import {
   type Editor,
 } from "@tiptap/core";
 import { ListItem } from "@tiptap/extension-list";
-import { installIndependentCompositions } from "@/components/stories/storyComposition";
+import {
+  installIndependentCompositions,
+  storyLayoutIsMobile,
+  STORY_MOBILE_MEDIA_QUERY,
+  STORY_MAX_FRAME_HEIGHT,
+} from "@/components/stories/storyComposition";
 
 export const STORY_MEDIA_EDIT_EVENT =
   "story-media-edit";
@@ -118,8 +123,13 @@ export const StoryMediaNode = TiptapNode.create({
       dom.contentEditable = "false";
       dom.draggable = true;
       dom.dataset.storyTiptapMedia = "true";
-      const mobileQuery = window.matchMedia("(max-width: 767px)");
-      const refreshComposition = () => installIndependentCompositions(dom, mobileQuery.matches);
+      const mobileQuery = window.matchMedia(STORY_MOBILE_MEDIA_QUERY);
+      const refreshComposition = () => {
+        // Mounted artboards own responsive updates. The fallback covers standalone nodes.
+        if (!dom.closest("[data-story-artboard-mode]")) {
+          installIndependentCompositions(dom, storyLayoutIsMobile(dom));
+        }
+      };
       refreshComposition();
       mobileQuery.addEventListener("change", refreshComposition);
 
@@ -221,7 +231,7 @@ export function normalizeLegacyStoryHtml(html: string) {
         }),
       ),
       120,
-      1200,
+      STORY_MAX_FRAME_HEIGHT,
     );
 
     for (const figure of figures) {

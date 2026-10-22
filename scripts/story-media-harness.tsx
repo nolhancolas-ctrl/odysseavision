@@ -1,5 +1,5 @@
 // Local regression fixture. Run `node scripts/serve-story-media-check.mjs`.
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { Editor } from "@tiptap/core";
 import StarterKit from "@tiptap/starter-kit";
@@ -19,10 +19,17 @@ import {
 } from "../src/components/admin/stories/storyTiptap";
 import { sanitizeStoryHtml } from "../src/components/stories/sanitizeStoryHtml";
 import { StoryRichHtml } from "../src/components/stories/StoryRichHtml";
+import { StoryArtboard } from "../src/components/stories/StoryArtboard";
+import { installSpatialLayouts } from "../src/components/stories/storySpatialLayout";
 import {
   alignedPhotoX,
-  photoFrameGeometry,
   installIndependentCompositions,
+  maximumStoryFrameWidth,
+  photoFrameGeometry,
+  singlePhotoPresetWidth,
+  storyTextMediaColumns,
+  separateOverlappingPhotos,
+  type StoryArtboardMode,
 } from "../src/components/stories/storyComposition";
 import styles from "../src/components/stories/StoryContent.module.css";
 import "../src/app/globals.css";
@@ -64,13 +71,60 @@ function parse(html: string) {
   return root;
 }
 
+function normalizedColumns(value: string) {
+  const probe = document.createElement("div");
+  probe.style.gridTemplateColumns = value;
+  return probe.style.gridTemplateColumns;
+}
+
 function tests() {
   const results: string[] = [];
   function assert(condition: unknown, message: string) {
     if (!condition) throw new Error(message);
     results.push(message);
   }
+  const mosaic = [
+    { x: 0, y: 0, width: 50, height: 620 },
+    { x: 50, y: 0, width: 50, height: 300 },
+    { x: 50, y: 300, width: 25, height: 200 },
+    { x: 75, y: 300, width: 25, height: 200 },
+  ];
+  const enlarged = mosaic.map((p, i) => i === 1 ? { ...p, height: 480 } : p);
+  const packed = separateOverlappingPhotos(enlarged);
+  assert(JSON.stringify(separateOverlappingPhotos(mosaic)) === JSON.stringify(mosaic),
+    "Opening a valid mosaic leaves every existing position unchanged");
+  assert(packed[2].y === 480 && packed[3].y === 480 &&
+    packed[0].height === 620 && enlarged[2].y === 300,
+    "Enlarging a mosaic photo pushes its neighbours down without mutating or resizing them");
+  assert(JSON.stringify(separateOverlappingPhotos(packed)) === JSON.stringify(packed),
+    "Collision repair is idempotent");
+  let seed = 27;
+  const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
+  for (let run = 0; run < 100; run++) {
+    const arranged = separateOverlappingPhotos(Array.from({ length: 12 }, () => ({
+      x: Math.floor(random() * 4) * 20, y: Math.floor(random() * 800),
+      width: 20, height: 120 + Math.floor(random() * 400),
+    })));
+    if (arranged.some((a, i) => arranged.slice(i + 1).some(b =>
+      a.x < b.x + b.width && a.x + a.width > b.x &&
+      a.y < b.y + b.height && a.y + a.height > b.y))) {
+      throw new Error("Generated composition has overlapping rectangles");
+    }
+  }
+  assert(true, "100 generated 12-photo compositions have no intersecting rectangles");
+  assert(
+    singlePhotoPresetWidth("medium", "center") === 50 &&
+      maximumStoryFrameWidth("center") === 60 &&
+      maximumStoryFrameWidth("left") === 72 &&
+      storyTextMediaColumns("center", 99).includes("60%"),
+    "Single-photo presets preserve usable side-text columns",
+  );
   const html = serializeMediaDraft(fixture);
+  const tall = readMediaDraft(parse(serializeMediaDraft({
+    ...fixture, compositionHeight: 1760,
+  })).firstElementChild as HTMLElement);
+  assert(tall.compositionHeight === 1760,
+    "Tall multi-row frames survive saving and reopening without the old 1200px truncation");
   const sanitized = sanitizeStoryHtml(html);
   const root = parse(sanitized);
   const restored = readMediaDraft(root.firstElementChild as HTMLElement);
@@ -78,6 +132,23 @@ function tests() {
     restored.leftText === fixture.leftText &&
       restored.rightText === fixture.rightText,
     "Side text, special characters and line breaks survive sanitization and reopening",
+  );
+  const wrapper = root.firstElementChild as HTMLElement;
+  const gallery = wrapper.querySelector<HTMLElement>(
+    'section[data-story-gallery="true"]',
+  )!;
+  assert(
+    wrapper.dataset.storyLeftText === fixture.leftText &&
+      wrapper.dataset.storyRightText === fixture.rightText,
+    "Side text is duplicated on the atomic wrapper for durable draft storage",
+  );
+  gallery.dataset.storyLeftText = "";
+  gallery.dataset.storyRightText = "";
+  const recoveredFromWrapper = readMediaDraft(wrapper);
+  assert(
+    recoveredFromWrapper.leftText === fixture.leftText &&
+      recoveredFromWrapper.rightText === fixture.rightText,
+    "Reopening recovers side text when a legacy gallery attribute is empty",
   );
   assert(
     !root.querySelector("script"),
@@ -149,6 +220,12 @@ function tests() {
   installIndependentCompositions(root, false);
   const figure = root.querySelector("figure")!;
   const desktopWidth = figure.style.width;
+  assert(
+    gallery.style.width === "100%" &&
+      wrapper.style.gridTemplateColumns ===
+        normalizedColumns(storyTextMediaColumns("center", fixture.compositionWidth)),
+    "The frame owns its exact grid column and side text receives the remaining width",
+  );
   installIndependentCompositions(root, true);
   assert(
     figure.style.width === "100%" && figure.style.height === "auto",
@@ -158,6 +235,32 @@ function tests() {
   assert(
     figure.style.width === desktopWidth && figure.style.position === "absolute",
     "Returning to desktop restores original geometry",
+  );
+  installIndependentCompositions(root, true);
+  const mobileLeft = wrapper.querySelector<HTMLElement>(
+    ":scope > .story-side-text-left",
+  );
+  const mobileRight = wrapper.querySelector<HTMLElement>(
+    ":scope > .story-side-text-right",
+  );
+  assert(
+    wrapper.style.display === "flex" &&
+      mobileLeft?.style.display === "block" &&
+      mobileLeft.style.order === "1" &&
+      mobileRight?.style.display === "block" &&
+      mobileRight.style.order === "2",
+    "A second mobile transition keeps both side texts below the photo",
+  );
+  for (let cycle = 0; cycle < 8; cycle += 1) {
+    installIndependentCompositions(root, cycle % 2 === 0);
+  }
+  assert(
+    root.querySelectorAll('[data-story-text-media="true"]').length === 1 &&
+      wrapper.querySelectorAll(":scope > .story-side-text-left").length === 1 &&
+      wrapper.querySelectorAll(":scope > .story-side-text-right").length === 1 &&
+      wrapper.dataset.storyLeftText === fixture.leftText &&
+      wrapper.dataset.storyRightText === fixture.rightText,
+    "Repeated responsive transitions are idempotent and never duplicate or erase side text",
   );
   const editor = new Editor({
     element: document.createElement("div"),
@@ -220,12 +323,184 @@ function tests() {
     dormant.leftText === fixture.leftText && !dormant.sideTextEnabled,
     "Disabling side text retains the draft fields",
   );
+  const leftDraft: StoryMediaDraft = {
+    ...fixture,
+    alignment: "left",
+    leftText: "Dormant text",
+    rightText: "Text beside a left-aligned photo",
+  };
+  const leftRoot = parse(
+    sanitizeStoryHtml(serializeMediaDraft(leftDraft)),
+  );
+  const leftWrapper = leftRoot.firstElementChild as HTMLElement;
+  installIndependentCompositions(leftRoot, false);
+  assert(
+    leftWrapper.dataset.alignment === "left" &&
+      leftWrapper.style.gridTemplateColumns ===
+        normalizedColumns(storyTextMediaColumns("left", fixture.compositionWidth)) &&
+      leftWrapper.querySelector(".story-side-text-right")?.textContent ===
+        leftDraft.rightText,
+    "A left-aligned photo creates one text column that consumes all remaining space",
+  );
+  const wrapperlessRoot = parse(serializeMediaDraft(fixture));
+  const wrapperlessWrapper = wrapperlessRoot.firstElementChild as HTMLElement;
+  const wrapperlessGallery = wrapperlessWrapper.querySelector<HTMLElement>(
+    'section[data-story-gallery="true"]',
+  )!;
+  wrapperlessWrapper.replaceWith(wrapperlessGallery);
+  wrapperlessRoot.append(wrapperlessGallery);
+  installIndependentCompositions(wrapperlessRoot, true);
+  const restoredWrapper = wrapperlessRoot.querySelector<HTMLElement>(
+    'section[data-story-text-media="true"]',
+  );
+  assert(
+    restoredWrapper?.querySelector<HTMLElement>(
+      ".story-side-text-left",
+    )?.style.display === "block" &&
+      restoredWrapper.querySelector<HTMLElement>(
+        ".story-side-text-right",
+      )?.style.display === "block",
+    "Mobile restores and displays side text from durable gallery metadata",
+  );
+
+  const plainDuplicateDraft: StoryMediaDraft = {
+    ...fixture,
+    alignment: "left",
+    sideTextEnabled: false,
+    leftText: "",
+    rightText: "",
+  };
+  const duplicateRoot = parse(
+    `${serializeMediaDraft(fixture)}${serializeMediaDraft(plainDuplicateDraft)}`,
+  );
+  for (const mobile of [false, true, false, true]) {
+    installIndependentCompositions(duplicateRoot, mobile);
+  }
+  const duplicateGalleries = duplicateRoot.querySelectorAll<HTMLElement>(
+    'section[data-story-gallery="true"]',
+  );
+  assert(
+    duplicateGalleries.length === 2 &&
+      duplicateRoot.querySelectorAll('[data-story-text-media="true"]').length ===
+        1 &&
+      duplicateGalleries[0].closest('[data-story-text-media="true"]') !==
+        null &&
+      duplicateGalleries[1].closest('[data-story-text-media="true"]') ===
+        null &&
+      duplicateGalleries[0].dataset.sideTextEnabled === "true" &&
+      duplicateGalleries[1].dataset.sideTextEnabled === "false",
+    "Two uses of the same photo keep independent composition metadata",
+  );
+  const duplicateEditor = new Editor({
+    element: document.createElement("div"),
+    extensions: [StarterKit, StoryMediaNode],
+    content: duplicateRoot.innerHTML,
+  });
+  const duplicateRoundTrip = parse(serializeStoryHtml(duplicateEditor));
+  const roundTripBlocks = Array.from(
+    duplicateRoundTrip.children,
+    (element) => readMediaDraft(element as HTMLElement),
+  );
+  assert(
+    roundTripBlocks.length === 2 &&
+      roundTripBlocks[0].sideTextEnabled === true &&
+      roundTripBlocks[0].leftText === fixture.leftText &&
+      roundTripBlocks[0].rightText === fixture.rightText &&
+      roundTripBlocks[1].sideTextEnabled === false &&
+      roundTripBlocks[1].leftText === "" &&
+      roundTripBlocks[1].rightText === "",
+    "Tiptap saves visually identical photos as independent atomic blocks",
+  );
+  duplicateEditor.destroy();
+  const legacyClassRoot = parse(serializeMediaDraft(fixture));
+  legacyClassRoot.querySelector("figure")!.classList.add("story-media", "story-media-left");
+  installSpatialLayouts(legacyClassRoot);
+  assert(legacyClassRoot.querySelector("figure")!.style.position ===
+    (window.matchMedia("(max-width: 767px), (max-aspect-ratio: 4 / 3)").matches ? "relative" : "absolute"),
+    "Legacy standalone renderer never overwrites a gallery child");
   return results;
+}
+
+const mosaicFixture: StoryMediaDraft = {
+  ...fixture, alignment: "center", layout: "mosaic", sideTextEnabled: false,
+  compositionWidth: 100, compositionHeight: 700, photoGap: 12,
+  items: [
+    { ...fixture.items[0], id: "m1", width: 50, height: 620, x: 0, y: 0 },
+    { ...fixture.items[0], id: "m2", width: 50, height: 300, x: 50, y: 0 },
+    { ...fixture.items[0], id: "m3", width: 25, height: 200, x: 50, y: 300 },
+    { ...fixture.items[0], id: "m4", width: 25, height: 200, x: 75, y: 300 },
+  ],
+};
+
+function EditorFixture({ html, mode }: { html: string; mode: StoryArtboardMode }) {
+  const host = useRef<HTMLDivElement>(null);
+  const editorRef = useRef<Editor | null>(null);
+  const [saved, setSaved] = useState("");
+  useEffect(() => {
+    if (!host.current) return;
+    const editor = new Editor({
+      element: host.current, extensions: [StarterKit, StoryMediaNode],
+      content: html, editorProps: { attributes: { class: "story-tiptap-document" } },
+    });
+    editorRef.current = editor;
+    return () => { editorRef.current = null; editor.destroy(); };
+  }, [html]);
+  return <section data-editor-fixture>
+    <h2>Tiptap node-view comparison</h2>
+    <button onClick={() => editorRef.current && setSaved(serializeStoryHtml(editorRef.current))}>
+      Serialize editor
+    </button>
+    <output data-editor-saved hidden>{saved}</output>
+    <StoryArtboard mode={mode}>
+      <div className={styles.content + " " + styles.editor}><div ref={host} /></div>
+    </StoryArtboard>
+  </section>;
+}
+
+function checkRenderedLayout() {
+  let checked = 0;
+  for (const canvas of document.querySelectorAll<HTMLElement>("[data-story-artboard-resolved]")) {
+    const mobile = canvas.dataset.storyArtboardResolved === "mobile";
+    for (const gallery of canvas.querySelectorAll<HTMLElement>("[data-story-gallery]")) {
+      const rects = Array.from(gallery.querySelectorAll("figure"), f => f.getBoundingClientRect());
+      for (let i = 0; i < rects.length; i++) {
+        for (const b of rects.slice(i + 1)) {
+          const a = rects[i];
+          if (a.left < b.right - 0.5 && a.right > b.left + 0.5 &&
+            a.top < b.bottom - 0.5 && a.bottom > b.top + 0.5) {
+            throw new Error("Rendered photos intersect");
+          }
+        }
+      }
+      const wrapper = gallery.closest<HTMLElement>("[data-story-text-media]");
+      if (wrapper) {
+        for (const side of ["left", "right"]) {
+          const expected = wrapper.dataset.alignment === "center" ||
+            wrapper.dataset.alignment === (side === "left" ? "right" : "left");
+          const text = wrapper.querySelector<HTMLElement>(".story-side-text-" + side);
+          if (!expected || !text?.textContent?.trim()) continue;
+          const rect = text.getBoundingClientRect();
+          if (getComputedStyle(text).display === "none" || rect.height === 0 || rect.width < 1) {
+            throw new Error("Side text is hidden");
+          }
+          if (mobile && rect.top < gallery.getBoundingClientRect().bottom - 0.5) {
+            throw new Error("Mobile text is not below its photo");
+          }
+        }
+      }
+      checked++;
+    }
+  }
+  return "PASS: " + checked + " rendered compositions, no overlaps or hidden side text";
 }
 
 function Harness() {
   const [html, setHtml] = useState(() => serializeMediaDraft(fixture));
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<StoryArtboardMode>("auto");
+  const [showEditor, setShowEditor] = useState(false);
+  const [longStory, setLongStory] = useState(false);
+  const [layoutResult, setLayoutResult] = useState("");
   const [results] = useState(() => {
     try {
       return tests().join("\n");
@@ -245,14 +520,37 @@ function Harness() {
     >
       <h1>Story media regression check</h1>
       <button onClick={() => setOpen(true)}>Edit composition</button>
+      <button onClick={() => setHtml(serializeMediaDraft(mosaicFixture))}>Load mosaic</button>
+      <button onClick={() => setHtml(serializeMediaDraft(fixture))}>Load side text</button>
+      <button onClick={() => setHtml(serializeMediaDraft({ ...fixture, alignment: "left" }))}>Load left photo</button>
+      <button onClick={() => setHtml(serializeMediaDraft({ ...fixture, alignment: "right" }))}>Load right photo</button>
+      <button onClick={() => setShowEditor(value => !value)}>Toggle editor test</button>
+      <button onClick={() => setLongStory(value => !value)}>Toggle long story</button>
+      {(["auto", "desktop", "mobile"] as const).map(value =>
+        <button key={value} onClick={() => setMode(value)}>Mode {value}</button>
+      )}
+      <button onClick={() => {
+        try { setLayoutResult(checkRenderedLayout()); }
+        catch (error) { setLayoutResult("FAIL: " + error); }
+      }}>Check rendered layout</button>
+      <output data-layout-result style={{ display: "block" }}>{layoutResult}</output>
+      <details><summary>Regression results</summary>
       <pre data-test-results style={{ whiteSpace: "pre-wrap", fontSize: 12 }}>
         {results}
       </pre>
       <output data-saved-values style={{ display: "block", overflowWrap: "anywhere" }}>{JSON.stringify(draft)}</output>
+      </details>
+      <StoryArtboard mode={mode}>
       <StoryRichHtml
-        html={sanitizeStoryHtml(html)}
+        html={sanitizeStoryHtml(longStory
+          ? Array.from({ length: 25 }, (_, i) => "<p>Paragraph " + (i + 1) +
+            ". Test content that wraps naturally on a phone and stays on one line on a desktop.</p>").join("") +
+            html + "<h2>Next section</h2><p>The reading point must stay with this composition.</p>".repeat(20)
+          : html)}
         className={styles.content}
       />
+      </StoryArtboard>
+      {showEditor ? <EditorFixture html={html} mode={mode} /> : null}
       {open ? (
         <StoryMediaDialog
           initialDraft={draft}
@@ -269,4 +567,4 @@ function Harness() {
     </main>
   );
 }
-createRoot(document.getElementById("root")!).render(<Harness />);
+createRoot(document.getElementById("root")!).render(<React.StrictMode><Harness /></React.StrictMode>);

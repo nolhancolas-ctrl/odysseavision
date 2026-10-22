@@ -32,6 +32,8 @@ import {
   type StoryMediaEditDetail,
 } from "@/components/admin/stories/storyTiptap";
 import styles from "@/components/stories/StoryContent.module.css";
+import { StoryArtboard } from "@/components/stories/StoryArtboard";
+import type { StoryArtboardMode } from "@/components/stories/storyComposition";
 import { readMediaDraft, serializeMediaDraft } from "./storyMediaHtml";
 
 const STORY_HTML_MARKER = "STORY_HTML_V1";
@@ -261,6 +263,7 @@ export function StoryRichTextEditor({
   const router = useRouter();
   const editorRef = useRef<HTMLDivElement>(null);
   const editorContainerRef = useRef<HTMLDivElement>(null);
+  const contentInputRef = useRef<HTMLInputElement>(null);
   const toolbarAnchorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const tiptapEditorRef = useRef<Editor | null>(null);
@@ -281,6 +284,8 @@ export function StoryRichTextEditor({
     useState(false);
   const [toolbarOpen, setToolbarOpen] =
     useState(false);
+  const [previewMode, setPreviewMode] =
+    useState<Exclude<StoryArtboardMode, "auto">>("desktop");
   const selectedFigure = useRef<HTMLElement | null>(null);
   const selectedVideo = useRef<HTMLElement | null>(null);
   const initialHtml = useRef(getInitialHtml(initialContent));
@@ -526,6 +531,12 @@ export function StoryRichTextEditor({
     const nextContent = hasContent
       ? `${STORY_HTML_PREFIX}${html}`
       : "";
+
+    // FormData reads the live DOM value. Update it synchronously so an
+    // immediate Save/Leave action cannot capture the previous React render.
+    if (contentInputRef.current) {
+      contentInputRef.current.value = nextContent;
+    }
 
     setContentValue(nextContent);
 
@@ -1126,6 +1137,7 @@ export function StoryRichTextEditor({
   return (
     <div ref={editorContainerRef}>
       <input
+        ref={contentInputRef}
         type="hidden"
         name="content"
         value={contentValue}
@@ -1503,12 +1515,32 @@ export function StoryRichTextEditor({
         </div>
       </div>
 
-      <div
-        ref={editorRef}
-        aria-label="Story content editor"
-        style={typographyStyle}
-        className={`${styles.content} ${styles.editor}`}
-      />
+      <div className={styles.previewModeBar} aria-label="Story preview format">
+        {(["desktop", "mobile"] as const).map((mode) => (
+          <button
+            key={mode}
+            type="button"
+            aria-pressed={previewMode === mode}
+            onClick={() => setPreviewMode(mode)}
+            className={`${styles.previewModeButton} ${
+              previewMode === mode ? styles.previewModeButtonActive : ""
+            }`}
+          >
+            {mode}
+          </button>
+        ))}
+      </div>
+
+      <StoryArtboard mode={previewMode}>
+        <div className={styles.editorViewport}>
+          <div
+            ref={editorRef}
+            aria-label="Story content editor"
+            style={typographyStyle}
+            className={`${styles.content} ${styles.editor}`}
+          />
+        </div>
+      </StoryArtboard>
 
       {videoOpen ? (
         <StoryVideoDialog

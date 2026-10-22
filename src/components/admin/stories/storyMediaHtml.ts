@@ -6,6 +6,7 @@ import type {
   StoryMediaItem,
   StoryWatermark,
 } from "./StoryMediaDialog";
+import { separateOverlappingPhotos, storyTextMediaColumns, STORY_MAX_FRAME_HEIGHT } from "@/components/stories/storyComposition";
 
 function escapeHtml(value: string) {
   return value
@@ -97,6 +98,27 @@ export function readMediaDraft(container: HTMLElement): StoryMediaDraft {
   const className = container.className;
   const firstItem = items[0];
   const storedAlignment = container.getAttribute("data-alignment");
+  const readSideText = (
+    dataKey: "storyLeftText" | "storyRightText",
+    selector: string,
+  ) => {
+    const galleryValue = container.dataset[dataKey];
+    const wrapperValue = outerContainer.dataset[dataKey];
+    const visibleValue = outerContainer.querySelector(selector)?.textContent;
+
+    // Older drafts can contain an empty gallery attribute next to a valid
+    // visible side column. Prefer the first non-empty copy, while still
+    // preserving an intentionally empty field.
+    return (
+      [galleryValue, wrapperValue, visibleValue].find(
+        (value) => value !== undefined && value.length > 0,
+      ) ??
+      galleryValue ??
+      wrapperValue ??
+      visibleValue ??
+      ""
+    );
+  };
 
   const alignment: StoryImageAlignment =
     storedAlignment === "left" ||
@@ -146,14 +168,8 @@ export function readMediaDraft(container: HTMLElement): StoryMediaDraft {
     sideTextEnabled:
       container.dataset.sideTextEnabled === "true" ||
       outerContainer.dataset.storyTextMedia === "true",
-    leftText:
-      container.dataset.storyLeftText ??
-      outerContainer.querySelector(".story-side-text-left")?.textContent ??
-      "",
-    rightText:
-      container.dataset.storyRightText ??
-      outerContainer.querySelector(".story-side-text-right")?.textContent ??
-      "",
+    leftText: readSideText("storyLeftText", ".story-side-text-left"),
+    rightText: readSideText("storyRightText", ".story-side-text-right"),
     compositionWidth: Math.max(
       12,
       Math.min(
@@ -168,7 +184,7 @@ export function readMediaDraft(container: HTMLElement): StoryMediaDraft {
     compositionHeight: Math.max(
       120,
       Math.min(
-        1200,
+        STORY_MAX_FRAME_HEIGHT,
         Number(
           container.getAttribute("data-composition-height") ??
             container.getAttribute("data-canvas-height") ??
@@ -221,7 +237,7 @@ function buildFigureHtml(
   );
   const safeCompositionHeight = Math.max(
     120,
-    Math.min(1200, frame?.compositionHeight ?? 560),
+    Math.min(STORY_MAX_FRAME_HEIGHT, frame?.compositionHeight ?? 560),
   );
   const safePhotoGap = Math.max(0, Math.min(32, frame?.photoGap ?? 12));
   const safeCornerRadius = Math.max(0, Math.min(40, frame?.cornerRadius ?? 16));
@@ -307,7 +323,7 @@ function buildFigureHtml(
 export function serializeMediaDraft(draft: StoryMediaDraft) {
   const canvasHeight = Math.max(
     120,
-    Math.min(1200, Math.round(draft.compositionHeight)),
+    Math.min(STORY_MAX_FRAME_HEIGHT, Math.round(draft.compositionHeight)),
   );
 
   const compositionWidth = Math.max(
@@ -335,18 +351,33 @@ export function serializeMediaDraft(draft: StoryMediaDraft) {
     `data-canvas-height="${canvasHeight}" ` +
     `style="position:relative;display:block;width:${compositionWidth}%;aspect-ratio:${compositionWidth * 10} / ${canvasHeight};container-type:inline-size;overflow:hidden;gap:0;margin-inline:auto;" ` +
     `class="story-gallery story-gallery-${draft.layout} story-gallery-${draft.size}">` +
-    draft.items
+    separateOverlappingPhotos(draft.items)
       .map((item, index) =>
         buildFigureHtml(item, "story-gallery-item", index, draft),
       )
       .join("") +
     `</section>`;
+  const visibleSideText =
+    draft.alignment === "center"
+      ? Boolean(draft.leftText?.trim() || draft.rightText?.trim())
+      : draft.alignment === "left"
+        ? Boolean(draft.rightText?.trim())
+        : draft.alignment === "right"
+          ? Boolean(draft.leftText?.trim())
+          : false;
   const withSideText =
     draft.sideTextEnabled &&
-    draft.alignment === "center" &&
-    draft.items.length === 1;
+    draft.alignment !== "full" &&
+    draft.items.length === 1 &&
+    visibleSideText;
   const mediaHtml = withSideText
-    ? `<section data-story-text-media="true" class="story-text-media" contenteditable="false" tabindex="0" draggable="true">` +
+    ? `<section data-story-text-media="true" ` +
+      `data-side-text-enabled="true" ` +
+      `data-alignment="${draft.alignment}" ` +
+      `data-story-left-text="${escapeHtml(draft.leftText ?? "")}" ` +
+      `data-story-right-text="${escapeHtml(draft.rightText ?? "")}" ` +
+      `style="grid-template-columns:${storyTextMediaColumns(draft.alignment, compositionWidth)};" ` +
+      `class="story-text-media" contenteditable="false" tabindex="0" draggable="true">` +
       galleryHtml +
       `<div class="story-side-text story-side-text-left">${escapeHtml(draft.leftText ?? "")}</div>` +
       `<div class="story-side-text story-side-text-right">${escapeHtml(draft.rightText ?? "")}</div></section>`

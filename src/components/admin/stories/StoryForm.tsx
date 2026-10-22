@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import {
+  useCallback,
   useEffect,
   useRef,
   useState,
@@ -383,6 +384,12 @@ export function StoryForm({
   const router = useRouter();
   const formRef = useRef<HTMLFormElement>(null);
   const draft = readStoryDraft(story?.draftData);
+  const initialContent = draftText(
+    draft,
+    "content",
+    story?.content ?? "",
+  );
+  const latestContentRef = useRef(initialContent);
 
   const [status, setStatus] = useState<StatusValue>(
     parseStatus(
@@ -443,6 +450,22 @@ export function StoryForm({
     setDraftMessage("");
   }
 
+  const getCurrentFormData = useCallback((form: HTMLFormElement) => {
+    const formData = new FormData(form);
+
+    // The rich editor is controlled by Tiptap. Its callback ref is updated
+    // synchronously, unlike React's hidden-input render, so this always saves
+    // the exact media HTML visible when the user clicks.
+    formData.set("content", latestContentRef.current);
+
+    return formData;
+  }, []);
+
+  function handleContentChange(content: string) {
+    latestContentRef.current = content;
+    markChanged();
+  }
+
   function cancelPendingAutosave() {
     if (autosaveTimerRef.current === null) return;
 
@@ -481,7 +504,7 @@ export function StoryForm({
         return;
       }
 
-      const formData = new FormData(currentForm);
+      const formData = getCurrentFormData(currentForm);
       setDraftMessage("Saving...");
 
       autosaveQueueRef.current = autosaveQueueRef.current
@@ -523,7 +546,7 @@ export function StoryForm({
         autosaveTimerRef.current = null;
       }
     };
-  }, [changeVersion, storyId]);
+  }, [changeVersion, getCurrentFormData, storyId]);
 
   useEffect(() => {
     if (!hasChanges) return;
@@ -655,7 +678,7 @@ export function StoryForm({
 
     if (!currentForm || leavePending) return;
 
-    const formData = new FormData(currentForm);
+    const formData = getCurrentFormData(currentForm);
 
     invalidatePendingAutosave();
     suspendAutosaveRef.current = true;
@@ -717,7 +740,7 @@ export function StoryForm({
 
     if (!currentForm) return;
 
-    const formData = new FormData(currentForm);
+    const formData = getCurrentFormData(currentForm);
     const currentCategoryId = String(
       formData.get("categoryId") ?? "",
     );
@@ -773,7 +796,7 @@ export function StoryForm({
 
     if (!currentForm || draftPending) return;
 
-    const formData = new FormData(currentForm);
+    const formData = getCurrentFormData(currentForm);
     setDraftMessage("Saving...");
 
     startDraftTransition(async () => {
@@ -850,7 +873,7 @@ export function StoryForm({
         allowNavigationRef.current = true;
         setHasChanges(false);
 
-        const formData = new FormData(
+        const formData = getCurrentFormData(
           event.currentTarget,
         );
 
@@ -1020,10 +1043,10 @@ export function StoryForm({
         >
           <StoryRichTextEditor
             existingPageImageUrls={imageSrc ? [imageSrc] : []}
-            initialContent={draftText(draft, "content", story?.content ?? "")}
+            initialContent={initialContent}
             typographyStyle={typographyStyle}
             uploadSlug={uploadSlug}
-            onContentChange={markChanged}
+            onContentChange={handleContentChange}
             onNavigateBack={() =>
               requestNavigation("/admin/stories")
             }

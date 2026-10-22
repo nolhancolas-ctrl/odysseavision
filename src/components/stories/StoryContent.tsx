@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { sanitizeStoryHtml } from "./sanitizeStoryHtml";
 import styles from "@/components/stories/StoryContent.module.css";
+import { StoryArtboard } from "@/components/stories/StoryArtboard";
 import { StoryRichHtml } from "@/components/stories/StoryRichHtml";
 import {
   defaultStoryTypographySettings,
@@ -144,43 +145,56 @@ export function StoryContent({
     const html = sanitizeStoryHtml(richHtml);
 
     return (
-      <StoryRichHtml
-        html={html}
-        className={styles.content}
-        style={typographyStyle}
-      />
+      <div className={styles.viewport}>
+        <StoryArtboard>
+          <StoryRichHtml
+            html={html}
+            className={`${styles.content} ${styles.canvas}`}
+            style={typographyStyle}
+          />
+        </StoryArtboard>
+      </div>
     );
   }
   const blocks = parseStoryContent(content);
 
   return (
-    <div className={styles.content} style={typographyStyle}>
-      {blocks.map((block, index) => {
-        if (block.type === "heading") {
-          const className =
-            block.level === 2
-              ? "pt-5 font-serif text-3xl leading-tight text-[#242617] md:text-4xl"
-              : "pt-3 font-serif text-2xl leading-tight text-[#242617] md:text-3xl";
+    <div className={styles.viewport}>
+      <StoryArtboard>
+        <div
+          className={`${styles.content} ${styles.canvas}`}
+          style={typographyStyle}
+        >
+          {blocks.map((block, index) => {
+            if (block.type === "heading") {
+              const className =
+                block.level === 2
+                  ? "pt-5 font-serif text-3xl leading-tight text-[#242617] md:text-4xl"
+                  : "pt-3 font-serif text-2xl leading-tight text-[#242617] md:text-3xl";
 
-          if (block.level === 2) {
+              if (block.level === 2) {
+                return (
+                  <h2 key={`${block.text}-${index}`} className={className}>
+                    {renderInlineMarkdown(block.text)}
+                  </h2>
+                );
+              }
+
+              return (
+                <h3 key={`${block.text}-${index}`} className={className}>
+                  {renderInlineMarkdown(block.text)}
+                </h3>
+              );
+            }
+
             return (
-              <h2 key={`${block.text}-${index}`} className={className}>
+              <p key={`${block.text}-${index}`}>
                 {renderInlineMarkdown(block.text)}
-              </h2>
+              </p>
             );
-          }
-
-          return (
-            <h3 key={`${block.text}-${index}`} className={className}>
-              {renderInlineMarkdown(block.text)}
-            </h3>
-          );
-        }
-
-        return (
-          <p key={`${block.text}-${index}`}>{renderInlineMarkdown(block.text)}</p>
-        );
-      })}
+          })}
+        </div>
+      </StoryArtboard>
     </div>
   );
 }
