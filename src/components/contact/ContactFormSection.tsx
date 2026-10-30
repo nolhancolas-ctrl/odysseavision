@@ -12,6 +12,7 @@ import { submitContactForm } from "@/server/actions/forms";
 type ContactFormSectionProps = {
   content?: PublicSectionContent;
   settings: FormsSettings;
+  instagramUrl: string;
 };
 
 const initialContactFormState = {
@@ -26,6 +27,7 @@ function renderLines(text: string) {
 export function ContactFormSection({
   content,
   settings,
+  instagramUrl,
 }: ContactFormSectionProps) {
   const formRef = useRef<HTMLFormElement | null>(null);
   const [state, formAction, isPending] = useActionState(
@@ -47,18 +49,24 @@ export function ContactFormSection({
     content?.body ||
     "We believe in real connections,\nwild places and telling\nstories that matter.";
 
-  const visibleContactInfo = settings.contactInfo.filter((item) => {
-    const title = item.title.trim().toLowerCase();
-    const value = item.value.trim().toLowerCase();
+  const visibleContactInfo = settings.contactInfo
+    .filter((item) => {
+      const title = item.title.trim().toLowerCase();
+      const value = item.value.trim().toLowerCase();
 
-    return (
-      item.visible &&
-      !title.includes("location") &&
-      !title.includes("based") &&
-      !value.includes("land & sea") &&
-      !value.includes("land and sea")
+      return (
+        item.visible &&
+        !title.includes("location") &&
+        !title.includes("based") &&
+        !value.includes("land & sea") &&
+        !value.includes("land and sea")
+      );
+    })
+    .map((item) =>
+      item.title.trim().toLowerCase() === "instagram"
+        ? { ...item, href: instagramUrl }
+        : item,
     );
-  });
 
   useEffect(() => {
     const closeOnOutsideClick = (event: MouseEvent) => {
