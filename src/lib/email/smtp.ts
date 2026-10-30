@@ -1,5 +1,11 @@
 import nodemailer from "nodemailer";
 import { db } from "@/lib/db";
+import {
+  DEFAULT_SMTP_FROM,
+  DEFAULT_SMTP_HOST,
+  DEFAULT_SMTP_PORT,
+  ODYSSEA_NEWSLETTER_EMAIL,
+} from "@/lib/email/config";
 
 export type TransactionalEmail = {
   to: string;
@@ -59,6 +65,29 @@ async function getSmtpSettingsFromDb(): Promise<SmtpSettingValue | null> {
 }
 
 async function getSmtpConfig() {
+  const environmentUser =
+    process.env.SMTP_USER || ODYSSEA_NEWSLETTER_EMAIL;
+  const environmentPassword = process.env.SMTP_PASS || "";
+
+  // Vercel secrets are authoritative when present. This prevents an old DB
+  // setting from shadowing credentials deliberately configured for a deploy.
+  if (environmentPassword) {
+    const host = process.env.SMTP_HOST || DEFAULT_SMTP_HOST;
+    const port = parsePort(process.env.SMTP_PORT, Number(DEFAULT_SMTP_PORT));
+    const secure = parseBoolean(process.env.SMTP_SECURE, port === 465);
+    const from = process.env.SMTP_FROM || DEFAULT_SMTP_FROM;
+
+    return {
+      host,
+      port,
+      secure,
+      user: environmentUser,
+      pass: environmentPassword,
+      from,
+      configured: Boolean(host && environmentUser && from),
+    };
+  }
+
   const dbSettings = await getSmtpSettingsFromDb();
 
   if (dbSettings?.enabled) {
@@ -81,13 +110,12 @@ async function getSmtpConfig() {
     };
   }
 
-  const host = process.env.SMTP_HOST || "smtp.gmail.com";
-  const port = parsePort(process.env.SMTP_PORT, 465);
+  const host = process.env.SMTP_HOST || DEFAULT_SMTP_HOST;
+  const port = parsePort(process.env.SMTP_PORT, Number(DEFAULT_SMTP_PORT));
   const secure = parseBoolean(process.env.SMTP_SECURE, port === 465);
-  const user = process.env.SMTP_USER || "";
-  const pass = process.env.SMTP_PASS || "";
-  const from =
-    process.env.SMTP_FROM || (user ? `Odyssea Vision <${user}>` : "");
+  const user = environmentUser;
+  const pass = environmentPassword;
+  const from = process.env.SMTP_FROM || DEFAULT_SMTP_FROM;
 
   return {
     host,

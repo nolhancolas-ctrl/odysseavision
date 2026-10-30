@@ -13,7 +13,9 @@ uses only the opposite text column, while preserving the other field in storage.
 
 A newly imported single photo retains its source aspect ratio at a reasonable
 preset width; the frame initially fits it. Centered frames reserve usable side
-columns (maximum width 60%); left/right frames use at most 72%.
+columns (maximum width 55%); left/right frames use at most 65%. The desktop
+story canvas uses a fixed 794px A4 reading width and only scales down to fit;
+side text is justified consistently in the editor and published story.
 
 New compositions persist their geometry with `data-story-coordinates="independent"`.
 Existing content keeps its legacy rendering until edited; the dialog converts

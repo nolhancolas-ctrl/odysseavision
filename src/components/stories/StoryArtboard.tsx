@@ -79,7 +79,10 @@ export function StoryArtboard({
       const anchor = mode === "auto" && changed ? readingAnchor : null;
       const width = nextMode === "mobile"
         ? STORY_MOBILE_ARTBOARD_WIDTH : STORY_DESKTOP_ARTBOARD_WIDTH;
-      const scale = Math.min(nextMode === "mobile" ? 1.1 : 1.2, Math.max(1, viewport.clientWidth) / width);
+      // Desktop is an A4 reading surface: it may shrink to fit, but never
+      // grows beyond its reference size and lets photography overpower copy.
+      const maximumScale = nextMode === "mobile" ? 1.1 : 1;
+      const scale = Math.min(maximumScale, Math.max(1, viewport.clientWidth) / width);
 
       canvas.dataset.storyArtboardResolved = nextMode;
       canvas.style.width = width + "px";

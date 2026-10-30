@@ -27,6 +27,7 @@ import {
   maximumStoryFrameWidth,
   photoFrameGeometry,
   singlePhotoPresetWidth,
+  STORY_DESKTOP_ARTBOARD_WIDTH,
   storyTextMediaColumns,
   separateOverlappingPhotos,
   type StoryArtboardMode,
@@ -113,11 +114,12 @@ function tests() {
   }
   assert(true, "100 generated 12-photo compositions have no intersecting rectangles");
   assert(
-    singlePhotoPresetWidth("medium", "center") === 50 &&
-      maximumStoryFrameWidth("center") === 60 &&
-      maximumStoryFrameWidth("left") === 72 &&
-      storyTextMediaColumns("center", 99).includes("60%"),
-    "Single-photo presets preserve usable side-text columns",
+    STORY_DESKTOP_ARTBOARD_WIDTH === 794 &&
+      singlePhotoPresetWidth("medium", "center") === 50 &&
+      maximumStoryFrameWidth("center") === 55 &&
+      maximumStoryFrameWidth("left") === 65 &&
+      storyTextMediaColumns("center", 99).includes("55%"),
+    "A4 story and single-photo presets preserve usable side-text columns",
   );
   const html = serializeMediaDraft(fixture);
   const tall = readMediaDraft(parse(serializeMediaDraft({

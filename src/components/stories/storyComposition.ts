@@ -3,7 +3,9 @@
 export const STORY_MOBILE_MEDIA_QUERY =
   "(max-width: 767px), (max-aspect-ratio: 4 / 3)";
 export const STORY_ARTBOARD_CONTENT_EVENT = "story-artboard-content-change";
-export const STORY_DESKTOP_ARTBOARD_WIDTH = 1050;
+// A4 at 96 CSS pixels per inch. Keeping one fixed desktop width makes the
+// editor, preview and published story share the same reading proportions.
+export const STORY_DESKTOP_ARTBOARD_WIDTH = 794;
 export const STORY_MOBILE_ARTBOARD_WIDTH = 390;
 export const STORY_MAX_FRAME_HEIGHT = 10000;
 
@@ -13,7 +15,9 @@ type StoryMediaAlignment = "left" | "center" | "right" | "full";
 
 export function maximumStoryFrameWidth(alignment: StoryMediaAlignment) {
   if (alignment === "full") return 100;
-  return alignment === "center" ? 60 : 72;
+  // On the A4 canvas, these limits preserve at least ~140px for each side
+  // column when centered and ~250px for the single column on left/right.
+  return alignment === "center" ? 55 : 65;
 }
 
 export function singlePhotoPresetWidth(
@@ -23,10 +27,10 @@ export function singlePhotoPresetWidth(
   if (alignment === "full") return 100;
 
   if (alignment === "center") {
-    return size === "small" ? 40 : size === "large" ? 60 : 50;
+    return size === "small" ? 40 : size === "large" ? 55 : 50;
   }
 
-  return size === "small" ? 45 : size === "large" ? 72 : 58;
+  return size === "small" ? 45 : size === "large" ? 65 : 58;
 }
 
 export function storyLayoutIsMobile(element: HTMLElement) {

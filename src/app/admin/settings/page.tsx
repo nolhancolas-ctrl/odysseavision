@@ -1,6 +1,12 @@
 import { getAdminAuthStatus } from "@/lib/admin/auth";
 import { db } from "@/lib/db";
 import {
+  DEFAULT_SMTP_FROM,
+  DEFAULT_SMTP_HOST,
+  DEFAULT_SMTP_PORT,
+  ODYSSEA_NEWSLETTER_EMAIL,
+} from "@/lib/email/config";
+import {
   updateGlobalSiteInfoAction,
   updateSmtpSettingsAction,
 } from "@/server/actions/admin-settings";
@@ -74,12 +80,12 @@ export default async function AdminSettingsPage({
   const [status, smtpSettings, globalInfo] = await Promise.all([
     getAdminAuthStatus(),
     getJsonSetting<SmtpSettings>("smtp", {
-      host: "",
-      port: "465",
+      host: DEFAULT_SMTP_HOST,
+      port: DEFAULT_SMTP_PORT,
       secure: true,
-      user: "",
+      user: ODYSSEA_NEWSLETTER_EMAIL,
       password: "",
-      from: "",
+      from: DEFAULT_SMTP_FROM,
       enabled: false,
     }),
     getJsonSetting<GlobalSiteInfo>("globalSiteInfo", {
@@ -175,8 +181,9 @@ export default async function AdminSettingsPage({
             </h2>
 
             <p className="mt-3 text-sm leading-6 text-[#242617]/55">
-              Configure this later when your email provider is ready. Leave
-              disabled until SMTP credentials are valid.
+              Gmail is prepared for odysseavision@gmail.com. Add a Google app
+              password in Vercel as SMTP_PASS; environment credentials take
+              priority over this fallback form.
             </p>
 
             <form action={updateSmtpSettingsAction} className="mt-6 space-y-4">
@@ -199,7 +206,7 @@ export default async function AdminSettingsPage({
                     name="host"
                     defaultValue={smtpSettings.host ?? ""}
                     className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/70 px-5 py-4 text-sm outline-none transition focus:border-[#b88a3b]/70 focus:bg-white"
-                    placeholder="smtp.gmail.com"
+                    placeholder={DEFAULT_SMTP_HOST}
                   />
                 </label>
 
@@ -211,7 +218,7 @@ export default async function AdminSettingsPage({
                     name="port"
                     defaultValue={smtpSettings.port ?? "465"}
                     className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/70 px-5 py-4 text-sm outline-none transition focus:border-[#b88a3b]/70 focus:bg-white"
-                    placeholder="465"
+                    placeholder={DEFAULT_SMTP_PORT}
                   />
                 </label>
               </div>
@@ -234,7 +241,7 @@ export default async function AdminSettingsPage({
                   name="user"
                   defaultValue={smtpSettings.user ?? ""}
                   className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/70 px-5 py-4 text-sm outline-none transition focus:border-[#b88a3b]/70 focus:bg-white"
-                  placeholder="hello@example.com"
+                  placeholder={ODYSSEA_NEWSLETTER_EMAIL}
                 />
               </label>
 
@@ -260,7 +267,7 @@ export default async function AdminSettingsPage({
                   name="from"
                   defaultValue={smtpSettings.from ?? ""}
                   className="mt-3 w-full rounded-2xl border border-[#242617]/10 bg-[#f4efe4]/70 px-5 py-4 text-sm outline-none transition focus:border-[#b88a3b]/70 focus:bg-white"
-                  placeholder="Odyssea Vision <hello@example.com>"
+                  placeholder={DEFAULT_SMTP_FROM}
                 />
               </label>
 

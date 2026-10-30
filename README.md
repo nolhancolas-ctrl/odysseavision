@@ -37,6 +37,12 @@ DATABASE_URL="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 DATABASE_URL_UNPOOLED="postgresql://USER:PASSWORD@HOST:PORT/DATABASE"
 ```
 The application also uses optional service integrations for features such as media storage and email. Configure those separately when using the corresponding features; never commit real credentials.
+
+For newsletter delivery, the application is prepared to send through
+`odysseavision@gmail.com` using Gmail SMTP. Copy the non-secret defaults from
+`.env.example`, then provide a Google app password as the server-only
+`SMTP_PASS` variable. In production, store that value as a Vercel Secret; do
+not use the regular Google account password and do not commit it.
 ```bash
 npm run db:generate
 npm run db:migrate

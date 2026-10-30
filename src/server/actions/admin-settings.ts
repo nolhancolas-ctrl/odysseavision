@@ -3,6 +3,12 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { db } from "@/lib/db";
+import {
+  DEFAULT_SMTP_FROM,
+  DEFAULT_SMTP_HOST,
+  DEFAULT_SMTP_PORT,
+  ODYSSEA_NEWSLETTER_EMAIL,
+} from "@/lib/email/config";
 
 function cleanString(value: FormDataEntryValue | null) {
   return String(value ?? "").trim();
@@ -32,12 +38,12 @@ export async function updateSmtpSettingsAction(formData: FormData) {
   const password = cleanString(formData.get("password"));
 
   const value = {
-    host: cleanString(formData.get("host")),
-    port: cleanString(formData.get("port")) || "465",
+    host: cleanString(formData.get("host")) || DEFAULT_SMTP_HOST,
+    port: cleanString(formData.get("port")) || DEFAULT_SMTP_PORT,
     secure: cleanBoolean(formData.get("secure")),
-    user: cleanString(formData.get("user")),
+    user: cleanString(formData.get("user")) || ODYSSEA_NEWSLETTER_EMAIL,
     password: password || String(currentValue.password ?? ""),
-    from: cleanString(formData.get("from")),
+    from: cleanString(formData.get("from")) || DEFAULT_SMTP_FROM,
     enabled: cleanBoolean(formData.get("enabled")),
   };
 
