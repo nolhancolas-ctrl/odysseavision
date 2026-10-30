@@ -852,8 +852,8 @@ export function NewsletterForm({
         </div>
       </section>
 
-      <div className="grid gap-8 xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.85fr)]">
-        <section className="overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+      <div className="grid min-w-0 gap-8 2xl:grid-cols-[minmax(0,0.95fr)_minmax(420px,0.85fr)]">
+        <section className="min-w-0 overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
           <div className="border-b border-[#242617]/10 p-6">
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
               Builder
@@ -987,8 +987,8 @@ export function NewsletterForm({
           </div>
         </section>
 
-        <aside className="xl:sticky xl:top-6 xl:self-start">
-          <section className="overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
+        <aside className="min-w-0 2xl:sticky 2xl:top-6 2xl:self-start">
+          <section className="min-w-0 overflow-hidden rounded-[2rem] border border-[#242617]/10 bg-white/45 shadow-[0_18px_50px_rgba(20,20,10,0.06)]">
             <div className="border-b border-[#242617]/10 p-6">
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#b88a3b]">
                 Preview
