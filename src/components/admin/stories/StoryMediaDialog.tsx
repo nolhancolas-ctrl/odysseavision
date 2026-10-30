@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
+import type { Editor } from "@tiptap/core";
+import { StorySideTextEditor } from "./StorySideTextEditor";
 import {
   alignedPhotoX,
   maximumStoryFrameWidth,
@@ -11,6 +13,10 @@ import {
   storyTextMediaColumns,
   STORY_MAX_FRAME_HEIGHT,
 } from "@/components/stories/storyComposition";
+import {
+  normalizeStorySideTextHtml,
+  storySideTextHasContent,
+} from "@/components/stories/storySideText";
 import styles from "@/components/stories/StoryContent.module.css";
 import {
   closestCenter,
@@ -160,6 +166,42 @@ function optionClass(active: boolean) {
       : "border-[#242617]/12 bg-[#f4efe4]/75 text-[#242617]/55 hover:border-[#b88a3b]/65"
   }`;
 }
+
+type SideTextPosition = "left" | "right";
+type SideTextAlignment = "left" | "center" | "right" | "justify";
+
+function TextAlignmentIcon({ alignment }: { alignment: SideTextAlignment }) {
+  const widths =
+    alignment === "justify"
+      ? ["100%", "100%", "100%", "100%"]
+      : ["100%", "68%", "86%", "58%"];
+  const lineAlignment =
+    alignment === "left"
+      ? "mr-auto"
+      : alignment === "right"
+        ? "ml-auto"
+        : alignment === "center"
+          ? "mx-auto"
+          : "";
+
+  return (
+    <span
+      aria-hidden="true"
+      className="flex h-4 w-[18px] flex-col justify-center gap-[2px]"
+    >
+      {widths.map((width, index) => (
+        <span
+          key={`${width}-${index}`}
+          className={`block h-[1.5px] rounded-full bg-current ${lineAlignment}`}
+          style={{ width }}
+        />
+      ))}
+    </span>
+  );
+}
+
+const sideTextToolbarButton =
+  "grid h-9 min-w-9 cursor-pointer place-items-center rounded-lg border border-[#242617]/10 bg-white/35 px-2 text-xs text-[#242617]/62 transition hover:border-[#b88a3b]/55 hover:bg-[#e8dfcf] hover:text-[#071321] disabled:cursor-not-allowed disabled:opacity-35";
 
 function clampPosition(value: number, maximum: number) {
   return Math.max(0, Math.min(maximum, Math.round(value * 10) / 10));
@@ -1309,8 +1351,19 @@ export function StoryMediaDialog({
   const [keepPhotoScale, setKeepPhotoScale] = useState(true);
   const [keepFrameScale, setKeepFrameScale] = useState(true);
   const [sideTextEnabled, setSideTextEnabled] = useState(initialDraft.sideTextEnabled ?? false);
-  const [leftText, setLeftText] = useState(initialDraft.leftText ?? "");
-  const [rightText, setRightText] = useState(initialDraft.rightText ?? "");
+  const [leftText, setLeftText] = useState(() =>
+    normalizeStorySideTextHtml(initialDraft.leftText),
+  );
+  const [rightText, setRightText] = useState(() =>
+    normalizeStorySideTextHtml(initialDraft.rightText),
+  );
+  const sideTextEditorsRef = useRef<Record<SideTextPosition, Editor | null>>({
+    left: null,
+    right: null,
+  });
+  const [activeSideText, setActiveSideText] = useState<SideTextPosition>(
+    initialDraft.alignment === "left" ? "right" : "left",
+  );
   const showSideTextEditor = alignment !== "full" && items.length === 1;
   const maximumFrameWidth =
     items.length === 1 ? maximumStoryFrameWidth(alignment) : 100;
@@ -1350,6 +1403,107 @@ export function StoryMediaDialog({
       coordinateGetter: sortableKeyboardCoordinates,
     }),
   );
+
+  function activeSideTextEditor() {
+    return (
+      sideTextEditorsRef.current[activeSideText] ??
+      sideTextEditorsRef.current.left ??
+      sideTextEditorsRef.current.right
+    );
+  }
+
+  function keepSideTextSelection(event: React.PointerEvent<HTMLButtonElement>) {
+    event.preventDefault();
+  }
+
+  function setSideTextAlignment(value: SideTextAlignment) {
+    activeSideTextEditor()?.chain().focus().setTextAlign(value).run();
+  }
+
+  function toggleSideTextList(type: "bullet" | "ordered") {
+    const editor = activeSideTextEditor();
+    if (!editor) return;
+
+    const chain = editor.chain().focus();
+    if (type === "bullet") {
+      chain.toggleBulletList().run();
+    } else {
+      chain.toggleOrderedList().run();
+    }
+  }
+
+  function normalizeLinkHref(value: string) {
+    const href = value.trim();
+    if (!href) return "";
+
+    if (
+      href.startsWith("http://") ||
+      href.startsWith("https://") ||
+      href.startsWith("mailto:") ||
+      href.startsWith("tel:") ||
+      href.startsWith("/") ||
+      href.startsWith("#")
+    ) {
+      return href;
+    }
+
+    return `https://${href}`;
+  }
+
+  function editSideTextLink() {
+    const editor = activeSideTextEditor();
+    if (!editor) return;
+
+    if (editor.state.selection.empty && !editor.isActive("link")) {
+      window.alert("Select the text you want to link first.");
+      return;
+    }
+
+    const enteredHref = window.prompt(
+      "Enter the destination URL:",
+      editor.getAttributes("link").href ?? "",
+    );
+    if (enteredHref === null) return;
+
+    const href = normalizeLinkHref(enteredHref);
+    const chain = editor.chain().focus().extendMarkRange("link");
+    if (!href) {
+      chain.unsetLink().run();
+      return;
+    }
+
+    const external = href.startsWith("http://") || href.startsWith("https://");
+    chain
+      .setLink({
+        href,
+        target: external ? "_blank" : null,
+        rel: external ? "noopener noreferrer" : null,
+      })
+      .run();
+  }
+
+  function removeSideTextLink() {
+    activeSideTextEditor()
+      ?.chain()
+      .focus()
+      .extendMarkRange("link")
+      .unsetLink()
+      .run();
+  }
+
+  function updateSideText(side: SideTextPosition, value: string) {
+    if (side === "left") {
+      setLeftText(value);
+      setSideTextEnabled(
+        storySideTextHasContent(value) || storySideTextHasContent(rightText),
+      );
+    } else {
+      setRightText(value);
+      setSideTextEnabled(
+        storySideTextHasContent(leftText) || storySideTextHasContent(value),
+      );
+    }
+  }
 
   useEffect(() => {
     const bodyOverflow = document.body.style.overflow;
@@ -2027,30 +2181,26 @@ export function StoryMediaDialog({
                 {showSideTextEditor ? (
                   <>
                     {alignment === "center" || alignment === "right" ? (
-                      <textarea
-                        aria-label="Left side text"
+                      <StorySideTextEditor
+                        ariaLabel="Left side text"
                         value={leftText}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setLeftText(value);
-                          setSideTextEnabled(
-                            Boolean(value.trim() || rightText.trim()),
-                          );
+                        onChange={(value) => updateSideText("left", value)}
+                        onFocus={() => setActiveSideText("left")}
+                        onEditorReady={(editor) => {
+                          sideTextEditorsRef.current.left = editor;
                         }}
                         placeholder="Write the text displayed on the left of the photo"
                         className="story-side-text story-side-text-left story-side-text-editor"
                       />
                     ) : null}
                     {alignment === "center" || alignment === "left" ? (
-                      <textarea
-                        aria-label="Right side text"
+                      <StorySideTextEditor
+                        ariaLabel="Right side text"
                         value={rightText}
-                        onChange={(event) => {
-                          const value = event.target.value;
-                          setRightText(value);
-                          setSideTextEnabled(
-                            Boolean(leftText.trim() || value.trim()),
-                          );
+                        onChange={(value) => updateSideText("right", value)}
+                        onFocus={() => setActiveSideText("right")}
+                        onEditorReady={(editor) => {
+                          sideTextEditorsRef.current.right = editor;
                         }}
                         placeholder="Write the text displayed on the right of the photo"
                         className="story-side-text story-side-text-right story-side-text-editor"
@@ -2299,11 +2449,84 @@ export function StoryMediaDialog({
                       <span className="block text-[10px] font-bold uppercase tracking-[0.15em] text-[#242617]/45">
                         Side text
                       </span>
-                      <p className="mt-2 text-xs leading-5 text-[#242617]/60">
-                        {alignment === "center"
-                          ? "Write directly in the two fields beside the photo. Their width automatically follows the frame width."
-                          : `Write in the field on the ${alignment === "left" ? "right" : "left"} of the photo. Its width automatically uses all remaining space.`} Empty fields are not published. On mobile, their content moves below the photo.
-                      </p>
+                      <div
+                        className="mt-3 flex flex-wrap items-center gap-1.5"
+                        role="toolbar"
+                        aria-label="Side text formatting"
+                      >
+                        {(
+                          [
+                            ["left", "Align left"],
+                            ["center", "Align center"],
+                            ["right", "Align right"],
+                            ["justify", "Justify"],
+                          ] as const
+                        ).map(([textAlignment, label]) => (
+                          <button
+                            key={textAlignment}
+                            type="button"
+                            title={label}
+                            aria-label={label}
+                            onPointerDown={keepSideTextSelection}
+                            onClick={() => setSideTextAlignment(textAlignment)}
+                            className={sideTextToolbarButton}
+                          >
+                            <TextAlignmentIcon alignment={textAlignment} />
+                          </button>
+                        ))}
+
+                        <span
+                          aria-hidden="true"
+                          className="mx-0.5 h-7 w-px bg-[#242617]/14"
+                        />
+
+                        <button
+                          type="button"
+                          title="Bulleted list"
+                          aria-label="Bulleted list"
+                          onPointerDown={keepSideTextSelection}
+                          onClick={() => toggleSideTextList("bullet")}
+                          className={sideTextToolbarButton}
+                        >
+                          <span className="text-base leading-none">•</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Numbered list"
+                          aria-label="Numbered list"
+                          onPointerDown={keepSideTextSelection}
+                          onClick={() => toggleSideTextList("ordered")}
+                          className={sideTextToolbarButton}
+                        >
+                          <span className="text-sm leading-none">1.</span>
+                        </button>
+
+                        <span
+                          aria-hidden="true"
+                          className="mx-0.5 h-7 w-px bg-[#242617]/14"
+                        />
+
+                        <button
+                          type="button"
+                          title="Add or edit link"
+                          aria-label="Add or edit link"
+                          onPointerDown={keepSideTextSelection}
+                          onClick={editSideTextLink}
+                          className={sideTextToolbarButton}
+                        >
+                          <span className="text-[10px] font-semibold">Link</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Remove link"
+                          aria-label="Remove link"
+                          onPointerDown={keepSideTextSelection}
+                          onClick={removeSideTextLink}
+                          className={sideTextToolbarButton}
+                        >
+                          <span className="text-[10px] font-semibold">Unlink</span>
+                        </button>
+                      </div>
                     </div>
                   ) : null}
                 </section>

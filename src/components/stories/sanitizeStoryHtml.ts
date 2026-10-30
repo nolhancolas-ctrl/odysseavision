@@ -95,7 +95,7 @@ export function sanitizeStoryHtml(content: string) {
         "border-radius": [/^\d+(?:\.\d+)?px$/],
       },
     },
-    allowedSchemes: ["http", "https", "mailto"],
+    allowedSchemes: ["http", "https", "mailto", "tel"],
     allowProtocolRelative: false,
   });
 }

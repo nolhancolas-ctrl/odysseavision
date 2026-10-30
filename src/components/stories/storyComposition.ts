@@ -1,5 +1,10 @@
 // Photo coordinates use a stable 1000-unit-wide canvas. The frame is a
 // viewport onto it: changing the frame must never scale the photo geometry.
+import {
+  normalizeStorySideTextHtml,
+  storySideTextHasContent,
+} from "./storySideText";
+
 export const STORY_MOBILE_MEDIA_QUERY =
   "(max-width: 767px), (max-aspect-ratio: 4 / 3)";
 export const STORY_ARTBOARD_CONTENT_EVENT = "story-artboard-content-change";
@@ -159,8 +164,8 @@ function ensureSideTextElement(
     wrapper.append(element);
   }
 
-  if (!element.textContent?.trim() && text.trim()) {
-    element.textContent = text;
+  if (!storySideTextHasContent(element.innerHTML) && storySideTextHasContent(text)) {
+    element.innerHTML = normalizeStorySideTextHtml(text);
   }
 
   return element;
@@ -193,10 +198,10 @@ function restoreSideTextWrapper(
   const rightText = gallery.dataset.storyRightText ?? "";
   const hasVisibleText =
     alignment === "center"
-      ? Boolean(leftText.trim() || rightText.trim())
+      ? storySideTextHasContent(leftText) || storySideTextHasContent(rightText)
       : alignment === "left"
-        ? Boolean(rightText.trim())
-        : Boolean(leftText.trim());
+        ? storySideTextHasContent(rightText)
+        : storySideTextHasContent(leftText);
 
   if (!hasVisibleText) return null;
 
@@ -262,10 +267,10 @@ export function installIndependentCompositions(
       );
       const showLeft =
         (alignment === "center" || alignment === "right") &&
-        Boolean(leftElement.textContent?.trim());
+        storySideTextHasContent(leftElement.innerHTML);
       const showRight =
         (alignment === "center" || alignment === "left") &&
-        Boolean(rightElement.textContent?.trim());
+        storySideTextHasContent(rightElement.innerHTML);
 
       textMedia.dataset.alignment = alignment;
       setStyles(textMedia, {

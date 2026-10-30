@@ -8,8 +8,10 @@ const files = [
   "src/components/stories/StoryArtboard.tsx",
   "src/components/stories/storySpatialLayout.ts",
   "src/components/stories/storyComposition.ts",
+  "src/components/stories/storySideText.ts",
   "src/components/stories/StoryRichHtml.tsx",
   "src/components/admin/stories/StoryMediaDialog.tsx",
+  "src/components/admin/stories/StorySideTextEditor.tsx",
   "src/components/admin/stories/storyMediaHtml.ts",
   "src/components/admin/stories/storyTiptap.ts",
 ];

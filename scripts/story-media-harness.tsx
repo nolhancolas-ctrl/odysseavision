@@ -18,6 +18,7 @@ import {
   StoryMediaNode,
 } from "../src/components/admin/stories/storyTiptap";
 import { sanitizeStoryHtml } from "../src/components/stories/sanitizeStoryHtml";
+import { normalizeStorySideTextHtml } from "../src/components/stories/storySideText";
 import { StoryRichHtml } from "../src/components/stories/StoryRichHtml";
 import { StoryArtboard } from "../src/components/stories/StoryArtboard";
 import { installSpatialLayouts } from "../src/components/stories/storySpatialLayout";
@@ -65,6 +66,8 @@ const fixture: StoryMediaDraft = {
   rightText:
     "Right text with more context.\nThis follows the left text on mobile.",
 };
+const expectedLeftText = normalizeStorySideTextHtml(fixture.leftText);
+const expectedRightText = normalizeStorySideTextHtml(fixture.rightText);
 
 function parse(html: string) {
   const root = document.createElement("div");
@@ -131,8 +134,8 @@ function tests() {
   const root = parse(sanitized);
   const restored = readMediaDraft(root.firstElementChild as HTMLElement);
   assert(
-    restored.leftText === fixture.leftText &&
-      restored.rightText === fixture.rightText,
+    restored.leftText === expectedLeftText &&
+      restored.rightText === expectedRightText,
     "Side text, special characters and line breaks survive sanitization and reopening",
   );
   const wrapper = root.firstElementChild as HTMLElement;
@@ -140,21 +143,47 @@ function tests() {
     'section[data-story-gallery="true"]',
   )!;
   assert(
-    wrapper.dataset.storyLeftText === fixture.leftText &&
-      wrapper.dataset.storyRightText === fixture.rightText,
+    wrapper.dataset.storyLeftText === expectedLeftText &&
+      wrapper.dataset.storyRightText === expectedRightText,
     "Side text is duplicated on the atomic wrapper for durable draft storage",
   );
   gallery.dataset.storyLeftText = "";
   gallery.dataset.storyRightText = "";
   const recoveredFromWrapper = readMediaDraft(wrapper);
   assert(
-    recoveredFromWrapper.leftText === fixture.leftText &&
-      recoveredFromWrapper.rightText === fixture.rightText,
+    recoveredFromWrapper.leftText === expectedLeftText &&
+      recoveredFromWrapper.rightText === expectedRightText,
     "Reopening recovers side text when a legacy gallery attribute is empty",
   );
   assert(
     !root.querySelector("script"),
     "Side text is escaped, never executable HTML",
+  );
+  const richSideText = normalizeStorySideTextHtml(
+    '<p style="text-align: right">Aligned <a href="https://example.com" target="_blank" rel="noopener noreferrer">link</a></p><ul><li>First item</li></ul>',
+  );
+  const richSideRoot = parse(
+    sanitizeStoryHtml(
+      serializeMediaDraft({
+        ...fixture,
+        leftText: richSideText,
+        rightText: "",
+      }),
+    ),
+  );
+  const richSideDraft = readMediaDraft(
+    richSideRoot.firstElementChild as HTMLElement,
+  );
+  const richSideColumn = richSideRoot.querySelector<HTMLElement>(
+    ".story-side-text-left",
+  );
+  assert(
+    richSideDraft.leftText === richSideText &&
+      richSideColumn?.querySelector("p")?.style.textAlign === "right" &&
+      richSideColumn?.querySelector("ul > li")?.textContent === "First item" &&
+      richSideColumn?.querySelector("a")?.getAttribute("href") ===
+        "https://example.com",
+    "Side-text alignment, lists and links survive saving and sanitization",
   );
   assert(
     restored.items[0].width === 61 &&
@@ -260,8 +289,8 @@ function tests() {
     root.querySelectorAll('[data-story-text-media="true"]').length === 1 &&
       wrapper.querySelectorAll(":scope > .story-side-text-left").length === 1 &&
       wrapper.querySelectorAll(":scope > .story-side-text-right").length === 1 &&
-      wrapper.dataset.storyLeftText === fixture.leftText &&
-      wrapper.dataset.storyRightText === fixture.rightText,
+      wrapper.dataset.storyLeftText === expectedLeftText &&
+      wrapper.dataset.storyRightText === expectedRightText,
     "Repeated responsive transitions are idempotent and never duplicate or erase side text",
   );
   const editor = new Editor({
@@ -274,7 +303,7 @@ function tests() {
     parse(serialized).firstElementChild as HTMLElement,
   );
   assert(
-    reopened.leftText === fixture.leftText && reopened.items.length === 1,
+    reopened.leftText === expectedLeftText && reopened.items.length === 1,
     "Tiptap preserves the text/photo block as one editable node",
   );
   editor.destroy();
@@ -322,7 +351,7 @@ function tests() {
     parse(serializeMediaDraft(disabled)).firstElementChild as HTMLElement,
   );
   assert(
-    dormant.leftText === fixture.leftText && !dormant.sideTextEnabled,
+    dormant.leftText === expectedLeftText && !dormant.sideTextEnabled,
     "Disabling side text retains the draft fields",
   );
   const leftDraft: StoryMediaDraft = {
@@ -406,8 +435,8 @@ function tests() {
   assert(
     roundTripBlocks.length === 2 &&
       roundTripBlocks[0].sideTextEnabled === true &&
-      roundTripBlocks[0].leftText === fixture.leftText &&
-      roundTripBlocks[0].rightText === fixture.rightText &&
+      roundTripBlocks[0].leftText === expectedLeftText &&
+      roundTripBlocks[0].rightText === expectedRightText &&
       roundTripBlocks[1].sideTextEnabled === false &&
       roundTripBlocks[1].leftText === "" &&
       roundTripBlocks[1].rightText === "",

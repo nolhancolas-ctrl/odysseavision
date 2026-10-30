@@ -7,6 +7,10 @@ import type {
   StoryWatermark,
 } from "./StoryMediaDialog";
 import { separateOverlappingPhotos, storyTextMediaColumns, STORY_MAX_FRAME_HEIGHT } from "@/components/stories/storyComposition";
+import {
+  normalizeStorySideTextHtml,
+  storySideTextHasContent,
+} from "@/components/stories/storySideText";
 
 function escapeHtml(value: string) {
   return value
@@ -104,19 +108,19 @@ export function readMediaDraft(container: HTMLElement): StoryMediaDraft {
   ) => {
     const galleryValue = container.dataset[dataKey];
     const wrapperValue = outerContainer.dataset[dataKey];
-    const visibleValue = outerContainer.querySelector(selector)?.textContent;
+    const visibleValue = outerContainer.querySelector(selector)?.innerHTML;
 
     // Older drafts can contain an empty gallery attribute next to a valid
     // visible side column. Prefer the first non-empty copy, while still
     // preserving an intentionally empty field.
-    return (
+    return normalizeStorySideTextHtml(
       [galleryValue, wrapperValue, visibleValue].find(
         (value) => value !== undefined && value.length > 0,
       ) ??
       galleryValue ??
       wrapperValue ??
       visibleValue ??
-      ""
+      "",
     );
   };
 
@@ -321,6 +325,8 @@ function buildFigureHtml(
 }
 
 export function serializeMediaDraft(draft: StoryMediaDraft) {
+  const leftText = normalizeStorySideTextHtml(draft.leftText);
+  const rightText = normalizeStorySideTextHtml(draft.rightText);
   const canvasHeight = Math.max(
     120,
     Math.min(STORY_MAX_FRAME_HEIGHT, Math.round(draft.compositionHeight)),
@@ -338,8 +344,8 @@ export function serializeMediaDraft(draft: StoryMediaDraft) {
     `data-story-coordinates="independent" ` +
     `data-alignment="${draft.alignment}" ` +
     `data-side-text-enabled="${draft.sideTextEnabled === true}" ` +
-    `data-story-left-text="${escapeHtml(draft.leftText ?? "")}" ` +
-    `data-story-right-text="${escapeHtml(draft.rightText ?? "")}" ` +
+    `data-story-left-text="${escapeHtml(leftText)}" ` +
+    `data-story-right-text="${escapeHtml(rightText)}" ` +
     `data-layout="${draft.layout}" ` +
     `data-size="${draft.size}" ` +
     `data-count="${draft.items.length}" ` +
@@ -359,11 +365,11 @@ export function serializeMediaDraft(draft: StoryMediaDraft) {
     `</section>`;
   const visibleSideText =
     draft.alignment === "center"
-      ? Boolean(draft.leftText?.trim() || draft.rightText?.trim())
+      ? storySideTextHasContent(leftText) || storySideTextHasContent(rightText)
       : draft.alignment === "left"
-        ? Boolean(draft.rightText?.trim())
+        ? storySideTextHasContent(rightText)
         : draft.alignment === "right"
-          ? Boolean(draft.leftText?.trim())
+          ? storySideTextHasContent(leftText)
           : false;
   const withSideText =
     draft.sideTextEnabled &&
@@ -374,13 +380,13 @@ export function serializeMediaDraft(draft: StoryMediaDraft) {
     ? `<section data-story-text-media="true" ` +
       `data-side-text-enabled="true" ` +
       `data-alignment="${draft.alignment}" ` +
-      `data-story-left-text="${escapeHtml(draft.leftText ?? "")}" ` +
-      `data-story-right-text="${escapeHtml(draft.rightText ?? "")}" ` +
+      `data-story-left-text="${escapeHtml(leftText)}" ` +
+      `data-story-right-text="${escapeHtml(rightText)}" ` +
       `style="grid-template-columns:${storyTextMediaColumns(draft.alignment, compositionWidth)};" ` +
       `class="story-text-media" contenteditable="false" tabindex="0" draggable="true">` +
       galleryHtml +
-      `<div class="story-side-text story-side-text-left">${escapeHtml(draft.leftText ?? "")}</div>` +
-      `<div class="story-side-text story-side-text-right">${escapeHtml(draft.rightText ?? "")}</div></section>`
+      `<div class="story-side-text story-side-text-left">${leftText}</div>` +
+      `<div class="story-side-text story-side-text-right">${rightText}</div></section>`
     : galleryHtml;
 
   return mediaHtml;
